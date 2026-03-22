@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>歯科自費管理</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+.app{display:flex;height:100vh;min-height:600px}
+.sidebar{width:200px;flex-shrink:0;background:#fff;border-right:0.5px solid rgba(0,0,0,0.1);display:flex;flex-direction:column;padding:16px 0}
+.sidebar-title{font-size:13px;font-weight:500;color:#888;padding:0 16px 12px}
+.nav-item{padding:8px 16px;font-size:13px;cursor:pointer;color:#666;border-left:2px solid transparent}
+.nav-item:hover{background:#f5f5f3;color:#1a1a1a}
+.nav-item.active{background:#e8f0fe;color:#1a73e8;border-left-color:#1a73e8;font-weight:500}
+.sidebar-sep{border:none;border-top:0.5px solid rgba(0,0,0,0.08);margin:8px 16px}
+.main{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:16px}
+.section-title{font-size:15px;font-weight:500;margin-bottom:14px;color:#1a1a1a}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-row.triple{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:#888}
+input,select,textarea{font-family:inherit;font-size:13px;padding:6px 8px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
+textarea{resize:vertical;line-height:1.6}
+.btn{font-family:inherit;font-size:13px;padding:6px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f5f5f3}
+.btn.primary{background:#e8f0fe;color:#1a73e8;border-color:rgba(26,115,232,0.3)}
+.btn.danger{background:#fce8e6;color:#d93025;border-color:rgba(217,48,37,0.3)}
+.btn.success{background:#e6f4ea;color:#137333;border-color:rgba(19,115,51,0.3)}
+.btn.warning{background:#fef7e0;color:#b06000;border-color:rgba(176,96,0,0.3)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:12px;font-weight:500;color:#888;border-bottom:0.5px solid rgba(0,0,0,0.1)}
+td{padding:8px 10px;border-bottom:0.5px solid rgba(0,0,0,0.07);color:#1a1a1a;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9f9f9}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px}
+.badge.paid{background:#e6f4ea;color:#137333}
+.badge.partial{background:#fef7e0;color:#b06000}
+.badge.unpaid{background:#fce8e6;color:#d93025}
+.total-row{display:flex;justify-content:flex-end;gap:24px;padding:10px 0;border-top:0.5px solid rgba(0,0,0,0.1);margin-top:8px}
+.total-item{display:flex;gap:8px;align-items:baseline}
+.total-label{font-size:12px;color:#888}
+.total-value{font-size:16px;font-weight:500}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.metric{background:#f5f5f3;border-radius:8px;padding:12px}
+.metric-label{font-size:11px;color:#888;margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:500}
+.item-row{display:grid;grid-template-columns:2fr 70px 110px 36px;gap:8px;align-items:center;margin-bottom:6px}
+.page{display:none}
+.page.active{display:flex;flex-direction:column;gap:16px}
+.action-row{display:flex;justify-content:space-between;align-items:center}
+.print-area{display:none}
+.pay-history{margin-top:6px;padding:8px 10px;background:#f0f4ff;border-radius:6px;border:0.5px solid rgba(26,115,232,0.15)}
+.pay-history-title{font-size:11px;color:#888;margin-bottom:4px;font-weight:500}
+.pay-history-row{display:flex;gap:16px;font-size:12px;padding:3px 0;border-bottom:0.5px solid rgba(0,0,0,0.06)}
+.pay-history-row:last-child{border-bottom:none}
+.master-row{display:grid;grid-template-columns:1fr 150px 36px;gap:8px;align-items:center;padding:6px 0;border-bottom:0.5px solid rgba(0,0,0,0.06)}
+.master-row:last-child{border-bottom:none}
+.inline-edit{font-family:inherit;font-size:13px;padding:4px 6px;border:0.5px solid rgba(0,0,0,0.15);border-radius:6px;background:#fff;color:#1a1a1a;width:100%}
+.inline-edit:focus{outline:none;border-color:#1a73e8}
+.tpl-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:20px;font-size:12px;cursor:pointer;background:#fff;margin:3px}
+.tpl-chip:hover{background:#e8f0fe;border-color:rgba(26,115,232,0.4);color:#1a73e8}
+.notes-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:20px;font-size:12px;cursor:pointer;background:#fff;margin:3px}
+.notes-chip.implant{border-color:rgba(26,115,232,0.4);color:#1a73e8;background:#e8f0fe}
+.notes-chip.gishi{border-color:rgba(19,115,51,0.4);color:#137333;background:#e6f4ea}
+.notes-chip.whitening{border-color:rgba(176,96,0,0.4);color:#b06000;background:#fef7e0}
+.notes-chip:hover{opacity:0.8}
+.est-title-input{font-size:15px;font-weight:500;padding:6px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f9f9f7;width:100%}
+.est-title-input:focus{outline:none;border-color:#1a73e8;background:#fff}
+@media print{
+  .app{display:none}
+  .print-area{display:block;padding:32px 40px;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',sans-serif;font-size:12px;color:#000}
+  .print-clinic{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #222;padding-bottom:10px;margin-bottom:16px}
+  .print-clinic-name{font-size:17px;font-weight:bold}
+  .print-clinic-addr{font-size:10px;color:#555;margin-top:3px;line-height:1.7}
+  .print-doc{font-size:11px;text-align:right;color:#333;line-height:1.8}
+  .print-title{font-size:18px;font-weight:bold;text-align:center;margin-bottom:16px;letter-spacing:0.1em}
+  .print-patient-box{border:1px solid #ccc;padding:10px 14px;margin-bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px}
+  .print-patient-box .label{color:#666}
+  .print-treatment-title{font-size:13px;font-weight:bold;background:#f0f0f0;padding:5px 10px;margin-bottom:0;border:1px solid #ccc;border-bottom:none}
+  .print-table{width:100%;border-collapse:collapse;margin-bottom:0}
+  .print-table th{background:#f7f7f7;font-size:11px;font-weight:500;padding:5px 8px;border:1px solid #ccc;text-align:left}
+  .print-table td{border:1px solid #ccc;padding:5px 8px;font-size:12px}
+  .print-table td.right{text-align:right}
+  .print-table td.center{text-align:center}
+  .print-totals{border:1px solid #ccc;border-top:none;padding:6px 10px;text-align:right;font-size:12px;margin-bottom:20px}
+  .print-totals table{width:auto;margin-left:auto;font-size:12px}
+  .print-totals td{border:none;padding:2px 8px;text-align:right}
+  .print-totals td.lbl{color:#555;text-align:right}
+  .print-totals tr.grand td{font-weight:bold;font-size:13px;border-top:1px solid #ccc}
+  .print-notes{border:1px solid #ccc;padding:10px 14px;font-size:11px;line-height:1.9;margin-bottom:16px}
+  .print-notes-title{font-size:11px;font-weight:bold;margin-bottom:6px}
+  .print-footer{font-size:10px;color:#888;text-align:center;margin-top:20px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="sidebar">
+    <div class="sidebar-title">歯科自費管理</div>
+    <div class="nav-item active" onclick="showPage('patients')">患者一覧</div>
+    <div class="nav-item" onclick="showPage('estimate')">見積作成</div>
+    <div class="nav-item" onclick="showPage('payments')">支払い管理</div>
+    <div class="nav-item" onclick="showPage('dashboard')">集計</div>
+    <hr class="sidebar-sep">
+    <div class="nav-item" onclick="showPage('master')">項目マスタ</div>
+    <div class="nav-item" onclick="showPage('templates')">テンプレート</div>
+    <div class="nav-item" onclick="showPage('notes-settings')">留意事項設定</div>
+  </div>
+  <div class="main">
+
+    <!-- 患者一覧 -->
+    <div class="page active" id="page-patients">
+      <div class="action-row">
+        <span class="section-title" style="margin:0">患者一覧</span>
+        <button class="btn primary" onclick="showPage('estimate');newEstimate()">＋ 新規見積</button>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>患者名</th><th>カルテNo</th><th>見積日</th><th>治療タイトル</th><th>合計</th><th>支払状況</th><th></th></tr></thead>
+          <tbody id="patient-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 見積作成 -->
+    <div class="page" id="page-estimate">
+      <div class="action-row">
+        <span class="section-title" style="margin:0">見積書作成</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="printEstimate()">印刷</button>
+          <button class="btn primary" onclick="saveEstimate()">保存</button>
+        </div>
+      </div>
+
+      <!-- テンプレート呼び出し -->
+      <div class="card" id="tpl-picker-card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#555">テンプレートから開始 <span style="font-size:11px;font-weight:400;color:#aaa">（任意）</span></div>
+        <div id="tpl-chips"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">患者情報</div>
+        <div class="form-row triple">
+          <div class="form-group"><label>患者名</label><input id="pt-name" placeholder="山田 太郎"></div>
+          <div class="form-group"><label>カルテNo</label><input id="pt-id" placeholder="2024-001"></div>
+          <div class="form-group"><label>見積日</label><input id="est-date" type="date"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>担当医</label><input id="pt-doctor" placeholder="院長　神藤佑亮"></div>
+          <div class="form-group"><label>メモ</label><input id="pt-memo" placeholder="備考など"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="form-group" style="margin-bottom:14px">
+          <label style="font-size:12px;color:#888;margin-bottom:4px">治療タイトル（見積書に印刷されます）</label>
+          <input class="est-title-input" id="est-title" placeholder="例：ジルコニアミリング義歯　レジン歯">
+        </div>
+        <div class="section-title" style="margin-bottom:10px">治療項目</div>
+        <div style="display:grid;grid-template-columns:2fr 70px 110px 36px;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;color:#888">項目名</span>
+          <span style="font-size:11px;color:#888;text-align:center">数量</span>
+          <span style="font-size:11px;color:#888;text-align:right">単価（税抜）</span>
+          <span></span>
+        </div>
+        <div id="item-list"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <select id="item-select" style="flex:1"><option value="">-- 項目を選択して追加 --</option></select>
+          <button class="btn" onclick="addItem()">追加</button>
+        </div>
+        <div class="total-row">
+          <div class="total-item"><span class="total-label">小計</span><span class="total-value" id="subtotal">¥0</span></div>
+          <div class="total-item"><span class="total-label">消費税(10%)</span><span class="total-value" id="tax">¥0</span></div>
+          <div class="total-item"><span class="total-label">合計</span><span class="total-value" id="grand-total">¥0</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="section-title" style="margin:0">留意事項</div>
+          <span class="notes-chip" onclick="document.getElementById('est-notes').value=''" style="color:#d93025;border-color:rgba(217,48,37,0.3)">クリア</span>
+        </div>
+        <div id="notes-chips" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:2px"></div>
+        <textarea id="est-notes" rows="5" placeholder="留意事項を入力、または上のボタンから挿入してください"></textarea>
+      </div>
+    </div>
+
+    <!-- 支払い管理 -->
+    <div class="page" id="page-payments">
+      <div class="section-title">支払い管理</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>患者名</th><th>治療</th><th>見積金額</th><th>入金履歴</th><th>残高</th><th>状況</th><th></th></tr></thead>
+          <tbody id="payment-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 集計 -->
+    <div class="page" id="page-dashboard">
+      <div class="section-title">集計</div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">見積件数</div><div class="metric-value" id="m-count">0</div></div>
+        <div class="metric"><div class="metric-label">見積合計</div><div class="metric-value" id="m-total">¥0</div></div>
+        <div class="metric"><div class="metric-label">入金済</div><div class="metric-value" id="m-paid" style="color:#137333">¥0</div></div>
+        <div class="metric"><div class="metric-label">未収</div><div class="metric-value" id="m-unpaid" style="color:#d93025">¥0</div></div>
+      </div>
+      <div class="card">
+        <table>
+          <thead><tr><th>月</th><th>件数</th><th>見積合計</th><th>入金合計</th></tr></thead>
+          <tbody id="monthly-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 項目マスタ -->
+    <div class="page" id="page-master">
+      <div class="section-title">自費項目マスタ</div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px">新規項目を追加</div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="form-group" style="flex:2"><label>項目名</label><input id="new-item-name" placeholder="例：ジルコニアクラウン"></div>
+          <div class="form-group" style="flex:1"><label>標準金額（税抜）</label><input id="new-item-price" type="number" placeholder="例：90000"></div>
+          <button class="btn primary" style="height:34px" onclick="addMasterItem()">追加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">登録済み項目 <span style="font-size:12px;font-weight:400;color:#aaa">名前・金額はその場で編集できます</span></div>
+        <div style="display:grid;grid-template-columns:1fr 150px 36px;gap:8px;padding:0 0 6px;border-bottom:0.5px solid rgba(0,0,0,0.1);margin-bottom:4px">
+          <span style="font-size:11px;color:#888">項目名</span><span style="font-size:11px;color:#888">標準金額（税抜）</span><span></span>
+        </div>
+        <div id="master-list"></div>
+      </div>
+    </div>
+
+    <!-- テンプレート -->
+    <div class="page" id="page-templates">
+      <div class="action-row">
+        <span class="section-title" style="margin:0">見積テンプレート</span>
+        <button class="btn primary" onclick="saveCurrentAsTemplate()">現在の見積をテンプレとして保存</button>
+      </div>
+      <div class="card">
+        <p style="font-size:13px;color:#888;margin-bottom:12px">テンプレートを選ぶと見積作成画面に項目が読み込まれます。患者情報は別途入力できます。</p>
+        <div id="template-list"></div>
+      </div>
+    </div>
+
+    <!-- 留意事項マスタ -->
+    <div class="page" id="page-notes-settings">
+      <div class="section-title">留意事項マスタ</div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px">新規テンプレートを追加</div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label>テンプレート名</label>
+          <input id="new-notes-name" placeholder="例：インプラント、義歯、ホワイトニング など">
+        </div>
+        <div class="form-group" style="margin-bottom:10px">
+          <label>留意事項テキスト</label>
+          <textarea id="new-notes-text" rows="5" placeholder="・ここに留意事項を入力&#10;・複数行入力できます"></textarea>
+        </div>
+        <button class="btn primary" onclick="addNotesMaster()">追加</button>
+      </div>
+      <div class="card">
+        <div class="section-title">登録済みテンプレート <span style="font-size:12px;font-weight:400;color:#aaa">名前・内容はその場で編集できます</span></div>
+        <div id="notes-master-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="print-area" id="print-area"></div>
+
+<script>
+// ── デフォルトデータ ──────────────────────────────
+const DEFAULT_ITEMS = [
+  {id:'m1',name:"インプラント埋入",price:150000},
+  {id:'m2',name:"インプラント上部構造",price:120000},
+  {id:'m3',name:"セラミッククラウン",price:80000},
+  {id:'m4',name:"セラミックインレー",price:45000},
+  {id:'m5',name:"骨造成",price:100000},
+  {id:'m6',name:"サージカルステント",price:30000},
+  {id:'m7',name:"仮義歯",price:20000},
+  {id:'m8',name:"仮歯",price:15000},
+  {id:'m9',name:"仮歯による咬合調整",price:10000},
+  {id:'m10',name:"メタルコーピング",price:40000},
+  {id:'m11',name:"メタルフレーム義歯",price:250000},
+  {id:'m12',name:"ミリング加工",price:10000},
+  {id:'m13',name:"アタッチメント",price:35000},
+  {id:'m14',name:"CT検査",price:15000},
+  {id:'m15',name:"MTM",price:50000},
+  {id:'m16',name:"ホワイトニング",price:40000},
+  {id:'m17',name:"クラウン",price:100000},
+];
+
+const DEFAULT_NOTES_MASTER = [
+  {id:'n1', name:'インプラント', text:'・インプラント治療は外科的手術を伴います。\n・骨の状態・全身疾患によっては治療できない場合があります。\n・治療期間は骨の治癒状況により変動します（目安3〜6ヶ月）。\n・インプラントは保険外診療（自費）です。\n・術後の定期メンテナンスが必要です。'},
+  {id:'n2', name:'義歯', text:'・義歯は慣れるまでに時間がかかる場合があります。\n・定期的な調整・修理が必要になる場合があります。\n・義歯は保険外診療（自費）です。\n・使用状況によっては作り直しが必要になる場合があります。'},
+  {id:'n3', name:'ホワイトニング', text:'・ホワイトニングの効果・期間には個人差があります。\n・治療後は色の濃い食事・飲み物を控えていただきます。\n・知覚過敏が一時的に生じる場合があります。\n・ホワイトニングは保険外診療（自費）です。\n・効果を維持するためにメンテナンスをお勧めします。'},
+];
+
+// ── ストレージ初期化 ─────────────────────────────
+let itemsMaster  = JSON.parse(localStorage.getItem('dental_items') || 'null') || DEFAULT_ITEMS;
+let estimates    = JSON.parse(localStorage.getItem('dental_estimates') || '[]');
+let templates    = JSON.parse(localStorage.getItem('dental_templates') || '[]');
+let notesMaster  = JSON.parse(localStorage.getItem('dental_notes_master') || 'null') || JSON.parse(JSON.stringify(DEFAULT_NOTES_MASTER));
+let currentItems = [];
+let editingId = null;
+
+function save(){ localStorage.setItem('dental_items', JSON.stringify(itemsMaster)); }
+function saveEst(){ localStorage.setItem('dental_estimates', JSON.stringify(estimates)); }
+function saveTpl(){ localStorage.setItem('dental_templates', JSON.stringify(templates)); }
+function saveNotesMasterStore(){ localStorage.setItem('dental_notes_master', JSON.stringify(notesMaster)); }
+
+// ── ナビ ─────────────────────────────────────────
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const map={patients:'患者',estimate:'見積作成',payments:'支払',dashboard:'集計',master:'項目マスタ',templates:'テンプレート','notes-settings':'留意事項設定'};
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===map[name])n.classList.add('active');});
+  const fns={patients:renderPatients,payments:renderPayments,dashboard:renderDashboard,master:renderMaster,templates:renderTemplates,'notes-settings':renderNotesMaster};
+  if(fns[name])fns[name]();
+}
+
+// ── 項目セレクト再構築 ────────────────────────────
+function rebuildSelect(){
+  const sel=document.getElementById('item-select');
+  const v=sel.value;
+  sel.innerHTML='<option value="">-- 項目を選択して追加 --</option>';
+  itemsMaster.forEach(i=>{
+    const o=document.createElement('option');
+    o.value=i.id; o.dataset.name=i.name; o.dataset.price=i.price;
+    o.textContent=`${i.name}　¥${Number(i.price).toLocaleString()}`;
+    sel.appendChild(o);
+  });
+  sel.value=v;
+}
+
+// ── 見積フォーム ──────────────────────────────────
+function newEstimate(){
+  editingId=null; currentItems=[];
+  ['pt-name','pt-id','pt-doctor','pt-memo','est-title','est-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('est-date').value=new Date().toISOString().split('T')[0];
+  renderItems(); renderTplChips();
+}
+
+function loadTemplate(tplId){
+  const t=templates.find(x=>x.id===tplId); if(!t)return;
+  currentItems=JSON.parse(JSON.stringify(t.items));
+  document.getElementById('est-title').value=t.title||'';
+  document.getElementById('est-notes').value=t.notes||'';
+  renderItems();
+}
+
+function saveCurrentAsTemplate(){
+  const title=document.getElementById('est-title').value.trim()||prompt('テンプレート名を入力してください');
+  if(!title)return;
+  if(currentItems.length===0){alert('見積作成画面で項目を追加してからテンプレートとして保存してください');return;}
+  templates.push({
+    id:'t'+Date.now(), name:title,
+    title:document.getElementById('est-title').value.trim(),
+    notes:document.getElementById('est-notes').value,
+    items:JSON.parse(JSON.stringify(currentItems))
+  });
+  saveTpl(); renderTemplates(); alert('テンプレートを保存しました');
+}
+
+function renderTplChips(){
+  const wrap=document.getElementById('tpl-chips');
+  if(templates.length===0){wrap.innerHTML='<span style="font-size:12px;color:#aaa">テンプレートがありません。見積作成後に「テンプレート」画面から保存できます。</span>';return;}
+  wrap.innerHTML='';
+  templates.forEach(t=>{
+    const chip=document.createElement('span');
+    chip.className='tpl-chip';
+    chip.innerHTML=`${t.name} <span style="color:#aaa;font-size:11px" onclick="event.stopPropagation();deleteTpl('${t.id}')">×</span>`;
+    chip.onclick=()=>loadTemplate(t.id);
+    wrap.appendChild(chip);
+  });
+}
+
+function deleteTpl(id){
+  if(!confirm('このテンプレートを削除しますか？'))return;
+  templates=templates.filter(t=>t.id!==id); saveTpl(); renderTplChips(); renderTemplates();
+}
+
+function renderTemplates(){
+  const list=document.getElementById('template-list');
+  if(templates.length===0){list.innerHTML='<p style="color:#aaa;font-size:13px">テンプレートがありません</p>';return;}
+  list.innerHTML='';
+  templates.forEach(t=>{
+    const sub=t.items.reduce((s,i)=>s+i.price*i.qty,0);
+    const div=document.createElement('div');
+    div.style.cssText='border:0.5px solid rgba(0,0,0,0.1);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center';
+    div.innerHTML=`<div>
+      <div style="font-weight:500;font-size:13px">${t.name}</div>
+      <div style="font-size:12px;color:#888;margin-top:2px">${t.items.map(i=>i.name).join('、')} ／ 小計 ¥${sub.toLocaleString()}</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn primary" style="font-size:12px;padding:4px 10px" onclick="showPage('estimate');newEstimate();loadTemplate('${t.id}')">使用</button>
+      <button class="btn danger" style="font-size:12px;padding:4px 10px" onclick="deleteTpl('${t.id}')">削除</button>
+    </div>`;
+    list.appendChild(div);
+  });
+}
+
+// ── 留意事項マスタ ────────────────────────────────
+function insertNotes(id){
+  const n=notesMaster.find(x=>x.id===id); if(!n)return;
+  const ta=document.getElementById('est-notes');
+  const cur=ta.value.trim();
+  ta.value=cur?(cur+'\n\n'+n.text):n.text;
+}
+
+function rebuildNotesChips(){
+  const wrap=document.getElementById('notes-chips');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  notesMaster.forEach(n=>{
+    const chip=document.createElement('span');
+    chip.className='notes-chip';
+    chip.style.cssText='display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:20px;font-size:12px;cursor:pointer;background:#fff;margin:3px';
+    chip.textContent='＋ '+n.name;
+    chip.onclick=()=>insertNotes(n.id);
+    wrap.appendChild(chip);
+  });
+}
+
+function addNotesMaster(){
+  const name=document.getElementById('new-notes-name').value.trim();
+  const text=document.getElementById('new-notes-text').value.trim();
+  if(!name){alert('テンプレート名を入力してください');return;}
+  if(!text){alert('留意事項テキストを入力してください');return;}
+  notesMaster.push({id:'n'+Date.now(),name,text});
+  saveNotesMasterStore();
+  document.getElementById('new-notes-name').value='';
+  document.getElementById('new-notes-text').value='';
+  renderNotesMaster(); rebuildNotesChips();
+}
+
+function deleteNotesMaster(id){
+  if(!confirm('このテンプレートを削除しますか？'))return;
+  notesMaster=notesMaster.filter(n=>n.id!==id);
+  saveNotesMasterStore(); renderNotesMaster(); rebuildNotesChips();
+}
+
+function updateNotesName(id,v){const n=notesMaster.find(x=>x.id===id);if(n){n.name=v.trim();saveNotesMasterStore();rebuildNotesChips();}}
+function updateNotesText(id,v){const n=notesMaster.find(x=>x.id===id);if(n){n.text=v;saveNotesMasterStore();}}
+
+function renderNotesMaster(){
+  const list=document.getElementById('notes-master-list'); if(!list)return;
+  list.innerHTML='';
+  if(!notesMaster.length){list.innerHTML='<p style="color:#aaa;font-size:13px;padding:10px 0">テンプレートがありません</p>';return;}
+  notesMaster.forEach(n=>{
+    const div=document.createElement('div');
+    div.style.cssText='border:0.5px solid rgba(0,0,0,0.1);border-radius:8px;padding:12px;margin-bottom:10px';
+    div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <input class="inline-edit" style="font-weight:500;max-width:200px" value="${n.name.replace(/"/g,'&quot;')}" onchange="updateNotesName('${n.id}',this.value)">
+      <button class="btn danger" style="padding:3px 8px;font-size:12px" onclick="deleteNotesMaster('${n.id}')">削除</button>
+    </div>
+    <textarea class="inline-edit" rows="4" style="width:100%;line-height:1.6" onchange="updateNotesText('${n.id}',this.value)">${n.text.replace(/</g,'&lt;')}</textarea>`;
+    list.appendChild(div);
+  });
+}
+
+// ── 見積アイテム ──────────────────────────────────
+function addItem(){
+  const s=document.getElementById('item-select');
+  const opt=s.options[s.selectedIndex];
+  if(!opt.value)return;
+  currentItems.push({name:opt.dataset.name,qty:1,price:parseInt(opt.dataset.price)});
+  renderItems();
+}
+function removeItem(i){currentItems.splice(i,1);renderItems();}
+function renderItems(){
+  const list=document.getElementById('item-list');
+  list.innerHTML='';
+  let sub=0;
+  currentItems.forEach((item,i)=>{
+    sub+=item.price*item.qty;
+    const row=document.createElement('div');
+    row.className='item-row';
+    row.innerHTML=`<span style="font-size:13px">${item.name}</span>
+      <input type="number" min="1" value="${item.qty}" style="text-align:center" onchange="currentItems[${i}].qty=Math.max(1,parseInt(this.value)||1);renderItems()">
+      <input type="number" value="${item.price}" style="text-align:right" onchange="currentItems[${i}].price=parseInt(this.value)||0;renderItems()">
+      <button class="btn danger" style="padding:3px 8px;font-size:12px" onclick="removeItem(${i})">×</button>`;
+    list.appendChild(row);
+  });
+  const tax=Math.round(sub*0.1);
+  document.getElementById('subtotal').textContent='¥'+sub.toLocaleString();
+  document.getElementById('tax').textContent='¥'+tax.toLocaleString();
+  document.getElementById('grand-total').textContent='¥'+(sub+tax).toLocaleString();
+}
+
+// ── 保存 ─────────────────────────────────────────
+function saveEstimate(){
+  const name=document.getElementById('pt-name').value.trim();
+  if(!name){alert('患者名を入力してください');return;}
+  if(currentItems.length===0){alert('治療項目を追加してください');return;}
+  const sub=currentItems.reduce((s,i)=>s+i.price*i.qty,0);
+  const prev=editingId?estimates.find(e=>e.id===editingId):null;
+  const est={
+    id:editingId||'e'+Date.now(),
+    patientName:name,
+    patientId:document.getElementById('pt-id').value,
+    doctor:document.getElementById('pt-doctor').value,
+    memo:document.getElementById('pt-memo').value,
+    date:document.getElementById('est-date').value,
+    title:document.getElementById('est-title').value,
+    notes:document.getElementById('est-notes').value,
+    items:JSON.parse(JSON.stringify(currentItems)),
+    total:Math.round(sub*1.1),
+    paid:prev?(prev.paid||0):0,
+    payHistory:prev?(prev.payHistory||[]):[]
+  };
+  if(editingId){const idx=estimates.findIndex(e=>e.id===editingId);if(idx>=0)estimates[idx]=est;}
+  else estimates.push(est);
+  saveEst(); alert('保存しました'); showPage('patients');
+}
+
+// ── 患者一覧 ──────────────────────────────────────
+function renderPatients(){
+  const tbody=document.getElementById('patient-table-body');
+  tbody.innerHTML='';
+  if(!estimates.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">データがありません</td></tr>';return;}
+  [...estimates].reverse().forEach(e=>{
+    const status=e.paid>=e.total?'paid':e.paid>0?'partial':'unpaid';
+    const lbl={paid:'支払済',partial:'一部入金',unpaid:'未払い'};
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.patientName}</td><td>${e.patientId||'—'}</td><td>${e.date}</td>
+      <td style="font-size:12px;color:#555">${e.title||'—'}</td>
+      <td>¥${e.total.toLocaleString()}</td>
+      <td><span class="badge ${status}">${lbl[status]}</span></td>
+      <td><button class="btn" style="font-size:12px;padding:3px 10px" onclick="editEst('${e.id}')">編集</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function editEst(id){
+  const e=estimates.find(x=>x.id===id);if(!e)return;
+  editingId=id; currentItems=JSON.parse(JSON.stringify(e.items));
+  document.getElementById('pt-name').value=e.patientName;
+  document.getElementById('pt-id').value=e.patientId||'';
+  document.getElementById('pt-doctor').value=e.doctor||'';
+  document.getElementById('pt-memo').value=e.memo||'';
+  document.getElementById('est-date').value=e.date;
+  document.getElementById('est-title').value=e.title||'';
+  document.getElementById('est-notes').value=e.notes||'';
+  renderItems(); renderTplChips(); showPage('estimate');
+}
+
+// ── 支払い管理 ────────────────────────────────────
+function renderPayments(){
+  const tbody=document.getElementById('payment-table-body');
+  tbody.innerHTML='';
+  if(!estimates.length){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">データがありません</td></tr>';return;}
+  [...estimates].reverse().forEach(e=>{
+    const remain=e.total-(e.paid||0);
+    const status=remain<=0?'paid':e.paid>0?'partial':'unpaid';
+    const lbl={paid:'支払済',partial:'一部入金',unpaid:'未払い'};
+    const hist=(e.payHistory||[]);
+    const histHTML=hist.length?`<div class="pay-history"><div class="pay-history-title">入金履歴</div>${hist.map(h=>`<div class="pay-history-row"><span style="color:#888;min-width:80px">${h.date}</span><span style="font-weight:500">¥${h.amount.toLocaleString()}</span>${h.memo?`<span style="color:#888">${h.memo}</span>`:''}</div>`).join('')}</div>`:'';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${e.patientName}</td>
+      <td style="font-size:12px;color:#888">${e.title||e.items.slice(0,2).map(i=>i.name).join('、')}</td>
+      <td>¥${e.total.toLocaleString()}</td>
+      <td>¥${(e.paid||0).toLocaleString()}${histHTML}</td>
+      <td style="color:${remain>0?'#d93025':'#137333'}">¥${remain.toLocaleString()}</td>
+      <td><span class="badge ${status}">${lbl[status]}</span></td>
+      <td>${remain>0?`<button class="btn success" style="font-size:12px;padding:3px 10px" onclick="recordPayment('${e.id}')">入金登録</button>`:'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function recordPayment(id){
+  const e=estimates.find(x=>x.id===id);if(!e)return;
+  const remain=e.total-(e.paid||0);
+  const modal=document.createElement('div');
+  modal.className='modal-bg';
+  modal.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;width:340px">
+    <div style="font-size:15px;font-weight:500;margin-bottom:4px">入金登録</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px">${e.patientName} 様　残高 ¥${remain.toLocaleString()}</div>
+    <div class="form-group" style="margin-bottom:10px"><label>入金日</label><input id="mpd" type="date" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group" style="margin-bottom:10px"><label>入金金額</label><input id="mpa" type="number" value="${remain}"></div>
+    <div class="form-group" style="margin-bottom:16px"><label>メモ（任意）</label><input id="mpm" placeholder="現金・振込など"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="this.closest('.modal-bg').remove()">キャンセル</button>
+      <button class="btn success" onclick="confirmPay('${id}')">登録</button>
+    </div></div>`;
+  document.body.appendChild(modal);
+}
+
+function confirmPay(id){
+  const e=estimates.find(x=>x.id===id);if(!e)return;
+  const date=document.getElementById('mpd').value;
+  const amount=parseInt(document.getElementById('mpa').value);
+  const memo=document.getElementById('mpm').value;
+  if(!date||isNaN(amount)||amount<=0){alert('日付と金額を正しく入力してください');return;}
+  if(!e.payHistory)e.payHistory=[];
+  e.payHistory.push({date,amount,memo});
+  e.paid=(e.paid||0)+amount;
+  saveEst(); document.querySelector('.modal-bg').remove(); renderPayments();
+}
+
+// ── 集計 ─────────────────────────────────────────
+function renderDashboard(){
+  const total=estimates.reduce((s,e)=>s+e.total,0);
+  const paid=estimates.reduce((s,e)=>s+(e.paid||0),0);
+  document.getElementById('m-count').textContent=estimates.length+'件';
+  document.getElementById('m-total').textContent='¥'+total.toLocaleString();
+  document.getElementById('m-paid').textContent='¥'+paid.toLocaleString();
+  document.getElementById('m-unpaid').textContent='¥'+(total-paid).toLocaleString();
+  const monthly={};
+  estimates.forEach(e=>{const ym=e.date.substring(0,7);if(!monthly[ym])monthly[ym]={count:0,total:0,paid:0};monthly[ym].count++;monthly[ym].total+=e.total;monthly[ym].paid+=(e.paid||0);});
+  const tbody=document.getElementById('monthly-table');tbody.innerHTML='';
+  Object.keys(monthly).sort().reverse().forEach(ym=>{
+    const m=monthly[ym];const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${ym}</td><td>${m.count}件</td><td>¥${m.total.toLocaleString()}</td><td>¥${m.paid.toLocaleString()}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── 項目マスタ ────────────────────────────────────
+function addMasterItem(){
+  const name=document.getElementById('new-item-name').value.trim();
+  const price=parseInt(document.getElementById('new-item-price').value);
+  if(!name){alert('項目名を入力してください');return;}
+  if(isNaN(price)||price<0){alert('金額を入力してください');return;}
+  itemsMaster.push({id:'m'+Date.now(),name,price});
+  save(); document.getElementById('new-item-name').value=''; document.getElementById('new-item-price').value='';
+  renderMaster(); rebuildSelect();
+}
+function deleteMasterItem(id){
+  if(!confirm('削除しますか？'))return;
+  itemsMaster=itemsMaster.filter(i=>i.id!==id); save(); renderMaster(); rebuildSelect();
+}
+function renderMaster(){
+  const list=document.getElementById('master-list');list.innerHTML='';
+  if(!itemsMaster.length){list.innerHTML='<p style="color:#aaa;font-size:13px;padding:10px 0">項目がありません</p>';return;}
+  itemsMaster.forEach(item=>{
+    const row=document.createElement('div');row.className='master-row';
+    row.innerHTML=`<input class="inline-edit" value="${item.name}" onchange="updateMasterName('${item.id}',this.value)">
+      <input class="inline-edit" type="number" value="${item.price}" style="text-align:right" onchange="updateMasterPrice('${item.id}',this.value)">
+      <button class="btn danger" style="padding:3px 8px;font-size:12px" onclick="deleteMasterItem('${item.id}')">削除</button>`;
+    list.appendChild(row);
+  });
+}
+function updateMasterName(id,v){const i=itemsMaster.find(x=>x.id===id);if(i){i.name=v.trim();save();rebuildSelect();}}
+function updateMasterPrice(id,v){const i=itemsMaster.find(x=>x.id===id);if(i){i.price=parseInt(v)||0;save();rebuildSelect();}}
+
+// ── 印刷 ─────────────────────────────────────────
+function printEstimate(){
+  if(currentItems.length===0){alert('項目がありません');return;}
+  const name=document.getElementById('pt-name').value||'—';
+  const pid=document.getElementById('pt-id').value||'—';
+  const date=document.getElementById('est-date').value;
+  const doc=document.getElementById('pt-doctor').value||'院長　神藤佑亮';
+  const title=document.getElementById('est-title').value||'自費診療 お見積書';
+  const notes=document.getElementById('est-notes').value;
+  const sub=currentItems.reduce((s,i)=>s+i.price*i.qty,0);
+  const tax=Math.round(sub*0.1);
+  const total=sub+tax;
+  const rows=currentItems.map(i=>`<tr>
+    <td>${i.name}</td>
+    <td class="right">¥${Number(i.price).toLocaleString()}</td>
+    <td class="center">${i.qty}</td>
+    <td class="right">¥${(i.price*i.qty).toLocaleString()}</td>
+  </tr>`).join('');
+  const notesHTML=notes?`<div class="print-notes"><div class="print-notes-title">留意事項</div>${notes.replace(/\n/g,'<br>')}</div>`:'';
+  document.getElementById('print-area').innerHTML=`
+    <div class="print-clinic">
+      <div>
+        <div class="print-clinic-name">かんとう歯科クリニック</div>
+        <div class="print-clinic-addr">〒981-4241 宮城県加美郡加美町南町111-3</div>
+      </div>
+      <div class="print-doc">院長　神藤 佑亮<br>発行日：${date}</div>
+    </div>
+    <div class="print-title">御　見　積　書</div>
+    <div class="print-patient-box">
+      <div><span class="label">患者名：</span>${name} 様</div>
+      <div><span class="label">カルテNo：</span>${pid}</div>
+      <div><span class="label">担当医：</span>${doc}</div>
+    </div>
+    <div class="print-treatment-title">${title}</div>
+    <table class="print-table">
+      <thead><tr><th>治療内容</th><th style="text-align:right">単価（税抜）</th><th style="text-align:center">数量</th><th style="text-align:right">金額（税抜）</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="print-totals">
+      <table><tbody>
+        <tr><td class="lbl">小計</td><td>¥${sub.toLocaleString()}</td></tr>
+        <tr><td class="lbl">消費税（10%）</td><td>¥${tax.toLocaleString()}</td></tr>
+        <tr class="grand"><td class="lbl">合計</td><td>¥${total.toLocaleString()}</td></tr>
+      </tbody></table>
+    </div>
+    ${notesHTML}
+    <div class="print-footer">本見積書の有効期限は発行日より3ヶ月です。</div>`;
+  window.print();
+}
+
+// ── 初期化 ────────────────────────────────────────
+document.getElementById('est-date').value=new Date().toISOString().split('T')[0];
+rebuildSelect();
+rebuildNotesChips();
+renderPatients();
+renderTplChips();
+</script>
+</body>
+</html>
