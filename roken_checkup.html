@@ -299,6 +299,17 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     </div>
 
     <div class="card">
+      <h2>衛生指導</h2>
+      <div class="hint">実施した口腔衛生指導・使用を勧めた物品にチェックしてください（複数選択可）</div>
+      <div class="chip-select" id="guidance-chips" style="margin-top:8px">
+        <div class="chip-opt" data-v="sponge">スポンジブラシ</div>
+        <div class="chip-opt" data-v="toothbrush">歯ブラシ</div>
+        <div class="chip-opt" data-v="mouthwash">洗口液</div>
+        <div class="chip-opt" data-v="moisturizer">保湿剤</div>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>特記事項・所見</h2>
       <div class="field"><textarea id="f-notes" placeholder="動揺歯、疼痛の訴え、義歯の不適合、開口障害、誤嚥リスク等、気になった点を記入"></textarea></div>
     </div>
@@ -477,6 +488,7 @@ function newDraft(){
     teeth: blankTeeth(),
     hygiene: null, dryness: null, mucus:'',
     notes:'', judge:null, next:'',
+    guidance: [],
     photos: []
   };
 }
@@ -561,7 +573,7 @@ function renderList(){
       var nd = JSON.parse(JSON.stringify(r));
       nd.id = uid();
       nd.date = todayStr();
-      nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next='';
+      nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next=''; nd.guidance=[];
       nd.photos = []; // 写真は当日撮影分のみを想定し引き継がない
       // keep teeth as-is (前回歯式を引き継いで訪問時に修正)
       showForm(nd);
@@ -588,6 +600,7 @@ function fillForm(r){
   setChoiceCard('hygiene-cards', r.hygiene);
   setChoiceCard('dryness-cards', r.dryness);
   setChip(r.judge);
+  setGuidanceChips(r.guidance);
 
   buildArch('arch-upper', TEETH_UPPER, r.teeth);
   buildArch('arch-lower', TEETH_LOWER, r.teeth);
@@ -982,6 +995,24 @@ document.getElementById('judge-chips').addEventListener('click', function(e){
   var v = chip.getAttribute('data-v');
   draft.judge = (draft.judge===v) ? null : v;
   setChip(draft.judge);
+});
+
+/* ============ 衛生指導（複数選択） ============ */
+var GUIDANCE_LABELS = {sponge:'スポンジブラシ', toothbrush:'歯ブラシ', mouthwash:'洗口液', moisturizer:'保湿剤'};
+function setGuidanceChips(selected){
+  selected = selected || [];
+  Array.prototype.forEach.call(document.getElementById('guidance-chips').children, function(c){
+    c.classList.toggle('sel', selected.indexOf(c.getAttribute('data-v')) > -1);
+  });
+}
+document.getElementById('guidance-chips').addEventListener('click', function(e){
+  var chip = e.target.closest('.chip-opt');
+  if(!chip) return;
+  var v = chip.getAttribute('data-v');
+  if(!draft.guidance) draft.guidance = [];
+  var idx = draft.guidance.indexOf(v);
+  if(idx > -1) draft.guidance.splice(idx, 1); else draft.guidance.push(v);
+  setGuidanceChips(draft.guidance);
 });
 
 /* ============ tooth chart ============ */
@@ -1390,12 +1421,13 @@ document.getElementById('file-import').addEventListener('change', function(e){
   e.target.value = '';
 });
 document.getElementById('btn-csv').addEventListener('click', function(){
-  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数','写真枚数'];
+  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','衛生指導','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数','写真枚数'];
   var rows = records.map(function(r){
     var counts = {sound:0,treated:0,caries:0,missing:0};
     Object.keys(r.teeth||{}).forEach(function(n){ var s=r.teeth[n].status; if(counts[s]!==undefined) counts[s]++; });
+    var guidanceText = (r.guidance||[]).map(function(k){ return GUIDANCE_LABELS[k] || k; }).join('・');
     return [r.facility,r.name,r.kana,r.dob,r.age,genderLabel(r.gender),r.date,r.examiner,r.careLevel,
-      scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,judgeLabel(r.judge),r.next,r.notes,
+      scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,guidanceText,judgeLabel(r.judge),r.next,r.notes,
       counts.sound,counts.treated,counts.caries,counts.missing,(r.photos||[]).length];
   });
   var csv = [header].concat(rows).map(function(row){
