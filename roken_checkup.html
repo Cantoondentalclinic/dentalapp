@@ -32,6 +32,13 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1a73e8}
 .hint{font-size:11.5px;color:#888;line-height:1.6;margin-top:6px}
 
+/* ---- autocomplete（datalistはiOS Safariで候補が出ないことがあるため自前実装） ---- */
+.autocomplete-field{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;z-index:30;background:#fff;border:1px solid rgba(0,0,0,0.15);border-radius:9px;margin-top:4px;max-height:220px;overflow-y:auto;box-shadow:0 8px 20px rgba(0,0,0,0.15)}
+.ac-list .ac-item{padding:9px 12px;font-size:13.5px;cursor:pointer;color:#1a1a1a}
+.ac-list .ac-item:active{background:#eef4fd}
+.ac-list .ac-empty{padding:9px 12px;font-size:12px;color:#999}
+
 /* ---- list view ---- */
 #view-list .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 #view-list .toolbar input{flex:1;min-width:140px}
@@ -169,6 +176,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
         <button class="btn sm" id="btn-import">JSON読み込み</button>
         <input type="file" id="file-import" accept="application/json" hidden>
         <button class="btn sm" id="btn-csv">CSV書き出し</button>
+        <button class="btn sm" id="btn-print-blank">📄 空欄シートを印刷</button>
       </div>
       <div id="record-list"></div>
     </div>
@@ -210,7 +218,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     <div class="card">
       <h2>基本情報</h2>
       <div class="grid c3">
-        <div class="field"><label>施設名</label><input id="f-facility" list="facility-list" placeholder="〇〇老健"></div>
+        <div class="field autocomplete-field"><label>施設名</label><input id="f-facility" autocomplete="off" placeholder="〇〇老健"><div class="ac-list" id="facility-ac-list" hidden></div></div>
         <div class="field"><label>氏名</label><input id="f-name" placeholder="山田 太郎"></div>
         <div class="field"><label>フリガナ</label><input id="f-kana" placeholder="ヤマダ タロウ"></div>
         <div class="field"><label>生年月日</label><input id="f-dob" type="date"></div>
@@ -219,19 +227,17 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
           <select id="f-gender"><option value="">未選択</option><option value="male">男性</option><option value="female">女性</option><option value="other">その他</option></select>
         </div>
         <div class="field"><label>検診日</label><input id="f-date" type="date"></div>
-        <div class="field"><label>検診者</label><input id="f-examiner" list="examiner-list" placeholder="担当歯科医師/歯科衛生士名"></div>
+        <div class="field autocomplete-field"><label>検診者</label><input id="f-examiner" autocomplete="off" placeholder="担当歯科医師/歯科衛生士名"><div class="ac-list" id="examiner-ac-list" hidden></div></div>
         <div class="field"><label>要介護度</label>
           <select id="f-care-level"><option value="">未選択</option><option>自立</option><option>要支援1</option><option>要支援2</option><option>要介護1</option><option>要介護2</option><option>要介護3</option><option>要介護4</option><option>要介護5</option></select>
         </div>
       </div>
-      <datalist id="facility-list"></datalist>
-      <datalist id="examiner-list"></datalist>
     </div>
 
     <div class="card">
       <h2>歯式<span class="badge-req">全32歯</span></h2>
       <div class="hint">
-        <b>タップ</b>＝健全歯／<b>指で○を描く</b>＝処置歯／<b>指でチェック✓を描く</b>＝未処置歯（要治療）／<b>長押し</b>＝欠損・補綴様式などの詳細メニュー
+        <b>右上→左下に斜めになぞる（／）</b>＝健全歯／<b>指で○を描く</b>＝処置歯／<b>指でチェック✓を描く</b>＝未処置歯（要治療）／<b>タップ</b>＝欠損（補綴様式をすぐ選択）／<b>長押し</b>＝詳細メニュー（訂正・未検査に戻す等）
       </div>
       <div class="legend">
         <span class="item"><span class="sym" style="color:#2e7d3b">/</span>健全歯</span>
@@ -568,8 +574,6 @@ function fillForm(r){
   buildArch('arch-lower', TEETH_LOWER, r.teeth);
 
   renderPhotoGrid();
-  refreshFacilityList();
-  refreshExaminerList();
 }
 function readFormBasics(){
   draft.facility = document.getElementById('f-facility').value.trim();
@@ -585,20 +589,39 @@ function readFormBasics(){
   draft.notes = document.getElementById('f-notes').value;
   draft.next = document.getElementById('f-next').value;
 }
-function refreshFacilityList(){
-  var dl = document.getElementById('facility-list');
+/* iOS Safariはdatalistの候補表示に対応が弱いため、自前のドロップダウンで候補を出す */
+function wireAutocomplete(inputId, listId, getOptions){
+  var input = document.getElementById(inputId);
+  var list = document.getElementById(listId);
+  function render(){
+    var q = input.value.trim();
+    var opts = getOptions();
+    if(q) opts = opts.filter(function(n){ return n.indexOf(q) > -1; });
+    if(opts.length === 0){ list.hidden = true; list.innerHTML = ''; return; }
+    list.innerHTML = opts.slice(0, 30).map(function(n){ return '<div class="ac-item">'+esc(n)+'</div>'; }).join('');
+    list.hidden = false;
+  }
+  input.addEventListener('focus', render);
+  input.addEventListener('input', render);
+  input.addEventListener('blur', function(){ setTimeout(function(){ list.hidden = true; }, 150); });
+  list.addEventListener('pointerdown', function(e){
+    var item = e.target.closest('.ac-item');
+    if(!item) return;
+    e.preventDefault();
+    input.value = item.textContent;
+    list.hidden = true;
+  });
+}
+function facilityOptions(){
   var used = records.map(function(r){return r.facility;}).filter(Boolean);
-  var names = Array.from(new Set(master.facilities.concat(used)));
-  names.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
-  dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+  return Array.from(new Set(master.facilities.concat(used))).sort(function(a,b){ return a.localeCompare(b, 'ja'); });
 }
-function refreshExaminerList(){
-  var dl = document.getElementById('examiner-list');
+function examinerOptions(){
   var used = records.map(function(r){return r.examiner;}).filter(Boolean);
-  var names = Array.from(new Set(master.examiners.concat(used)));
-  names.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
-  dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+  return Array.from(new Set(master.examiners.concat(used))).sort(function(a,b){ return a.localeCompare(b, 'ja'); });
 }
+wireAutocomplete('f-facility', 'facility-ac-list', facilityOptions);
+wireAutocomplete('f-examiner', 'examiner-ac-list', examinerOptions);
 
 /* ============ master data（施設名・検診者の事前登録） ============ */
 function addMasterItem(kind, value){
@@ -629,8 +652,6 @@ function renderMasterList(kind, containerId){
     btn.addEventListener('click', function(){
       removeMasterItem(kind, btn.getAttribute('data-v'));
       renderMasterList(kind, containerId);
-      refreshFacilityList();
-      refreshExaminerList();
     });
   });
 }
@@ -640,8 +661,6 @@ function wireMasterAdd(kind, inputId, btnId, listContainerId){
     if(addMasterItem(kind, input.value)){
       input.value = '';
       renderMasterList(kind, listContainerId);
-      refreshFacilityList();
-      refreshExaminerList();
     }
   }
   document.getElementById(btnId).addEventListener('click', doAdd);
@@ -708,8 +727,6 @@ function wireMasterFileImport(kind, fileInputId, listContainerId){
       var added = 0;
       values.forEach(function(v){ if(addMasterItem(kind, v)) added++; });
       renderMasterList(kind, listContainerId);
-      refreshFacilityList();
-      refreshExaminerList();
       toast(added + '件を登録しました（'+(values.length-added)+'件は重複または空欄のためスキップ）');
     }).catch(function(err){
       toast('読み込みに失敗しました：' + (err && err.message ? err.message : 'ファイル形式を確認してください'));
@@ -935,7 +952,7 @@ function wireToothGestures(cell, num){
     clearTimeout(GESTURE.longpressTimer);
     GESTURE.pts.push({x:e.clientX,y:e.clientY,t:Date.now()});
     var gesture = classifyGesture(GESTURE.pts);
-    applyGesture(num, gesture);
+    applyGesture(num, gesture, cell);
     endGesture(true);
   });
   cell.addEventListener('pointercancel', function(){ endGesture(false); });
@@ -948,15 +965,17 @@ function endGesture(){
   GESTURE.toothNum = null;
   GESTURE.cell = null;
 }
-function applyGesture(num, g){
+function applyGesture(num, g, cell){
   if(g === 'tap'){
+    openProsthQuickPicker(cell, num);
+  }else if(g === 'diagonal'){
     setToothStatus(num, 'sound');
   }else if(g === 'circle'){
     setToothStatus(num, 'treated');
   }else if(g === 'check'){
     setToothStatus(num, 'caries');
   }else{
-    toast('認識できませんでした。○(処置歯)／✓(未処置歯)を描くか、長押しでメニューを開いてください');
+    toast('認識できませんでした。健全歯は右上→左下に斜め、処置歯は○、未処置歯はチェックを描いてください。欠損はタップ、詳細メニューは長押しです');
   }
 }
 
@@ -995,6 +1014,11 @@ function classifyGesture(pts){
   var isClosed = dEnds < diag*0.6;
   if(Math.abs(totalRot) > 4.5 && isClosed) return 'circle'; // ~258°+ of rotation and roughly closed loop
 
+  // --- diagonal slash test（健全歯 "/"）: 右上→左下へのほぼ直線の動き ---
+  var dx = last.x - first.x, dy = last.y - first.y;
+  var straightness = dEnds / totalLen; // 1に近いほど直線的
+  if(dx < -TAP_MOVE_LIMIT && dy > TAP_MOVE_LIMIT && straightness > 0.75) return 'diagonal';
+
   // --- checkmark test: down-stroke then longer up-right stroke ---
   var viIdx = 0, maxY2 = -Infinity;
   pts.forEach(function(p,idx){ if(p.y > maxY2){ maxY2 = p.y; viIdx = idx; } });
@@ -1013,6 +1037,42 @@ function classifyGesture(pts){
 }
 
 /* ---- long-press full menu ---- */
+/* タップ操作＝欠損。補綴様式（なし／ブリッジ／部分床義歯／全部床義歯／インプラント）をその場ですぐ選ばせる */
+function openProsthQuickPicker(cell, num){
+  closePopover();
+  var po = document.createElement('div');
+  po.className = 'popover';
+  po.innerHTML =
+    '<div class="po-head">歯番 '+num+'：欠損の補綴様式</div>'+
+    Object.keys(PROSTH_LABEL).map(function(k){
+      return '<button data-prosth="'+k+'"><span class="ic" style="color:#777">'+(k==='none'?'△':'○△')+'</span>'+PROSTH_LABEL[k]+'</button>';
+    }).join('')+
+    '<div class="sep"></div>'+
+    '<button data-detail="1"><span class="ic">…</span>他の状態を選ぶ（詳細メニュー）</button>';
+
+  document.body.appendChild(po);
+  var overlay = document.createElement('div');
+  overlay.className = 'overlay-catch';
+  document.body.insertBefore(overlay, po);
+
+  var rect = cell.getBoundingClientRect();
+  positionPopover(po, rect);
+
+  openPopover = { el: po, overlay: overlay };
+  overlay.addEventListener('pointerdown', closePopover);
+
+  po.addEventListener('click', function(e){
+    var prosthBtn = e.target.closest('[data-prosth]');
+    var detailBtn = e.target.closest('[data-detail]');
+    if(prosthBtn){
+      setToothStatus(num, 'missing', prosthBtn.getAttribute('data-prosth'));
+      closePopover();
+    }else if(detailBtn){
+      closePopover();
+      openToothMenu(cell, num);
+    }
+  });
+}
 function openToothMenu(cell, num){
   closePopover();
   var st = draft.teeth[num];
@@ -1121,6 +1181,10 @@ document.getElementById('btn-delete').addEventListener('click', function(){
 document.getElementById('btn-print').addEventListener('click', function(){
   readFormBasics();
   window.print();
+});
+document.getElementById('btn-print-blank').addEventListener('click', function(){
+  showForm(newDraft());
+  setTimeout(function(){ window.print(); }, 50);
 });
 
 /* ============ nav ============ */
