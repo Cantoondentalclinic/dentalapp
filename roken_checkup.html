@@ -149,6 +149,9 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
   .popover,.overlay-catch,.toast,.lightbox{display:none!important}
   .photo-item .cap{border:none;background:transparent;padding:2px 0}
   .photo-grid{grid-template-columns:repeat(4,1fr)}
+  /* 入力例（プレースホルダー）は印刷時に薄文字で残ってしまうため非表示にし、完全な空欄にする */
+  input::placeholder,textarea::placeholder{color:transparent!important}
+  .ac-list{display:none!important}
 }
 </style>
 </head>
@@ -1313,7 +1316,10 @@ document.getElementById('btn-print').addEventListener('click', function(){
   window.print();
 });
 document.getElementById('btn-print-blank').addEventListener('click', function(){
-  showForm(newDraft());
+  var d = newDraft();
+  d.date = ''; // 空欄シートは検診日も手書き運用のため空欄にする
+  showForm(d);
+  document.getElementById('f-date').value = '';
   setTimeout(function(){ window.print(); }, 50);
 });
 
