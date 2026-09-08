@@ -108,15 +108,40 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.9);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:20px;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
 
+/* ---- photos ---- */
+.photo-hint{font-size:11.5px;color:#888;line-height:1.6;margin-bottom:8px}
+.photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+.photo-item{position:relative;border:1px solid rgba(0,0,0,0.1);border-radius:10px;overflow:hidden;background:#fafafa}
+.photo-item img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;cursor:zoom-in;background:#eee}
+.photo-item .cap{width:100%;font-size:11px;padding:5px 6px;border:none;border-top:1px solid rgba(0,0,0,0.08);background:#fff;color:#1a1a1a}
+.photo-item .cap:focus{outline:none;background:#f5f9ff}
+.photo-item .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;font-size:13px;line-height:22px;text-align:center;cursor:pointer;padding:0}
+.photo-empty{font-size:12px;color:#999;padding:6px 2px}
+.photo-count{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#888;margin-left:6px}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px}
+.lightbox img{max-width:100%;max-height:100%;border-radius:8px}
+.lightbox .close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);color:#fff;border:none;font-size:18px;cursor:pointer}
+
+/* ---- master data (facility / examiner) ---- */
+.master-add{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.master-add input[type=text]{flex:1;min-width:160px;font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid rgba(0,0,0,0.2);border-radius:9px;background:#fff;color:#1a1a1a}
+.master-add input[type=text]:focus{outline:none;border-color:#1a73e8}
+.master-list{display:flex;flex-wrap:wrap;gap:8px}
+.master-chip{display:inline-flex;align-items:center;gap:6px;background:#f5f5f3;border:1px solid rgba(0,0,0,0.1);border-radius:20px;padding:5px 6px 5px 12px;font-size:13px}
+.master-chip button{border:none;background:rgba(0,0,0,0.08);color:#666;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:18px;text-align:center;padding:0}
+
 [hidden]{display:none!important}
 
 @media print{
-  header.top,.no-print,#view-list{display:none!important}
+  header.top,.no-print,#view-list,#view-settings{display:none!important}
   body{background:#fff}
   .app{max-width:none;padding:0}
   .card{border:none;box-shadow:none;padding:6px 0;margin:0;break-inside:avoid}
   .tooth{box-shadow:none}
-  .popover,.overlay-catch,.toast{display:none!important}
+  .popover,.overlay-catch,.toast,.lightbox{display:none!important}
+  .photo-item .cap{border:none;background:transparent;padding:2px 0}
+  .photo-grid{grid-template-columns:repeat(4,1fr)}
 }
 </style>
 </head>
@@ -127,6 +152,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     <div class="sub" id="header-sub">検診対象者一覧</div>
   </div>
   <div style="display:flex;gap:8px">
+    <button class="btn no-print" id="btn-settings">⚙ 施設・検診者の登録</button>
     <button class="btn no-print" id="btn-back" hidden>← 一覧へ</button>
     <button class="btn primary no-print" id="btn-new">＋ 新規健診</button>
   </div>
@@ -148,6 +174,36 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     </div>
   </section>
 
+  <!-- ===== settings view ===== -->
+  <section id="view-settings" hidden>
+    <div class="card">
+      <h2>施設名マスタ</h2>
+      <div class="hint">あらかじめ訪問先の施設名を登録しておくと、健診表の「施設名」欄で候補として選択できるようになります。</div>
+      <div class="master-add no-print" style="margin-top:10px">
+        <input type="text" id="facility-master-input" placeholder="施設名を入力してEnterまたは追加">
+        <button class="btn sm" id="facility-master-add">追加</button>
+        <label class="btn sm" for="facility-master-file">📄 ファイルから一括登録</label>
+        <input type="file" id="facility-master-file" accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <div class="hint" style="margin-top:0">CSV／Excelファイルの場合、1列目に施設名を1行ずつ入力したものをご用意ください（見出し行があっても構いません）。</div>
+      <div style="height:8px"></div>
+      <div class="master-list" id="facility-master-list"></div>
+    </div>
+    <div class="card">
+      <h2>検診者マスタ</h2>
+      <div class="hint">担当する歯科医師・歯科衛生士の氏名を登録しておくと、健診表の「検診者」欄で候補として選択できるようになります。</div>
+      <div class="master-add no-print" style="margin-top:10px">
+        <input type="text" id="examiner-master-input" placeholder="氏名を入力してEnterまたは追加">
+        <button class="btn sm" id="examiner-master-add">追加</button>
+        <label class="btn sm" for="examiner-master-file">📄 ファイルから一括登録</label>
+        <input type="file" id="examiner-master-file" accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <div class="hint" style="margin-top:0">CSV／Excelファイルの場合、1列目に氏名を1行ずつ入力したものをご用意ください（見出し行があっても構いません）。</div>
+      <div style="height:8px"></div>
+      <div class="master-list" id="examiner-master-list"></div>
+    </div>
+  </section>
+
   <!-- ===== form view ===== -->
   <section id="view-form" hidden>
 
@@ -163,12 +219,13 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
           <select id="f-gender"><option value="">未選択</option><option value="male">男性</option><option value="female">女性</option><option value="other">その他</option></select>
         </div>
         <div class="field"><label>検診日</label><input id="f-date" type="date"></div>
-        <div class="field"><label>検診者</label><input id="f-examiner" placeholder="担当歯科医師/歯科衛生士名"></div>
+        <div class="field"><label>検診者</label><input id="f-examiner" list="examiner-list" placeholder="担当歯科医師/歯科衛生士名"></div>
         <div class="field"><label>要介護度</label>
           <select id="f-care-level"><option value="">未選択</option><option>自立</option><option>要支援1</option><option>要支援2</option><option>要介護1</option><option>要介護2</option><option>要介護3</option><option>要介護4</option><option>要介護5</option></select>
         </div>
       </div>
       <datalist id="facility-list"></datalist>
+      <datalist id="examiner-list"></datalist>
     </div>
 
     <div class="card">
@@ -224,6 +281,18 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     </div>
 
     <div class="card">
+      <h2>写真</h2>
+      <div class="photo-hint">タブレットのカメラで直接撮影するか、既存の写真（PCのWebカメラで撮った画像等）を選択して添付できます。口腔内・義歯・気になる部位の記録に。</div>
+      <div class="photo-actions no-print">
+        <label class="btn sm" for="photo-camera-input">📷 写真を撮る</label>
+        <input type="file" id="photo-camera-input" accept="image/*" capture="environment" hidden>
+        <label class="btn sm" for="photo-file-input">🖼 写真を選択</label>
+        <input type="file" id="photo-file-input" accept="image/*" multiple hidden>
+      </div>
+      <div class="photo-grid" id="photo-grid"></div>
+    </div>
+
+    <div class="card">
       <h2>総合判定</h2>
       <div class="chip-select" id="judge-chips">
         <div class="chip-opt" data-v="ok">経過観察不要</div>
@@ -252,6 +321,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 
 /* ============ constants ============ */
 var STORE_KEY = "roken_dental_checkup_v1";
+var MASTER_KEY = "roken_dental_master_v1";
 var TEETH_UPPER = [18,17,16,15,14,13,12,11, 21,22,23,24,25,26,27,28];
 var TEETH_LOWER = [48,47,46,45,44,43,42,41, 31,32,33,34,35,36,37,38];
 var PROSTH_LABEL = {none:"補綴なし", bridge:"ブリッジ", partial:"部分床義歯", full:"全部床義歯", implant:"インプラント"};
@@ -261,6 +331,7 @@ var PROSTH_ABBR = {none:"欠", bridge:"ブ", partial:"部", full:"総", implant:
 var records = [];
 var draft = null;       // current form's working record
 var openPopover = null; // {el, toothNum}
+var master = { facilities: [], examiners: [] }; // 施設名・検診者マスタ
 
 /* ============ storage ============ */
 function load(){
@@ -272,6 +343,90 @@ function load(){
 function persist(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
   catch(e){ toast("保存に失敗しました（ストレージ容量超過の可能性）"); }
+}
+function loadMaster(){
+  try{
+    var raw = localStorage.getItem(MASTER_KEY);
+    master = raw ? JSON.parse(raw) : {facilities:[], examiners:[]};
+  }catch(e){ master = {facilities:[], examiners:[]}; }
+  if(!Array.isArray(master.facilities)) master.facilities = [];
+  if(!Array.isArray(master.examiners)) master.examiners = [];
+}
+function persistMaster(){
+  try{ localStorage.setItem(MASTER_KEY, JSON.stringify(master)); }
+  catch(e){ toast("登録内容の保存に失敗しました"); }
+}
+
+/* ============ photo storage (IndexedDB — 写真本体はlocalStorageの容量上限を避けるためこちらに保存) ============ */
+var PHOTO_DB_NAME = "roken_dental_photos_v1";
+var PHOTO_STORE = "photos";
+var _photoDbPromise = null;
+function openPhotoDb(){
+  if(_photoDbPromise) return _photoDbPromise;
+  _photoDbPromise = new Promise(function(resolve, reject){
+    if(!window.indexedDB){ reject(new Error('IndexedDB unsupported')); return; }
+    var req = indexedDB.open(PHOTO_DB_NAME, 1);
+    req.onupgradeneeded = function(e){
+      var db = e.target.result;
+      if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE, {keyPath:'id'});
+    };
+    req.onsuccess = function(e){ resolve(e.target.result); };
+    req.onerror = function(e){ reject(e.target.error); };
+  });
+  return _photoDbPromise;
+}
+function savePhotoRecord(photo){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(PHOTO_STORE, 'readwrite');
+      tx.objectStore(PHOTO_STORE).put(photo);
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(){ reject(tx.error); };
+    });
+  });
+}
+function getPhotoRecord(id){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(PHOTO_STORE, 'readonly');
+      var req = tx.objectStore(PHOTO_STORE).get(id);
+      req.onsuccess = function(){ resolve(req.result || null); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  });
+}
+function deletePhotoRecord(id){
+  return openPhotoDb().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(PHOTO_STORE, 'readwrite');
+      tx.objectStore(PHOTO_STORE).delete(id);
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(){ reject(tx.error); };
+    });
+  }).catch(function(){});
+}
+/* 画像を長辺1280pxに縮小しJPEG圧縮してからDataURL化（IndexedDBの肥大化・保存失敗を防ぐため） */
+function fileToCompressedDataUrl(file){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var maxDim = 1280;
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = function(){ reject(new Error('image decode failed')); };
+      img.src = reader.result;
+    };
+    reader.onerror = function(){ reject(reader.error); };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ============ helpers ============ */
@@ -297,7 +452,8 @@ function newDraft(){
     date: todayStr(), examiner:'', careLevel:'',
     teeth: blankTeeth(),
     hygiene: null, dryness: null, mucus:'',
-    notes:'', judge:null, next:''
+    notes:'', judge:null, next:'',
+    photos: []
   };
 }
 
@@ -305,18 +461,34 @@ function newDraft(){
 function showList(){
   document.getElementById('view-list').hidden = false;
   document.getElementById('view-form').hidden = true;
+  document.getElementById('view-settings').hidden = true;
   document.getElementById('btn-back').hidden = true;
   document.getElementById('btn-new').hidden = false;
+  document.getElementById('btn-settings').hidden = false;
   document.getElementById('header-sub').textContent = '検診対象者一覧';
   closePopover();
   renderList();
 }
+function showSettings(){
+  document.getElementById('view-list').hidden = true;
+  document.getElementById('view-form').hidden = true;
+  document.getElementById('view-settings').hidden = false;
+  document.getElementById('btn-back').hidden = false;
+  document.getElementById('btn-new').hidden = true;
+  document.getElementById('btn-settings').hidden = true;
+  document.getElementById('header-sub').textContent = '施設・検診者マスタ設定';
+  closePopover();
+  renderMasterList('facilities', 'facility-master-list');
+  renderMasterList('examiners', 'examiner-master-list');
+}
 function showForm(rec){
   draft = rec;
   document.getElementById('view-list').hidden = true;
+  document.getElementById('view-settings').hidden = true;
   document.getElementById('view-form').hidden = false;
   document.getElementById('btn-back').hidden = false;
   document.getElementById('btn-new').hidden = true;
+  document.getElementById('btn-settings').hidden = true;
   document.getElementById('header-sub').textContent = (rec.name || '氏名未入力') + ' の健診記録';
   document.getElementById('btn-delete').hidden = !recordExists(rec.id);
   fillForm(rec);
@@ -339,10 +511,11 @@ function renderList(){
   }
   el.innerHTML = list.map(function(r){
     var judgeChip = r.judge ? '<span class="judge-chip ' + r.judge + '">' + judgeLabel(r.judge) + '</span>' : '';
+    var photoChip = (r.photos && r.photos.length) ? '<span class="photo-count">📷'+r.photos.length+'</span>' : '';
     return '<div class="record-row" data-id="'+r.id+'">'+
       '<div class="record-main">'+
         '<div class="name">'+esc(r.name||'（氏名未入力）')+judgeChip+'</div>'+
-        '<div class="meta">'+esc(r.facility||'施設未入力')+' ・ '+esc(r.date||'')+'</div>'+
+        '<div class="meta">'+esc(r.facility||'施設未入力')+' ・ '+esc(r.date||'')+photoChip+'</div>'+
       '</div>'+
       '<div class="record-actions">'+
         '<button class="btn sm" data-act="dup">再検診</button>'+
@@ -364,6 +537,7 @@ function renderList(){
       nd.id = uid();
       nd.date = todayStr();
       nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next='';
+      nd.photos = []; // 写真は当日撮影分のみを想定し引き継がない
       // keep teeth as-is (前回歯式を引き継いで訪問時に修正)
       showForm(nd);
     });
@@ -393,7 +567,9 @@ function fillForm(r){
   buildArch('arch-upper', TEETH_UPPER, r.teeth);
   buildArch('arch-lower', TEETH_LOWER, r.teeth);
 
+  renderPhotoGrid();
   refreshFacilityList();
+  refreshExaminerList();
 }
 function readFormBasics(){
   draft.facility = document.getElementById('f-facility').value.trim();
@@ -411,8 +587,205 @@ function readFormBasics(){
 }
 function refreshFacilityList(){
   var dl = document.getElementById('facility-list');
-  var names = Array.from(new Set(records.map(function(r){return r.facility;}).filter(Boolean)));
+  var used = records.map(function(r){return r.facility;}).filter(Boolean);
+  var names = Array.from(new Set(master.facilities.concat(used)));
+  names.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
   dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+}
+function refreshExaminerList(){
+  var dl = document.getElementById('examiner-list');
+  var used = records.map(function(r){return r.examiner;}).filter(Boolean);
+  var names = Array.from(new Set(master.examiners.concat(used)));
+  names.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+  dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+}
+
+/* ============ master data（施設名・検診者の事前登録） ============ */
+function addMasterItem(kind, value){
+  value = (value||'').trim();
+  if(!value) return false;
+  var arr = master[kind];
+  if(arr.indexOf(value) > -1) return false;
+  arr.push(value);
+  arr.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+  persistMaster();
+  return true;
+}
+function removeMasterItem(kind, value){
+  master[kind] = master[kind].filter(function(v){ return v!==value; });
+  persistMaster();
+}
+function renderMasterList(kind, containerId){
+  var box = document.getElementById(containerId);
+  var arr = master[kind];
+  if(arr.length===0){
+    box.innerHTML = '<div class="photo-empty">まだ登録がありません</div>';
+    return;
+  }
+  box.innerHTML = arr.map(function(v){
+    return '<span class="master-chip">'+esc(v)+'<button type="button" data-v="'+esc(v)+'" title="削除">×</button></span>';
+  }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('button'), function(btn){
+    btn.addEventListener('click', function(){
+      removeMasterItem(kind, btn.getAttribute('data-v'));
+      renderMasterList(kind, containerId);
+      refreshFacilityList();
+      refreshExaminerList();
+    });
+  });
+}
+function wireMasterAdd(kind, inputId, btnId, listContainerId){
+  var input = document.getElementById(inputId);
+  function doAdd(){
+    if(addMasterItem(kind, input.value)){
+      input.value = '';
+      renderMasterList(kind, listContainerId);
+      refreshFacilityList();
+      refreshExaminerList();
+    }
+  }
+  document.getElementById(btnId).addEventListener('click', doAdd);
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); doAdd(); }
+  });
+}
+
+/* CSV / Excel ファイルから一覧を読み込む（1列目の値を1行ずつ登録） */
+var HEADER_WORDS = ['施設名','施設','氏名','名前','検診者','name','facility','examiner'];
+var _xlsxLoadPromise = null;
+function ensureXlsxLib(){
+  if(window.XLSX) return Promise.resolve();
+  if(_xlsxLoadPromise) return _xlsxLoadPromise;
+  _xlsxLoadPromise = new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('Excel読み込み機能の取得に失敗しました（インターネット接続をご確認のうえ、CSVファイルでお試しください）')); };
+    document.head.appendChild(s);
+  });
+  return _xlsxLoadPromise;
+}
+function extractNamesFromRows(rows){
+  var out = [];
+  rows.forEach(function(row, idx){
+    var v = (row && row[0] != null) ? String(row[0]).trim() : '';
+    if(!v) return;
+    if(idx===0 && HEADER_WORDS.indexOf(v) > -1) return;
+    out.push(v);
+  });
+  return out;
+}
+function extractNamesFromText(text){
+  var rows = text.replace(/^﻿/, '').split(/\r\n|\r|\n/).map(function(line){ return line.split(','); });
+  return extractNamesFromRows(rows);
+}
+function parseListFile(file){
+  var name = (file.name||'').toLowerCase();
+  if(name.endsWith('.xlsx') || name.endsWith('.xls')){
+    return ensureXlsxLib().then(function(){
+      return file.arrayBuffer().then(function(buf){
+        var wb = XLSX.read(buf, {type:'array'});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+        return extractNamesFromRows(rows);
+      });
+    });
+  }
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){ resolve(extractNamesFromText(String(reader.result))); };
+    reader.onerror = function(){ reject(reader.error); };
+    reader.readAsText(file);
+  });
+}
+function wireMasterFileImport(kind, fileInputId, listContainerId){
+  document.getElementById(fileInputId).addEventListener('change', function(e){
+    var file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    toast('読み込み中…');
+    parseListFile(file).then(function(values){
+      var added = 0;
+      values.forEach(function(v){ if(addMasterItem(kind, v)) added++; });
+      renderMasterList(kind, listContainerId);
+      refreshFacilityList();
+      refreshExaminerList();
+      toast(added + '件を登録しました（'+(values.length-added)+'件は重複または空欄のためスキップ）');
+    }).catch(function(err){
+      toast('読み込みに失敗しました：' + (err && err.message ? err.message : 'ファイル形式を確認してください'));
+    });
+  });
+}
+wireMasterAdd('facilities', 'facility-master-input', 'facility-master-add', 'facility-master-list');
+wireMasterAdd('examiners', 'examiner-master-input', 'examiner-master-add', 'examiner-master-list');
+wireMasterFileImport('facilities', 'facility-master-file', 'facility-master-list');
+wireMasterFileImport('examiners', 'examiner-master-file', 'examiner-master-list');
+
+/* ============ photos ============ */
+function renderPhotoGrid(){
+  if(!draft.photos) draft.photos = [];
+  var box = document.getElementById('photo-grid');
+  if(draft.photos.length===0){
+    box.innerHTML = '<div class="photo-empty">まだ写真がありません</div>';
+    return;
+  }
+  box.innerHTML = '';
+  draft.photos.forEach(function(p){
+    var item = document.createElement('div');
+    item.className = 'photo-item';
+    item.innerHTML =
+      '<img data-id="'+p.id+'" alt="健診写真">'+
+      '<button type="button" class="del no-print" data-id="'+p.id+'" title="削除">×</button>'+
+      '<input type="text" class="cap" data-id="'+p.id+'" placeholder="部位・メモ" value="'+esc(p.caption||'')+'">';
+    box.appendChild(item);
+    var imgEl = item.querySelector('img');
+    getPhotoRecord(p.id).then(function(rec){
+      if(rec) imgEl.src = rec.dataUrl;
+    });
+    imgEl.addEventListener('click', function(){
+      if(imgEl.src) openLightbox(imgEl.src);
+    });
+    item.querySelector('.del').addEventListener('click', function(){
+      if(!confirm('この写真を削除しますか？')) return;
+      draft.photos = draft.photos.filter(function(x){ return x.id!==p.id; });
+      deletePhotoRecord(p.id);
+      renderPhotoGrid();
+    });
+    item.querySelector('.cap').addEventListener('input', function(e){
+      p.caption = e.target.value;
+    });
+  });
+}
+function addPhotosFromFiles(files){
+  files = Array.prototype.slice.call(files || []);
+  if(!files.length) return;
+  if(!draft.photos) draft.photos = [];
+  Promise.all(files.map(function(file){
+    return fileToCompressedDataUrl(file).then(function(dataUrl){
+      var id = uid();
+      return savePhotoRecord({id:id, recordId:draft.id, dataUrl:dataUrl, createdAt:Date.now()}).then(function(){
+        draft.photos.push({id:id, caption:''});
+      });
+    }).catch(function(){ toast('写真の読み込みに失敗しました'); });
+  })).then(function(){
+    renderPhotoGrid();
+    toast(files.length+'枚の写真を追加しました');
+  });
+}
+document.getElementById('photo-camera-input').addEventListener('change', function(e){
+  addPhotosFromFiles(e.target.files);
+  e.target.value = '';
+});
+document.getElementById('photo-file-input').addEventListener('change', function(e){
+  addPhotosFromFiles(e.target.files);
+  e.target.value = '';
+});
+function openLightbox(src){
+  var lb = document.createElement('div');
+  lb.className = 'lightbox no-print';
+  lb.innerHTML = '<button type="button" class="close">×</button><img src="'+src+'">';
+  document.body.appendChild(lb);
+  lb.addEventListener('click', function(){ lb.remove(); });
 }
 
 /* age auto-calc from dob */
@@ -740,6 +1113,7 @@ document.getElementById('btn-save').addEventListener('click', function(){
 });
 document.getElementById('btn-delete').addEventListener('click', function(){
   if(!confirm('この健診記録を削除します。よろしいですか？')) return;
+  (draft.photos||[]).forEach(function(p){ deletePhotoRecord(p.id); });
   records = records.filter(function(r){return r.id!==draft.id;});
   persist();
   showList();
@@ -751,19 +1125,34 @@ document.getElementById('btn-print').addEventListener('click', function(){
 
 /* ============ nav ============ */
 document.getElementById('btn-new').addEventListener('click', function(){ showForm(newDraft()); });
+document.getElementById('btn-settings').addEventListener('click', function(){ showSettings(); });
 document.getElementById('btn-back').addEventListener('click', function(){
-  readFormBasics();
+  if(!document.getElementById('view-form').hidden) readFormBasics();
   showList();
 });
 document.getElementById('search').addEventListener('input', renderList);
 
-/* ============ import / export ============ */
+/* ============ import / export（写真も含めて自己完結したバックアップにする） ============ */
 document.getElementById('btn-export').addEventListener('click', function(){
-  var blob = new Blob([JSON.stringify(records, null, 2)], {type:'application/json'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'roken_dental_checkup_' + todayStr() + '.json';
-  document.body.appendChild(a); a.click(); a.remove();
+  toast('書き出し中…');
+  var clone = JSON.parse(JSON.stringify(records));
+  var photoIds = [];
+  clone.forEach(function(r){ (r.photos||[]).forEach(function(p){ photoIds.push(p.id); }); });
+  Promise.all(photoIds.map(function(id){
+    return getPhotoRecord(id).then(function(rec){ return {id:id, dataUrl: rec ? rec.dataUrl : null}; });
+  })).then(function(list){
+    var byId = {};
+    list.forEach(function(x){ byId[x.id] = x.dataUrl; });
+    clone.forEach(function(r){
+      (r.photos||[]).forEach(function(p){ p.dataUrl = byId[p.id] || null; });
+    });
+    var blob = new Blob([JSON.stringify(clone, null, 2)], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'roken_dental_checkup_' + todayStr() + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('書き出しが完了しました（写真を含む）');
+  });
 });
 document.getElementById('btn-import').addEventListener('click', function(){
   document.getElementById('file-import').click();
@@ -776,28 +1165,38 @@ document.getElementById('file-import').addEventListener('change', function(e){
     try{
       var data = JSON.parse(reader.result);
       if(!Array.isArray(data)) throw new Error('bad format');
-      var merged = records.slice();
+      var savePromises = [];
       data.forEach(function(rec){
-        if(!rec.id || merged.some(function(r){return r.id===rec.id;})) rec.id = uid();
-        merged.push(rec);
+        if(!rec.id || records.some(function(r){return r.id===rec.id;})) rec.id = uid();
+        (rec.photos||[]).forEach(function(p){
+          var newId = uid();
+          var dataUrl = p.dataUrl;
+          if(dataUrl){
+            savePromises.push(savePhotoRecord({id:newId, recordId:rec.id, dataUrl:dataUrl, createdAt:Date.now()}));
+          }
+          p.id = newId;
+          delete p.dataUrl; // localStorage側のrecordsには本体を持たせない
+        });
       });
-      records = merged;
-      persist();
-      renderList();
-      toast(data.length + '件のデータを読み込みました');
+      Promise.all(savePromises).then(function(){
+        records = records.concat(data);
+        persist();
+        renderList();
+        toast(data.length + '件のデータを読み込みました');
+      });
     }catch(err){ toast('読み込みに失敗しました：ファイル形式を確認してください'); }
   };
   reader.readAsText(file);
   e.target.value = '';
 });
 document.getElementById('btn-csv').addEventListener('click', function(){
-  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数'];
+  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数','写真枚数'];
   var rows = records.map(function(r){
     var counts = {sound:0,treated:0,caries:0,missing:0};
     Object.keys(r.teeth||{}).forEach(function(n){ var s=r.teeth[n].status; if(counts[s]!==undefined) counts[s]++; });
     return [r.facility,r.name,r.kana,r.dob,r.age,genderLabel(r.gender),r.date,r.examiner,r.careLevel,
       scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,judgeLabel(r.judge),r.next,r.notes,
-      counts.sound,counts.treated,counts.caries,counts.missing];
+      counts.sound,counts.treated,counts.caries,counts.missing,(r.photos||[]).length];
   });
   var csv = [header].concat(rows).map(function(row){
     return row.map(function(v){
@@ -816,6 +1215,7 @@ function scoreLabel(v){ return v==null? '' : (v+ (v===0?'（良好）':v===1?'�
 
 /* ============ init ============ */
 load();
+loadMaster();
 wireChoiceCards('hygiene-cards', 'hygiene');
 wireChoiceCards('dryness-cards', 'dryness');
 showList();
