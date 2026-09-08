@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>老健訪問歯科健診表</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#f2f3f5;touch-action:manipulation}
+.app{max-width:980px;margin:0 auto;padding:10px 10px 60px}
+header.top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid rgba(0,0,0,0.1);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+header.top h1{font-size:16px;font-weight:600}
+header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
+.btn{font-family:inherit;font-size:13px;padding:8px 14px;border:1px solid rgba(0,0,0,0.18);border-radius:9px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap}
+.btn:active{background:#eee}
+.btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8;font-weight:600}
+.btn.primary:active{background:#1560c2}
+.btn.danger{background:#fce8e6;color:#c5221f;border-color:rgba(197,34,31,0.3)}
+.btn.ghost{background:transparent;border-color:transparent;color:#1a73e8}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.card{background:#fff;border:1px solid rgba(0,0,0,0.08);border-radius:14px;padding:16px;margin-bottom:12px}
+.card h2{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card h2 .badge-req{font-size:10px;background:#fce8e6;color:#c5221f;padding:1px 6px;border-radius:10px;font-weight:500}
+.grid{display:grid;gap:10px}
+.grid.c2{grid-template-columns:1fr 1fr}
+.grid.c3{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:560px){.grid.c2,.grid.c3{grid-template-columns:1fr 1fr}}
+.field label{display:block;font-size:11.5px;color:#777;margin-bottom:3px}
+.field input,.field select,.field textarea{font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid rgba(0,0,0,0.2);border-radius:9px;background:#fff;width:100%;color:#1a1a1a}
+.field textarea{resize:vertical;line-height:1.6;min-height:56px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1a73e8}
+.hint{font-size:11.5px;color:#888;line-height:1.6;margin-top:6px}
+
+/* ---- list view ---- */
+#view-list .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+#view-list .toolbar input{flex:1;min-width:140px}
+.record-row{display:flex;align-items:center;justify-content:space-between;padding:12px 6px;border-bottom:1px solid rgba(0,0,0,0.06);gap:10px}
+.record-row:last-child{border-bottom:none}
+.record-main{flex:1;min-width:0}
+.record-main .name{font-size:14.5px;font-weight:600}
+.record-main .meta{font-size:12px;color:#888;margin-top:2px}
+.record-actions{display:flex;gap:6px;flex-shrink:0}
+.judge-chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin-left:6px}
+.judge-chip.ok{background:#e6f4ea;color:#137333}
+.judge-chip.watch{background:#fef7e0;color:#b06000}
+.judge-chip.refer{background:#fce8e6;color:#c5221f}
+.empty{text-align:center;color:#999;padding:40px 10px;font-size:13px}
+
+/* ---- legend ---- */
+.legend{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:12px;color:#555;margin-top:6px}
+.legend .item{display:flex;align-items:center;gap:6px}
+.legend .sym{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;border:1px solid rgba(0,0,0,0.15);font-weight:700;font-size:12px;background:#fff}
+
+/* ---- tooth chart ---- */
+.chart-wrap{overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+.arch{display:inline-flex;gap:3px;padding:4px;position:relative}
+.arch.lower{margin-top:6px}
+.quad-gap{width:8px;border-left:1.5px dashed #bbb;margin:0 2px}
+.tooth{width:42px;height:56px;flex-shrink:0;border:1.5px solid #ccc;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:#fafafa;user-select:none;touch-action:none;cursor:pointer}
+.tooth .num{position:absolute;bottom:2px;font-size:8.5px;color:#aaa;left:0;right:0;text-align:center}
+.tooth .sym{font-size:19px;font-weight:700;line-height:1;color:#999}
+.tooth .sub{position:absolute;top:2px;right:2px;font-size:8px;font-weight:700;background:#eee;color:#666;border-radius:3px;padding:0 2px}
+.tooth.sound{background:#f2f9f3;border-color:#9fd3ac}
+.tooth.sound .sym{color:#2e7d3b}
+.tooth.treated{background:#eaf1fd;border-color:#9dbdf2}
+.tooth.treated .sym{color:#1a56c4}
+.tooth.caries{background:#fdecea;border-color:#f0a8a1}
+.tooth.caries .sym{color:#c5221f}
+.tooth.missing{background:#f1f1f1;border-color:#bbb}
+.tooth.missing .sym{color:#777}
+.tooth.missing .sub{background:#5c6bc0;color:#fff}
+.tooth.drawing{box-shadow:0 0 0 2px #1a73e8 inset}
+.arch-label{font-size:10px;color:#999;padding:0 2px 2px}
+
+/* ---- popover ---- */
+.popover{position:fixed;z-index:100;background:#fff;border:1px solid rgba(0,0,0,0.15);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.22);padding:8px;min-width:190px}
+.popover .po-head{font-size:11.5px;color:#888;padding:4px 8px 6px;border-bottom:1px solid rgba(0,0,0,0.06);margin-bottom:4px}
+.popover button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;padding:9px 8px;font-size:13px;border-radius:8px;cursor:pointer;font-family:inherit;color:#1a1a1a}
+.popover button:active{background:#f0f0f0}
+.popover button .ic{width:20px;text-align:center;font-weight:700}
+.popover .sep{height:1px;background:rgba(0,0,0,0.06);margin:4px 2px}
+.popover .prosth-row{display:none;flex-wrap:wrap;gap:5px;padding:4px 4px 6px}
+.popover .prosth-row.open{display:flex}
+.popover .prosth-row button{width:auto;flex:0 0 auto;background:#f5f5f5;font-size:12px;padding:6px 9px}
+.overlay-catch{position:fixed;inset:0;z-index:99}
+
+/* ---- choice cards (hygiene / dryness) ---- */
+.choice-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+@media (max-width:560px){.choice-cards{grid-template-columns:1fr}}
+.choice-card{border:1.5px solid rgba(0,0,0,0.15);border-radius:12px;padding:10px 12px;cursor:pointer;background:#fff}
+.choice-card .cc-title{font-size:13px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.choice-card .cc-desc{font-size:11.5px;color:#777;line-height:1.55}
+.choice-card.sel{border-color:#1a73e8;background:#eef4fd}
+.choice-card[data-score="0"].sel{border-color:#2e7d3b;background:#eaf6ec}
+.choice-card[data-score="1"].sel{border-color:#b06000;background:#fdf3e0}
+.choice-card[data-score="2"].sel{border-color:#c5221f;background:#fceceb}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.choice-card[data-score="0"] .dot{background:#2e7d3b}
+.choice-card[data-score="1"] .dot{background:#b06000}
+.choice-card[data-score="2"] .dot{background:#c5221f}
+
+/* ---- judgement chips ---- */
+.chip-select{display:flex;gap:8px;flex-wrap:wrap}
+.chip-opt{border:1.5px solid rgba(0,0,0,0.15);border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer;background:#fff}
+.chip-opt.sel{background:#1a73e8;color:#fff;border-color:#1a73e8}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:rgba(20,20,20,0.9);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:20px;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+
+[hidden]{display:none!important}
+
+@media print{
+  header.top,.no-print,#view-list{display:none!important}
+  body{background:#fff}
+  .app{max-width:none;padding:0}
+  .card{border:none;box-shadow:none;padding:6px 0;margin:0;break-inside:avoid}
+  .tooth{box-shadow:none}
+  .popover,.overlay-catch,.toast{display:none!important}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>老健訪問歯科健診表</h1>
+    <div class="sub" id="header-sub">検診対象者一覧</div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn no-print" id="btn-back" hidden>← 一覧へ</button>
+    <button class="btn primary no-print" id="btn-new">＋ 新規健診</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ===== list view ===== -->
+  <section id="view-list">
+    <div class="card">
+      <div class="toolbar no-print">
+        <input type="text" id="search" placeholder="施設名・氏名で検索">
+        <button class="btn sm" id="btn-export">JSON書き出し</button>
+        <button class="btn sm" id="btn-import">JSON読み込み</button>
+        <input type="file" id="file-import" accept="application/json" hidden>
+        <button class="btn sm" id="btn-csv">CSV書き出し</button>
+      </div>
+      <div id="record-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== form view ===== -->
+  <section id="view-form" hidden>
+
+    <div class="card">
+      <h2>基本情報</h2>
+      <div class="grid c3">
+        <div class="field"><label>施設名</label><input id="f-facility" list="facility-list" placeholder="〇〇老健"></div>
+        <div class="field"><label>氏名</label><input id="f-name" placeholder="山田 太郎"></div>
+        <div class="field"><label>フリガナ</label><input id="f-kana" placeholder="ヤマダ タロウ"></div>
+        <div class="field"><label>生年月日</label><input id="f-dob" type="date"></div>
+        <div class="field"><label>年齢</label><input id="f-age" type="number" min="0" max="130" placeholder="自動計算/手入力"></div>
+        <div class="field"><label>性別</label>
+          <select id="f-gender"><option value="">未選択</option><option value="male">男性</option><option value="female">女性</option><option value="other">その他</option></select>
+        </div>
+        <div class="field"><label>検診日</label><input id="f-date" type="date"></div>
+        <div class="field"><label>検診者</label><input id="f-examiner" placeholder="担当歯科医師/歯科衛生士名"></div>
+        <div class="field"><label>要介護度</label>
+          <select id="f-care-level"><option value="">未選択</option><option>自立</option><option>要支援1</option><option>要支援2</option><option>要介護1</option><option>要介護2</option><option>要介護3</option><option>要介護4</option><option>要介護5</option></select>
+        </div>
+      </div>
+      <datalist id="facility-list"></datalist>
+    </div>
+
+    <div class="card">
+      <h2>歯式<span class="badge-req">全32歯</span></h2>
+      <div class="hint">
+        <b>タップ</b>＝健全歯／<b>指で○を描く</b>＝処置歯／<b>指でチェック✓を描く</b>＝未処置歯（要治療）／<b>長押し</b>＝欠損・補綴様式などの詳細メニュー
+      </div>
+      <div class="legend">
+        <span class="item"><span class="sym" style="color:#2e7d3b">/</span>健全歯</span>
+        <span class="item"><span class="sym" style="color:#1a56c4">○</span>処置歯</span>
+        <span class="item"><span class="sym" style="color:#c5221f">C</span>未処置歯（う蝕）</span>
+        <span class="item"><span class="sym" style="color:#777">△</span>欠損</span>
+        <span class="item"><span class="sym" style="background:#5c6bc0;color:#fff">補</span>欠損＋補綴あり</span>
+        <span class="item"><span class="sym" style="color:#ccc">−</span>未検査</span>
+      </div>
+      <div style="height:10px"></div>
+      <div class="arch-label">上顎（右 ← → 左）</div>
+      <div class="chart-wrap"><div class="arch upper" id="arch-upper"></div></div>
+      <div class="arch-label" style="margin-top:8px">下顎（右 ← → 左）</div>
+      <div class="chart-wrap"><div class="arch lower" id="arch-lower"></div></div>
+      <div style="margin-top:10px;display:flex;gap:8px" class="no-print">
+        <button class="btn sm" id="btn-fill-sound">未検査の歯を一括「健全」に</button>
+        <button class="btn sm" id="btn-clear-teeth">歯式を全てリセット</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>口腔衛生状態</h2>
+      <div class="choice-cards" id="hygiene-cards">
+        <div class="choice-card" data-score="0"><div class="cc-title"><span class="dot"></span>0：良好</div><div class="cc-desc">口腔内・義歯ともに清潔。食渣・歯石・プラークの付着なし</div></div>
+        <div class="choice-card" data-score="1"><div class="cc-title"><span class="dot"></span>1：やや不良</div><div class="cc-desc">歯・歯間部・義歯の1〜2部位に食渣、歯石、プラークの付着あり</div></div>
+        <div class="choice-card" data-score="2"><div class="cc-title"><span class="dot"></span>2：不良</div><div class="cc-desc">歯・義歯の広範囲/全体に食渣、歯石、プラークが多量に付着</div></div>
+      </div>
+      <div class="hint">評価基準：OHAT-J（Oral Health Assessment Tool 日本語版）口腔清掃項目に準拠</div>
+    </div>
+
+    <div class="card">
+      <h2>口腔乾燥状態</h2>
+      <div class="choice-cards" id="dryness-cards">
+        <div class="choice-card" data-score="0"><div class="cc-title"><span class="dot"></span>0：湿潤</div><div class="cc-desc">粘膜が湿潤して見え、正常な光沢がある</div></div>
+        <div class="choice-card" data-score="1"><div class="cc-title"><span class="dot"></span>1：やや乾燥</div><div class="cc-desc">粘膜が乾燥気味・べたつく、または唾液の量がやや少ない</div></div>
+        <div class="choice-card" data-score="2"><div class="cc-title"><span class="dot"></span>2：高度乾燥</div><div class="cc-desc">粘膜が乾燥し赤く光沢がある、唾液がほとんど見られない</div></div>
+      </div>
+      <div class="hint">評価基準：OHAT-J 唾液項目に準拠。可能であれば口腔水分計（ムーカス等）の測定値も参考値として併記（目安：27未満で口腔乾燥の可能性）</div>
+      <div class="grid c2" style="margin-top:10px">
+        <div class="field"><label>口腔水分計 測定値（任意）</label><input id="f-mucus" type="number" step="0.1" placeholder="例：25.3"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>特記事項・所見</h2>
+      <div class="field"><textarea id="f-notes" placeholder="動揺歯、疼痛の訴え、義歯の不適合、開口障害、誤嚥リスク等、気になった点を記入"></textarea></div>
+    </div>
+
+    <div class="card">
+      <h2>総合判定</h2>
+      <div class="chip-select" id="judge-chips">
+        <div class="chip-opt" data-v="ok">経過観察不要</div>
+        <div class="chip-opt" data-v="watch">経過観察</div>
+        <div class="chip-opt" data-v="refer">要精査・受診勧奨</div>
+      </div>
+      <div class="grid c2" style="margin-top:10px">
+        <div class="field"><label>次回健診予定</label><input id="f-next" type="date"></div>
+      </div>
+    </div>
+
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">
+      <button class="btn danger" id="btn-delete" hidden>この記録を削除</button>
+      <button class="btn" id="btn-print">印刷</button>
+      <button class="btn primary" id="btn-save">保存</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ constants ============ */
+var STORE_KEY = "roken_dental_checkup_v1";
+var TEETH_UPPER = [18,17,16,15,14,13,12,11, 21,22,23,24,25,26,27,28];
+var TEETH_LOWER = [48,47,46,45,44,43,42,41, 31,32,33,34,35,36,37,38];
+var PROSTH_LABEL = {none:"補綴なし", bridge:"ブリッジ", partial:"部分床義歯", full:"全部床義歯", implant:"インプラント"};
+var PROSTH_ABBR = {none:"欠", bridge:"ブ", partial:"部", full:"総", implant:"イ"};
+
+/* ============ state ============ */
+var records = [];
+var draft = null;       // current form's working record
+var openPopover = null; // {el, toothNum}
+
+/* ============ storage ============ */
+function load(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    records = raw ? JSON.parse(raw) : [];
+  }catch(e){ records = []; }
+}
+function persist(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
+  catch(e){ toast("保存に失敗しました（ストレージ容量超過の可能性）"); }
+}
+
+/* ============ helpers ============ */
+function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function todayStr(){ var d=new Date(); return d.toISOString().slice(0,10); }
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function toast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._tm);
+  toast._tm = setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+function blankTeeth(){
+  var t = {};
+  TEETH_UPPER.concat(TEETH_LOWER).forEach(function(n){ t[n] = {status:'unset', prosth:null}; });
+  return t;
+}
+function newDraft(){
+  return {
+    id: uid(),
+    facility:'', name:'', kana:'', dob:'', age:'', gender:'',
+    date: todayStr(), examiner:'', careLevel:'',
+    teeth: blankTeeth(),
+    hygiene: null, dryness: null, mucus:'',
+    notes:'', judge:null, next:''
+  };
+}
+
+/* ============ view switching ============ */
+function showList(){
+  document.getElementById('view-list').hidden = false;
+  document.getElementById('view-form').hidden = true;
+  document.getElementById('btn-back').hidden = true;
+  document.getElementById('btn-new').hidden = false;
+  document.getElementById('header-sub').textContent = '検診対象者一覧';
+  closePopover();
+  renderList();
+}
+function showForm(rec){
+  draft = rec;
+  document.getElementById('view-list').hidden = true;
+  document.getElementById('view-form').hidden = false;
+  document.getElementById('btn-back').hidden = false;
+  document.getElementById('btn-new').hidden = true;
+  document.getElementById('header-sub').textContent = (rec.name || '氏名未入力') + ' の健診記録';
+  document.getElementById('btn-delete').hidden = !recordExists(rec.id);
+  fillForm(rec);
+}
+function recordExists(id){ return records.some(function(r){return r.id===id;}); }
+
+/* ============ list rendering ============ */
+function renderList(){
+  var q = (document.getElementById('search').value || '').trim();
+  var list = records.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  if(q){
+    list = list.filter(function(r){
+      return (r.facility+r.name+r.kana).indexOf(q) > -1;
+    });
+  }
+  var el = document.getElementById('record-list');
+  if(list.length===0){
+    el.innerHTML = '<div class="empty">健診記録がまだありません。「＋ 新規健診」から作成してください。</div>';
+    return;
+  }
+  el.innerHTML = list.map(function(r){
+    var judgeChip = r.judge ? '<span class="judge-chip ' + r.judge + '">' + judgeLabel(r.judge) + '</span>' : '';
+    return '<div class="record-row" data-id="'+r.id+'">'+
+      '<div class="record-main">'+
+        '<div class="name">'+esc(r.name||'（氏名未入力）')+judgeChip+'</div>'+
+        '<div class="meta">'+esc(r.facility||'施設未入力')+' ・ '+esc(r.date||'')+'</div>'+
+      '</div>'+
+      '<div class="record-actions">'+
+        '<button class="btn sm" data-act="dup">再検診</button>'+
+        '<button class="btn sm primary" data-act="open">開く</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  Array.prototype.forEach.call(el.querySelectorAll('.record-row'), function(row){
+    var id = row.getAttribute('data-id');
+    row.querySelector('[data-act="open"]').addEventListener('click', function(){
+      var r = records.find(function(x){return x.id===id;});
+      if(r) showForm(JSON.parse(JSON.stringify(r)));
+    });
+    row.querySelector('[data-act="dup"]').addEventListener('click', function(){
+      var r = records.find(function(x){return x.id===id;});
+      if(!r) return;
+      var nd = JSON.parse(JSON.stringify(r));
+      nd.id = uid();
+      nd.date = todayStr();
+      nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next='';
+      // keep teeth as-is (前回歯式を引き継いで訪問時に修正)
+      showForm(nd);
+    });
+  });
+}
+function judgeLabel(v){ return v==='ok'?'経過観察不要':v==='watch'?'経過観察':v==='refer'?'要精査':''; }
+
+/* ============ form fill / read ============ */
+function fillForm(r){
+  document.getElementById('f-facility').value = r.facility||'';
+  document.getElementById('f-name').value = r.name||'';
+  document.getElementById('f-kana').value = r.kana||'';
+  document.getElementById('f-dob').value = r.dob||'';
+  document.getElementById('f-age').value = r.age||'';
+  document.getElementById('f-gender').value = r.gender||'';
+  document.getElementById('f-date').value = r.date||todayStr();
+  document.getElementById('f-examiner').value = r.examiner||'';
+  document.getElementById('f-care-level').value = r.careLevel||'';
+  document.getElementById('f-mucus').value = r.mucus||'';
+  document.getElementById('f-notes').value = r.notes||'';
+  document.getElementById('f-next').value = r.next||'';
+
+  setChoiceCard('hygiene-cards', r.hygiene);
+  setChoiceCard('dryness-cards', r.dryness);
+  setChip(r.judge);
+
+  buildArch('arch-upper', TEETH_UPPER, r.teeth);
+  buildArch('arch-lower', TEETH_LOWER, r.teeth);
+
+  refreshFacilityList();
+}
+function readFormBasics(){
+  draft.facility = document.getElementById('f-facility').value.trim();
+  draft.name = document.getElementById('f-name').value.trim();
+  draft.kana = document.getElementById('f-kana').value.trim();
+  draft.dob = document.getElementById('f-dob').value;
+  draft.age = document.getElementById('f-age').value;
+  draft.gender = document.getElementById('f-gender').value;
+  draft.date = document.getElementById('f-date').value || todayStr();
+  draft.examiner = document.getElementById('f-examiner').value.trim();
+  draft.careLevel = document.getElementById('f-care-level').value;
+  draft.mucus = document.getElementById('f-mucus').value;
+  draft.notes = document.getElementById('f-notes').value;
+  draft.next = document.getElementById('f-next').value;
+}
+function refreshFacilityList(){
+  var dl = document.getElementById('facility-list');
+  var names = Array.from(new Set(records.map(function(r){return r.facility;}).filter(Boolean)));
+  dl.innerHTML = names.map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
+}
+
+/* age auto-calc from dob */
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'f-dob'){
+    var v = e.target.value;
+    if(v){
+      var d = new Date(v), t = new Date();
+      var age = t.getFullYear() - d.getFullYear();
+      var m = t.getMonth() - d.getMonth();
+      if(m < 0 || (m===0 && t.getDate() < d.getDate())) age--;
+      if(age>=0 && age<130) document.getElementById('f-age').value = age;
+    }
+  }
+});
+
+/* ============ choice cards (hygiene/dryness) ============ */
+function setChoiceCard(containerId, score){
+  var box = document.getElementById(containerId);
+  Array.prototype.forEach.call(box.children, function(c){
+    c.classList.toggle('sel', String(score) === c.getAttribute('data-score'));
+  });
+}
+function wireChoiceCards(containerId, field){
+  var box = document.getElementById(containerId);
+  box.addEventListener('click', function(e){
+    var card = e.target.closest('.choice-card');
+    if(!card) return;
+    var v = Number(card.getAttribute('data-score'));
+    draft[field] = (draft[field]===v) ? null : v;
+    setChoiceCard(containerId, draft[field]);
+  });
+}
+
+/* ============ judgement chips ============ */
+function setChip(v){
+  Array.prototype.forEach.call(document.getElementById('judge-chips').children, function(c){
+    c.classList.toggle('sel', c.getAttribute('data-v')===v);
+  });
+}
+document.getElementById('judge-chips').addEventListener('click', function(e){
+  var chip = e.target.closest('.chip-opt');
+  if(!chip) return;
+  var v = chip.getAttribute('data-v');
+  draft.judge = (draft.judge===v) ? null : v;
+  setChip(draft.judge);
+});
+
+/* ============ tooth chart ============ */
+function buildArch(containerId, teethNums, teethState){
+  var box = document.getElementById(containerId);
+  box.innerHTML = '';
+  teethNums.forEach(function(num, idx){
+    if(idx===8){
+      var gap = document.createElement('div');
+      gap.className = 'quad-gap';
+      box.appendChild(gap);
+    }
+    box.appendChild(makeToothCell(num, teethState[num]));
+  });
+}
+function makeToothCell(num, st){
+  var cell = document.createElement('div');
+  cell.className = 'tooth ' + (st.status!=='unset' ? st.status : '');
+  cell.setAttribute('data-num', num);
+
+  var sym = document.createElement('div');
+  sym.className = 'sym';
+  sym.textContent = symbolFor(st);
+  cell.appendChild(sym);
+
+  if(st.status==='missing' && st.prosth && st.prosth!=='none'){
+    var sub = document.createElement('div');
+    sub.className = 'sub';
+    sub.textContent = PROSTH_ABBR[st.prosth] || '';
+    cell.appendChild(sub);
+  }
+
+  var numEl = document.createElement('div');
+  numEl.className = 'num';
+  numEl.textContent = num;
+  cell.appendChild(numEl);
+
+  wireToothGestures(cell, num);
+  return cell;
+}
+function symbolFor(st){
+  switch(st.status){
+    case 'sound': return '/';
+    case 'treated': return '○';
+    case 'caries': return 'C';
+    case 'missing': return (st.prosth && st.prosth!=='none') ? '○△' : '△';
+    default: return '−';
+  }
+}
+function refreshTooth(num){
+  var cell = document.querySelector('.tooth[data-num="'+num+'"]');
+  if(!cell) return;
+  var st = draft.teeth[num];
+  var fresh = makeToothCell(num, st);
+  cell.replaceWith(fresh);
+}
+function setToothStatus(num, status, prosth){
+  draft.teeth[num] = { status: status, prosth: (status==='missing') ? (prosth||'none') : null };
+  refreshTooth(num);
+}
+
+/* ---- gesture recognition ---- */
+var GESTURE = { active:false, pts:[], toothNum:null, startT:0, cell:null, longpressTimer:null, longpressFired:false, moved:false };
+var TAP_MOVE_LIMIT = 7;
+var LONGPRESS_MS = 550;
+
+function wireToothGestures(cell, num){
+  cell.addEventListener('pointerdown', function(e){
+    if(openPopover){ closePopover(); }
+    GESTURE.active = true;
+    GESTURE.pts = [{x:e.clientX,y:e.clientY,t:Date.now()}];
+    GESTURE.toothNum = num;
+    GESTURE.cell = cell;
+    GESTURE.startT = Date.now();
+    GESTURE.moved = false;
+    GESTURE.longpressFired = false;
+    cell.classList.add('drawing');
+    try{ cell.setPointerCapture(e.pointerId); }catch(err){}
+    clearTimeout(GESTURE.longpressTimer);
+    GESTURE.longpressTimer = setTimeout(function(){
+      if(GESTURE.active && !GESTURE.moved){
+        GESTURE.longpressFired = true;
+        openToothMenu(cell, num);
+        endGesture(false);
+      }
+    }, LONGPRESS_MS);
+    e.preventDefault();
+  });
+  cell.addEventListener('pointermove', function(e){
+    if(!GESTURE.active || GESTURE.toothNum!==num) return;
+    GESTURE.pts.push({x:e.clientX,y:e.clientY,t:Date.now()});
+    var first = GESTURE.pts[0];
+    var d = Math.hypot(e.clientX-first.x, e.clientY-first.y);
+    if(d > TAP_MOVE_LIMIT){
+      GESTURE.moved = true;
+      clearTimeout(GESTURE.longpressTimer);
+    }
+  });
+  cell.addEventListener('pointerup', function(e){
+    if(!GESTURE.active || GESTURE.toothNum!==num || GESTURE.longpressFired){ endGesture(false); return; }
+    clearTimeout(GESTURE.longpressTimer);
+    GESTURE.pts.push({x:e.clientX,y:e.clientY,t:Date.now()});
+    var gesture = classifyGesture(GESTURE.pts);
+    applyGesture(num, gesture);
+    endGesture(true);
+  });
+  cell.addEventListener('pointercancel', function(){ endGesture(false); });
+}
+function endGesture(){
+  clearTimeout(GESTURE.longpressTimer);
+  if(GESTURE.cell) GESTURE.cell.classList.remove('drawing');
+  GESTURE.active = false;
+  GESTURE.pts = [];
+  GESTURE.toothNum = null;
+  GESTURE.cell = null;
+}
+function applyGesture(num, g){
+  if(g === 'tap'){
+    setToothStatus(num, 'sound');
+  }else if(g === 'circle'){
+    setToothStatus(num, 'treated');
+  }else if(g === 'check'){
+    setToothStatus(num, 'caries');
+  }else{
+    toast('認識できませんでした。○(処置歯)／✓(未処置歯)を描くか、長押しでメニューを開いてください');
+  }
+}
+
+function classifyGesture(pts){
+  if(pts.length < 2) return 'tap';
+  var first = pts[0], last = pts[pts.length-1];
+  var totalLen = 0;
+  for(var i=1;i<pts.length;i++){ totalLen += Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y); }
+  var dEnds = Math.hypot(last.x-first.x, last.y-first.y);
+  var duration = last.t - first.t;
+
+  // tap: barely moved
+  if(totalLen < TAP_MOVE_LIMIT && duration < LONGPRESS_MS) return 'tap';
+  if(totalLen < 10) return null;
+
+  // bounding box
+  var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  pts.forEach(function(p){ if(p.x<minX)minX=p.x; if(p.x>maxX)maxX=p.x; if(p.y<minY)minY=p.y; if(p.y>maxY)maxY=p.y; });
+  var w = Math.max(1,maxX-minX), h = Math.max(1,maxY-minY);
+  var diag = Math.hypot(w,h);
+
+  // --- circle test: cumulative signed turning angle around centroid ---
+  var cx=0,cy=0;
+  pts.forEach(function(p){ cx+=p.x; cy+=p.y; });
+  cx/=pts.length; cy/=pts.length;
+  var prevAngle = Math.atan2(pts[0].y-cy, pts[0].x-cx);
+  var totalRot = 0;
+  for(i=1;i<pts.length;i++){
+    var a = Math.atan2(pts[i].y-cy, pts[i].x-cx);
+    var da = a - prevAngle;
+    while(da > Math.PI) da -= 2*Math.PI;
+    while(da < -Math.PI) da += 2*Math.PI;
+    totalRot += da;
+    prevAngle = a;
+  }
+  var isClosed = dEnds < diag*0.6;
+  if(Math.abs(totalRot) > 4.5 && isClosed) return 'circle'; // ~258°+ of rotation and roughly closed loop
+
+  // --- checkmark test: down-stroke then longer up-right stroke ---
+  var viIdx = 0, maxY2 = -Infinity;
+  pts.forEach(function(p,idx){ if(p.y > maxY2){ maxY2 = p.y; viIdx = idx; } });
+  if(viIdx > 0 && viIdx < pts.length-1){
+    var vtx = pts[viIdx];
+    var dx1 = vtx.x-first.x, dy1 = vtx.y-first.y;
+    var dx2 = last.x-vtx.x, dy2 = last.y-vtx.y;
+    var len1 = Math.hypot(dx1,dy1), len2 = Math.hypot(dx2,dy2);
+    var downOk = dy1 > h*0.15;
+    var upRightOk = dy2 < -h*0.15 && dx2 > 0;
+    var lenOk = len2 > len1*0.6;
+    var notLoop = !isClosed;
+    if(downOk && upRightOk && lenOk && notLoop) return 'check';
+  }
+  return null;
+}
+
+/* ---- long-press full menu ---- */
+function openToothMenu(cell, num){
+  closePopover();
+  var st = draft.teeth[num];
+  var po = document.createElement('div');
+  po.className = 'popover';
+  po.innerHTML =
+    '<div class="po-head">歯番 '+num+' の入力</div>'+
+    '<button data-set="sound"><span class="ic" style="color:#2e7d3b">/</span>健全歯</button>'+
+    '<button data-set="treated"><span class="ic" style="color:#1a56c4">○</span>処置歯</button>'+
+    '<button data-set="caries"><span class="ic" style="color:#c5221f">C</span>未処置歯（う蝕）</button>'+
+    '<button data-set="missing"><span class="ic" style="color:#777">△</span>欠損（補綴様式を選択）</button>'+
+    '<div class="prosth-row" id="po-prosth">'+
+      Object.keys(PROSTH_LABEL).map(function(k){ return '<button data-prosth="'+k+'">'+PROSTH_LABEL[k]+'</button>'; }).join('')+
+    '</div>'+
+    '<div class="sep"></div>'+
+    '<button data-set="unset"><span class="ic" style="color:#ccc">−</span>未検査に戻す</button>';
+
+  document.body.appendChild(po);
+  var overlay = document.createElement('div');
+  overlay.className = 'overlay-catch';
+  document.body.insertBefore(overlay, po);
+
+  var rect = cell.getBoundingClientRect();
+  positionPopover(po, rect);
+
+  openPopover = { el: po, overlay: overlay };
+
+  overlay.addEventListener('pointerdown', closePopover);
+
+  po.addEventListener('click', function(e){
+    var setBtn = e.target.closest('[data-set]');
+    var prosthBtn = e.target.closest('[data-prosth]');
+    if(setBtn){
+      var v = setBtn.getAttribute('data-set');
+      if(v === 'missing'){
+        document.getElementById('po-prosth').classList.toggle('open');
+        return;
+      }
+      setToothStatus(num, v);
+      closePopover();
+    }else if(prosthBtn){
+      setToothStatus(num, 'missing', prosthBtn.getAttribute('data-prosth'));
+      closePopover();
+    }
+  });
+}
+function positionPopover(po, rect){
+  var margin = 8;
+  document.body.style.overflow = document.body.style.overflow; // noop, keep scroll pos
+  var top = rect.bottom + margin;
+  var left = rect.left;
+  po.style.left = left + 'px';
+  po.style.top = top + 'px';
+  // clamp after layout
+  requestAnimationFrame(function(){
+    var pr = po.getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var nx = left, ny = top;
+    if(pr.right > vw - margin) nx -= (pr.right - (vw - margin));
+    if(nx < margin) nx = margin;
+    if(pr.bottom > vh - margin) ny = rect.top - pr.height - margin; // flip above
+    if(ny < margin) ny = margin;
+    po.style.left = nx + 'px';
+    po.style.top = ny + 'px';
+  });
+}
+function closePopover(){
+  if(openPopover){
+    openPopover.el.remove();
+    openPopover.overlay.remove();
+    openPopover = null;
+  }
+}
+
+/* ============ bulk tooth actions ============ */
+document.getElementById('btn-fill-sound').addEventListener('click', function(){
+  TEETH_UPPER.concat(TEETH_LOWER).forEach(function(n){
+    if(draft.teeth[n].status === 'unset') setToothStatus(n, 'sound');
+  });
+  toast('未検査の歯を健全歯として入力しました');
+});
+document.getElementById('btn-clear-teeth').addEventListener('click', function(){
+  if(!confirm('歯式の入力内容をすべてリセットします。よろしいですか？')) return;
+  draft.teeth = blankTeeth();
+  buildArch('arch-upper', TEETH_UPPER, draft.teeth);
+  buildArch('arch-lower', TEETH_LOWER, draft.teeth);
+});
+
+/* ============ save / delete / print ============ */
+document.getElementById('btn-save').addEventListener('click', function(){
+  readFormBasics();
+  if(!draft.name){ toast('氏名を入力してください'); return; }
+  var idx = records.findIndex(function(r){return r.id===draft.id;});
+  if(idx>-1) records[idx] = draft; else records.push(draft);
+  persist();
+  toast('保存しました');
+  document.getElementById('btn-delete').hidden = false;
+});
+document.getElementById('btn-delete').addEventListener('click', function(){
+  if(!confirm('この健診記録を削除します。よろしいですか？')) return;
+  records = records.filter(function(r){return r.id!==draft.id;});
+  persist();
+  showList();
+});
+document.getElementById('btn-print').addEventListener('click', function(){
+  readFormBasics();
+  window.print();
+});
+
+/* ============ nav ============ */
+document.getElementById('btn-new').addEventListener('click', function(){ showForm(newDraft()); });
+document.getElementById('btn-back').addEventListener('click', function(){
+  readFormBasics();
+  showList();
+});
+document.getElementById('search').addEventListener('input', renderList);
+
+/* ============ import / export ============ */
+document.getElementById('btn-export').addEventListener('click', function(){
+  var blob = new Blob([JSON.stringify(records, null, 2)], {type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'roken_dental_checkup_' + todayStr() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+document.getElementById('btn-import').addEventListener('click', function(){
+  document.getElementById('file-import').click();
+});
+document.getElementById('file-import').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try{
+      var data = JSON.parse(reader.result);
+      if(!Array.isArray(data)) throw new Error('bad format');
+      var merged = records.slice();
+      data.forEach(function(rec){
+        if(!rec.id || merged.some(function(r){return r.id===rec.id;})) rec.id = uid();
+        merged.push(rec);
+      });
+      records = merged;
+      persist();
+      renderList();
+      toast(data.length + '件のデータを読み込みました');
+    }catch(err){ toast('読み込みに失敗しました：ファイル形式を確認してください'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+document.getElementById('btn-csv').addEventListener('click', function(){
+  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数'];
+  var rows = records.map(function(r){
+    var counts = {sound:0,treated:0,caries:0,missing:0};
+    Object.keys(r.teeth||{}).forEach(function(n){ var s=r.teeth[n].status; if(counts[s]!==undefined) counts[s]++; });
+    return [r.facility,r.name,r.kana,r.dob,r.age,genderLabel(r.gender),r.date,r.examiner,r.careLevel,
+      scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,judgeLabel(r.judge),r.next,r.notes,
+      counts.sound,counts.treated,counts.caries,counts.missing];
+  });
+  var csv = [header].concat(rows).map(function(row){
+    return row.map(function(v){
+      v = (v==null?'':String(v)).replace(/"/g,'""');
+      return '"'+v+'"';
+    }).join(',');
+  }).join('\r\n');
+  var blob = new Blob(['﻿'+csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'roken_dental_checkup_' + todayStr() + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+function genderLabel(v){ return v==='male'?'男性':v==='female'?'女性':v==='other'?'その他':''; }
+function scoreLabel(v){ return v==null? '' : (v+ (v===0?'（良好）':v===1?'（やや不良）':'（不良）')); }
+
+/* ============ init ============ */
+load();
+wireChoiceCards('hygiene-cards', 'hygiene');
+wireChoiceCards('dryness-cards', 'dryness');
+showList();
+
+})();
+</script>
+</body>
+</html>
