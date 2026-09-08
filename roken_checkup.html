@@ -27,7 +27,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 .grid.c3{grid-template-columns:1fr 1fr 1fr}
 @media (max-width:560px){.grid.c2,.grid.c3{grid-template-columns:1fr 1fr}}
 .field label{display:block;font-size:11.5px;color:#777;margin-bottom:3px}
-.field input,.field select,.field textarea{font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid rgba(0,0,0,0.2);border-radius:9px;background:#fff;width:100%;color:#1a1a1a}
+.field input,.field select,.field textarea,#notes-quick-select,#notes-other-input{font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid rgba(0,0,0,0.2);border-radius:9px;background:#fff;width:100%;color:#1a1a1a}
 .field textarea{resize:vertical;line-height:1.6;min-height:56px}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1a73e8}
 .hint{font-size:11.5px;color:#888;line-height:1.6;margin-top:6px}
@@ -306,12 +306,30 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
         <div class="chip-opt" data-v="toothbrush">歯ブラシ</div>
         <div class="chip-opt" data-v="mouthwash">洗口液</div>
         <div class="chip-opt" data-v="moisturizer">保湿剤</div>
+        <div class="chip-opt" data-v="other">その他</div>
+      </div>
+      <div class="field" id="guidance-other-field" hidden style="margin-top:10px">
+        <label>その他の内容</label>
+        <input type="text" id="f-guidance-other" placeholder="内容を入力">
       </div>
     </div>
 
     <div class="card">
       <h2>特記事項・所見</h2>
-      <div class="field"><textarea id="f-notes" placeholder="動揺歯、疼痛の訴え、義歯の不適合、開口障害、誤嚥リスク等、気になった点を記入"></textarea></div>
+      <div class="hint">よくある所見を選ぶと下の入力欄に追記されます</div>
+      <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap" class="no-print">
+        <select id="notes-quick-select" style="flex:1;min-width:180px">
+          <option value="">よくある所見を選択...</option>
+          <option value="動揺歯あり">動揺歯あり</option>
+          <option value="疼痛の訴えあり">疼痛の訴えあり</option>
+          <option value="義歯の不適合">義歯の不適合</option>
+          <option value="開口障害あり">開口障害あり</option>
+          <option value="誤嚥リスクあり">誤嚥リスクあり</option>
+          <option value="__other__">その他（自由入力）</option>
+        </select>
+        <input type="text" id="notes-other-input" placeholder="内容を入力してEnterで追記" hidden style="flex:1;min-width:180px">
+      </div>
+      <div class="field"><textarea id="f-notes" placeholder="気になった点を記入"></textarea></div>
     </div>
 
     <div class="card">
@@ -488,7 +506,7 @@ function newDraft(){
     teeth: blankTeeth(),
     hygiene: null, dryness: null, mucus:'',
     notes:'', judge:null, next:'',
-    guidance: [],
+    guidance: [], guidanceOther: '',
     photos: []
   };
 }
@@ -573,7 +591,7 @@ function renderList(){
       var nd = JSON.parse(JSON.stringify(r));
       nd.id = uid();
       nd.date = todayStr();
-      nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next=''; nd.guidance=[];
+      nd.hygiene = null; nd.dryness = null; nd.mucus=''; nd.notes=''; nd.judge=null; nd.next=''; nd.guidance=[]; nd.guidanceOther='';
       nd.photos = []; // 写真は当日撮影分のみを想定し引き継がない
       // keep teeth as-is (前回歯式を引き継いで訪問時に修正)
       showForm(nd);
@@ -596,6 +614,7 @@ function fillForm(r){
   document.getElementById('f-mucus').value = r.mucus||'';
   document.getElementById('f-notes').value = r.notes||'';
   document.getElementById('f-next').value = r.next||'';
+  document.getElementById('f-guidance-other').value = r.guidanceOther||'';
 
   setChoiceCard('hygiene-cards', r.hygiene);
   setChoiceCard('dryness-cards', r.dryness);
@@ -620,6 +639,7 @@ function readFormBasics(){
   draft.mucus = document.getElementById('f-mucus').value;
   draft.notes = document.getElementById('f-notes').value;
   draft.next = document.getElementById('f-next').value;
+  draft.guidanceOther = document.getElementById('f-guidance-other').value.trim();
 }
 /* iOS Safariはdatalistの候補表示に対応が弱いため、自前のドロップダウンで候補を出す */
 function wireAutocomplete(inputId, listId, getOptions){
@@ -998,12 +1018,13 @@ document.getElementById('judge-chips').addEventListener('click', function(e){
 });
 
 /* ============ 衛生指導（複数選択） ============ */
-var GUIDANCE_LABELS = {sponge:'スポンジブラシ', toothbrush:'歯ブラシ', mouthwash:'洗口液', moisturizer:'保湿剤'};
+var GUIDANCE_LABELS = {sponge:'スポンジブラシ', toothbrush:'歯ブラシ', mouthwash:'洗口液', moisturizer:'保湿剤', other:'その他'};
 function setGuidanceChips(selected){
   selected = selected || [];
   Array.prototype.forEach.call(document.getElementById('guidance-chips').children, function(c){
     c.classList.toggle('sel', selected.indexOf(c.getAttribute('data-v')) > -1);
   });
+  document.getElementById('guidance-other-field').hidden = selected.indexOf('other') === -1;
 }
 document.getElementById('guidance-chips').addEventListener('click', function(e){
   var chip = e.target.closest('.chip-opt');
@@ -1013,6 +1034,42 @@ document.getElementById('guidance-chips').addEventListener('click', function(e){
   var idx = draft.guidance.indexOf(v);
   if(idx > -1) draft.guidance.splice(idx, 1); else draft.guidance.push(v);
   setGuidanceChips(draft.guidance);
+  if(v === 'other' && idx === -1) document.getElementById('f-guidance-other').focus();
+});
+
+/* ============ 特記事項・所見：よくある所見をプルダウンから追記 ============ */
+function appendToNotes(text){
+  var ta = document.getElementById('f-notes');
+  var cur = ta.value.trim();
+  ta.value = cur ? (cur + '、' + text) : text;
+  draft.notes = ta.value;
+}
+document.getElementById('notes-quick-select').addEventListener('change', function(e){
+  var v = e.target.value;
+  e.target.value = '';
+  if(!v) return;
+  if(v === '__other__'){
+    var otherInput = document.getElementById('notes-other-input');
+    otherInput.hidden = false;
+    otherInput.focus();
+    return;
+  }
+  appendToNotes(v);
+});
+document.getElementById('notes-other-input').addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    var v = e.target.value.trim();
+    if(v) appendToNotes(v);
+    e.target.value = '';
+    e.target.hidden = true;
+  }
+});
+document.getElementById('notes-other-input').addEventListener('blur', function(e){
+  var v = e.target.value.trim();
+  if(v) appendToNotes(v);
+  e.target.value = '';
+  e.target.hidden = true;
 });
 
 /* ============ tooth chart ============ */
@@ -1425,7 +1482,9 @@ document.getElementById('btn-csv').addEventListener('click', function(){
   var rows = records.map(function(r){
     var counts = {sound:0,treated:0,caries:0,missing:0};
     Object.keys(r.teeth||{}).forEach(function(n){ var s=r.teeth[n].status; if(counts[s]!==undefined) counts[s]++; });
-    var guidanceText = (r.guidance||[]).map(function(k){ return GUIDANCE_LABELS[k] || k; }).join('・');
+    var guidanceText = (r.guidance||[]).map(function(k){
+      return k==='other' ? ('その他'+(r.guidanceOther?'（'+r.guidanceOther+'）':'')) : (GUIDANCE_LABELS[k] || k);
+    }).join('・');
     return [r.facility,r.name,r.kana,r.dob,r.age,genderLabel(r.gender),r.date,r.examiner,r.careLevel,
       scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,guidanceText,judgeLabel(r.judge),r.next,r.notes,
       counts.sound,counts.treated,counts.caries,counts.missing,(r.photos||[]).length];
