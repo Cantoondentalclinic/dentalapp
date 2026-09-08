@@ -210,6 +210,20 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
       <div style="height:8px"></div>
       <div class="master-list" id="examiner-master-list"></div>
     </div>
+    <div class="card">
+      <h2>利用者（入所者）氏名マスタ</h2>
+      <div class="hint">施設ごとに、入所者様のお名前をあらかじめ登録しておくと、健診表の「氏名」欄で、その時点で入力されている施設名に応じた候補として選択できるようになります（先に「施設名」欄を入力してから「氏名」欄をタップしてください）。</div>
+      <div class="master-add no-print" style="margin-top:10px">
+        <input type="text" id="resident-master-facility" placeholder="施設名" style="max-width:180px">
+        <input type="text" id="resident-master-input" placeholder="氏名を入力してEnterまたは追加">
+        <button class="btn sm" id="resident-master-add">追加</button>
+        <label class="btn sm" for="resident-master-file">📄 ファイルから一括登録</label>
+        <input type="file" id="resident-master-file" accept=".csv,.xlsx,.xls,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+      </div>
+      <div class="hint" style="margin-top:0">CSV／Excelファイルの場合、1列目に施設名、2列目に氏名を入力したものをご用意ください（見出し行があっても構いません）。未登録の施設名が含まれる場合は、施設名マスタにも自動で追加されます。</div>
+      <div style="height:8px"></div>
+      <div id="resident-master-groups"></div>
+    </div>
   </section>
 
   <!-- ===== form view ===== -->
@@ -219,7 +233,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
       <h2>基本情報</h2>
       <div class="grid c3">
         <div class="field autocomplete-field"><label>施設名</label><input id="f-facility" autocomplete="off" placeholder="〇〇老健"><div class="ac-list" id="facility-ac-list" hidden></div></div>
-        <div class="field"><label>氏名</label><input id="f-name" placeholder="山田 太郎"></div>
+        <div class="field autocomplete-field"><label>氏名</label><input id="f-name" autocomplete="off" placeholder="山田 太郎"><div class="ac-list" id="name-ac-list" hidden></div></div>
         <div class="field"><label>フリガナ</label><input id="f-kana" placeholder="ヤマダ タロウ"></div>
         <div class="field"><label>生年月日</label><input id="f-dob" type="date"></div>
         <div class="field"><label>年齢</label><input id="f-age" type="number" min="0" max="130" placeholder="自動計算/手入力"></div>
@@ -353,10 +367,11 @@ function persist(){
 function loadMaster(){
   try{
     var raw = localStorage.getItem(MASTER_KEY);
-    master = raw ? JSON.parse(raw) : {facilities:[], examiners:[]};
-  }catch(e){ master = {facilities:[], examiners:[]}; }
+    master = raw ? JSON.parse(raw) : {facilities:[], examiners:[], residents:[]};
+  }catch(e){ master = {facilities:[], examiners:[], residents:[]}; }
   if(!Array.isArray(master.facilities)) master.facilities = [];
   if(!Array.isArray(master.examiners)) master.examiners = [];
+  if(!Array.isArray(master.residents)) master.residents = []; // {facility, name}
 }
 function persistMaster(){
   try{ localStorage.setItem(MASTER_KEY, JSON.stringify(master)); }
@@ -486,6 +501,7 @@ function showSettings(){
   closePopover();
   renderMasterList('facilities', 'facility-master-list');
   renderMasterList('examiners', 'examiner-master-list');
+  renderResidentGroups();
 }
 function showForm(rec){
   draft = rec;
@@ -737,6 +753,120 @@ wireMasterAdd('facilities', 'facility-master-input', 'facility-master-add', 'fac
 wireMasterAdd('examiners', 'examiner-master-input', 'examiner-master-add', 'examiner-master-list');
 wireMasterFileImport('facilities', 'facility-master-file', 'facility-master-list');
 wireMasterFileImport('examiners', 'examiner-master-file', 'examiner-master-list');
+
+/* ============ 利用者（入所者）氏名マスタ（施設ごとに管理） ============ */
+function addResidentItem(facility, name){
+  facility = (facility||'').trim();
+  name = (name||'').trim();
+  if(!facility || !name) return false;
+  var exists = master.residents.some(function(r){ return r.facility===facility && r.name===name; });
+  if(exists) return false;
+  master.residents.push({facility:facility, name:name});
+  addMasterItem('facilities', facility); // 未登録の施設名なら施設名マスタにも自動登録
+  persistMaster();
+  return true;
+}
+function removeResidentItem(facility, name){
+  master.residents = master.residents.filter(function(r){ return !(r.facility===facility && r.name===name); });
+  persistMaster();
+}
+function renderResidentGroups(){
+  var box = document.getElementById('resident-master-groups');
+  var list = master.residents;
+  if(list.length===0){
+    box.innerHTML = '<div class="photo-empty">まだ登録がありません</div>';
+    return;
+  }
+  var byFacility = {};
+  list.forEach(function(r){ (byFacility[r.facility] = byFacility[r.facility] || []).push(r.name); });
+  var facilities = Object.keys(byFacility).sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+  box.innerHTML = facilities.map(function(f){
+    var names = byFacility[f].slice().sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+    var chips = names.map(function(n){
+      return '<span class="master-chip">'+esc(n)+'<button type="button" data-facility="'+esc(f)+'" data-name="'+esc(n)+'" title="削除">×</button></span>';
+    }).join('');
+    return '<div style="margin-bottom:12px"><div style="font-size:12.5px;font-weight:600;color:#555;margin-bottom:6px">'+esc(f)+'（'+names.length+'名）</div><div class="master-list">'+chips+'</div></div>';
+  }).join('');
+  Array.prototype.forEach.call(box.querySelectorAll('button[data-facility]'), function(btn){
+    btn.addEventListener('click', function(){
+      removeResidentItem(btn.getAttribute('data-facility'), btn.getAttribute('data-name'));
+      renderResidentGroups();
+    });
+  });
+}
+function wireResidentAdd(){
+  var facilityInput = document.getElementById('resident-master-facility');
+  var nameInput = document.getElementById('resident-master-input');
+  function doAdd(){
+    if(addResidentItem(facilityInput.value, nameInput.value)){
+      nameInput.value = '';
+      renderResidentGroups();
+      renderMasterList('facilities', 'facility-master-list');
+    }else{
+      toast('施設名と氏名の両方を入力してください（すでに登録済みの可能性もあります）');
+    }
+  }
+  document.getElementById('resident-master-add').addEventListener('click', doAdd);
+  nameInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
+  facilityInput.addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); nameInput.focus(); } });
+}
+wireResidentAdd();
+function extractResidentsFromRows(rows){
+  var out = [];
+  rows.forEach(function(row, idx){
+    var facility = (row && row[0] != null) ? String(row[0]).trim() : '';
+    var name = (row && row[1] != null) ? String(row[1]).trim() : '';
+    if(!facility || !name) return;
+    if(idx===0 && (HEADER_WORDS.indexOf(facility) > -1 || HEADER_WORDS.indexOf(name) > -1)) return;
+    out.push({facility:facility, name:name});
+  });
+  return out;
+}
+function parseResidentListFile(file){
+  var fname = (file.name||'').toLowerCase();
+  if(fname.endsWith('.xlsx') || fname.endsWith('.xls')){
+    return ensureXlsxLib().then(function(){
+      return file.arrayBuffer().then(function(buf){
+        var wb = XLSX.read(buf, {type:'array'});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+        return extractResidentsFromRows(rows);
+      });
+    });
+  }
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var rows = String(reader.result).replace(/^﻿/, '').split(/\r\n|\r|\n/).map(function(line){ return line.split(','); });
+      resolve(extractResidentsFromRows(rows));
+    };
+    reader.onerror = function(){ reject(reader.error); };
+    reader.readAsText(file);
+  });
+}
+document.getElementById('resident-master-file').addEventListener('change', function(e){
+  var file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  toast('読み込み中…');
+  parseResidentListFile(file).then(function(pairs){
+    var added = 0;
+    pairs.forEach(function(p){ if(addResidentItem(p.facility, p.name)) added++; });
+    renderResidentGroups();
+    renderMasterList('facilities', 'facility-master-list');
+    toast(added + '件を登録しました（'+(pairs.length-added)+'件は重複または不正な行のためスキップ）');
+  }).catch(function(err){
+    toast('読み込みに失敗しました：' + (err && err.message ? err.message : 'ファイル形式を確認してください'));
+  });
+});
+function residentOptions(){
+  var currentFacility = (document.getElementById('f-facility').value || '').trim();
+  var filtered = currentFacility ? master.residents.filter(function(r){ return r.facility === currentFacility; }) : master.residents;
+  var names = filtered.map(function(r){ return r.name; });
+  var used = records.filter(function(r){ return !currentFacility || r.facility === currentFacility; }).map(function(r){ return r.name; }).filter(Boolean);
+  return Array.from(new Set(names.concat(used))).sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+}
+wireAutocomplete('f-name', 'name-ac-list', residentOptions);
 
 /* ============ photos ============ */
 function renderPhotoGrid(){
