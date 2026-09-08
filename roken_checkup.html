@@ -1420,6 +1420,14 @@ wireChoiceCards('hygiene-cards', 'hygiene');
 wireChoiceCards('dryness-cards', 'dryness');
 showList();
 
+/* オフライン対応：一度読み込めば、以降は電波が無い環境でも起動できるようにする。
+   file://で直接開いた場合は元々ネット不要のため登録しない（Service Workerはhttp(s)専用）。 */
+if('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+
 })();
 </script>
 </body>
