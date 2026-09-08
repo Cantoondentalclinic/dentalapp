@@ -273,6 +273,27 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
         <button class="btn sm" id="btn-fill-sound">未検査の歯を一括「健全」に</button>
         <button class="btn sm" id="btn-clear-teeth">歯式を全てリセット</button>
       </div>
+
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.08)">
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">義歯（総義歯・FD）の一括入力</div>
+        <div class="hint" style="margin-top:2px">上顎・下顎それぞれ総義歯の場合、ここから一括で「欠損＋全部床義歯」を入力できます</div>
+        <div class="grid c2" style="margin-top:8px">
+          <div>
+            <div style="font-size:11.5px;color:#777;margin-bottom:4px">上顎の義歯</div>
+            <div class="chip-select" id="denture-upper-chips">
+              <div class="chip-opt" data-v="none">なし</div>
+              <div class="chip-opt" data-v="full">総義歯（FD）あり</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11.5px;color:#777;margin-bottom:4px">下顎の義歯</div>
+            <div class="chip-select" id="denture-lower-chips">
+              <div class="chip-opt" data-v="none">なし</div>
+              <div class="chip-opt" data-v="full">総義歯（FD）あり</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -623,6 +644,7 @@ function fillForm(r){
 
   buildArch('arch-upper', TEETH_UPPER, r.teeth);
   buildArch('arch-lower', TEETH_LOWER, r.teeth);
+  refreshDentureChips();
 
   renderPhotoGrid();
 }
@@ -1129,7 +1151,45 @@ function refreshTooth(num){
 function setToothStatus(num, status, prosth){
   draft.teeth[num] = { status: status, prosth: (status==='missing') ? (prosth||'none') : null };
   refreshTooth(num);
+  refreshDentureChips();
 }
+
+/* ============ 義歯（総義歯・FD）一括入力 ============ */
+function isArchFullDenture(archTeethNums){
+  return archTeethNums.every(function(n){
+    var st = draft.teeth[n];
+    return st && st.status === 'missing' && st.prosth === 'full';
+  });
+}
+function refreshDentureChips(){
+  setDentureChip('denture-upper-chips', isArchFullDenture(TEETH_UPPER) ? 'full' : 'none');
+  setDentureChip('denture-lower-chips', isArchFullDenture(TEETH_LOWER) ? 'full' : 'none');
+}
+function setDentureChip(containerId, v){
+  Array.prototype.forEach.call(document.getElementById(containerId).children, function(c){
+    c.classList.toggle('sel', c.getAttribute('data-v') === v);
+  });
+}
+function wireDentureChips(containerId, archTeethNums, archContainerId){
+  document.getElementById(containerId).addEventListener('click', function(e){
+    var chip = e.target.closest('.chip-opt');
+    if(!chip) return;
+    var v = chip.getAttribute('data-v');
+    if(v === 'full'){
+      if(isArchFullDenture(archTeethNums)) return;
+      if(!confirm('この顎の歯（16本）をすべて「欠損＋全部床義歯（総義歯）」として一括入力します。個別に入力済みの内容は上書きされます。よろしいですか？')) return;
+      archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'missing', prosth:'full'}; });
+    }else{
+      if(!isArchFullDenture(archTeethNums)) return;
+      if(!confirm('総義歯の一括設定を解除し、この顎の歯をすべて未検査の状態に戻します。よろしいですか？')) return;
+      archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'unset', prosth:null}; });
+    }
+    buildArch(archContainerId, archTeethNums, draft.teeth);
+    refreshDentureChips();
+  });
+}
+wireDentureChips('denture-upper-chips', TEETH_UPPER, 'arch-upper');
+wireDentureChips('denture-lower-chips', TEETH_LOWER, 'arch-lower');
 
 /* ---- gesture recognition ---- */
 var GESTURE = { active:false, pts:[], toothNum:null, startT:0, cell:null, longpressTimer:null, longpressFired:false, moved:false };
@@ -1380,6 +1440,7 @@ document.getElementById('btn-clear-teeth').addEventListener('click', function(){
   draft.teeth = blankTeeth();
   buildArch('arch-upper', TEETH_UPPER, draft.teeth);
   buildArch('arch-lower', TEETH_LOWER, draft.teeth);
+  refreshDentureChips();
 });
 
 /* ============ save / delete / print ============ */
