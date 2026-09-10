@@ -404,7 +404,8 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
       </div>
     </div>
 
-    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">
+    <div class="no-print" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">
+      <span id="autosave-status" class="hint" style="margin:0 auto 0 0"></span>
       <button class="btn danger" id="btn-delete" hidden>この記録を削除</button>
       <button class="btn" id="btn-print">印刷</button>
       <button class="btn" id="btn-pdf">📄 PDF出力</button>
@@ -601,6 +602,8 @@ function showForm(rec){
   document.getElementById('btn-settings').hidden = true;
   document.getElementById('header-sub').textContent = (rec.name || '氏名未入力') + ' の健診記録';
   document.getElementById('btn-delete').hidden = !recordExists(rec.id);
+  document.getElementById('autosave-status').textContent = '';
+  clearTimeout(autoSaveTimer);
   return fillForm(rec);
 }
 function recordExists(id){ return records.some(function(r){return r.id===id;}); }
@@ -1078,6 +1081,7 @@ function renderPhotoGrid(){
       draft.photos = draft.photos.filter(function(x){ return x.id!==p.id; });
       deletePhotoRecord(p.id);
       renderPhotoGrid();
+      scheduleAutoSave();
     });
     item.querySelector('.cap').addEventListener('input', function(e){
       p.caption = e.target.value;
@@ -1099,6 +1103,7 @@ function addPhotosFromFiles(files){
   })).then(function(){
     renderPhotoGrid();
     toast(files.length+'枚の写真を追加しました');
+    scheduleAutoSave();
   });
 }
 document.getElementById('photo-camera-input').addEventListener('change', function(e){
@@ -1146,6 +1151,7 @@ function wireChoiceCards(containerId, field){
     var v = Number(card.getAttribute('data-score'));
     draft[field] = (draft[field]===v) ? null : v;
     setChoiceCard(containerId, draft[field]);
+    scheduleAutoSave();
   });
 }
 
@@ -1161,6 +1167,7 @@ document.getElementById('judge-chips').addEventListener('click', function(e){
   var v = chip.getAttribute('data-v');
   draft.judge = (draft.judge===v) ? null : v;
   setChip(draft.judge);
+  scheduleAutoSave();
 });
 
 /* ============ 衛生指導（複数選択） ============ */
@@ -1181,6 +1188,7 @@ document.getElementById('guidance-chips').addEventListener('click', function(e){
   if(idx > -1) draft.guidance.splice(idx, 1); else draft.guidance.push(v);
   setGuidanceChips(draft.guidance);
   if(v === 'other' && idx === -1) document.getElementById('f-guidance-other').focus();
+  scheduleAutoSave();
 });
 
 /* ============ 特記事項・所見：よくある所見をプルダウンから追記 ============ */
@@ -1297,6 +1305,7 @@ function makeZankonCell(num){
 
   cell.addEventListener('click', function(){
     draft.zankon[num] = !draft.zankon[num];
+    scheduleAutoSave();
     cell.replaceWith(makeZankonCell(num));
   });
   return cell;
@@ -1312,6 +1321,7 @@ function setToothStatus(num, status, prosth){
   draft.teeth[num] = { status: status, prosth: (status==='missing') ? (prosth||'none') : null };
   refreshTooth(num);
   refreshDentureChips();
+  scheduleAutoSave();
 }
 
 /* ============ 無歯顎の一括入力（義歯なし＝欠損補綴なし／義歯あり＝総義歯） ============ */
@@ -1346,6 +1356,7 @@ function wireDentureChips(containerId, archTeethNums, archContainerId){
     archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'missing', prosth:v}; });
     buildArch(archContainerId, archTeethNums, draft.teeth);
     refreshDentureChips();
+    scheduleAutoSave();
   });
 }
 wireDentureChips('denture-upper-chips', TEETH_UPPER, 'arch-upper');
@@ -1601,17 +1612,44 @@ document.getElementById('btn-clear-teeth').addEventListener('click', function(){
   buildArch('arch-upper', TEETH_UPPER, draft.teeth);
   buildArch('arch-lower', TEETH_LOWER, draft.teeth);
   refreshDentureChips();
+  scheduleAutoSave();
 });
 
 /* ============ save / delete / print ============ */
-document.getElementById('btn-save').addEventListener('click', function(){
+/* ============ 自動保存（保存ボタンを押さなくても入力内容を保持） ============ */
+var autoSaveTimer = null;
+function scheduleAutoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(doAutoSave, 900);
+}
+function doAutoSave(){
+  clearTimeout(autoSaveTimer);
+  if(!draft || document.getElementById('view-form').hidden) return false;
   readFormBasics();
-  if(!draft.name){ toast('氏名を入力してください'); return; }
-  var idx = records.findIndex(function(r){return r.id===draft.id;});
-  if(idx>-1) records[idx] = draft; else records.push(draft);
+  if(!draft.name) return false; // 氏名が未入力のうちは、空の記録として一覧に残さないため保存しない
+  var idx = records.findIndex(function(r){ return r.id === draft.id; });
+  if(idx > -1) records[idx] = draft; else records.push(draft);
   persist();
-  toast('保存しました');
   document.getElementById('btn-delete').hidden = false;
+  var status = document.getElementById('autosave-status');
+  if(status){
+    var t = new Date();
+    status.textContent = '自動保存済み（' + ('0'+t.getHours()).slice(-2) + ':' + ('0'+t.getMinutes()).slice(-2) + ':' + ('0'+t.getSeconds()).slice(-2) + '）';
+  }
+  return true;
+}
+document.getElementById('view-form').addEventListener('input', scheduleAutoSave);
+document.getElementById('view-form').addEventListener('change', scheduleAutoSave);
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden') doAutoSave();
+});
+
+document.getElementById('btn-save').addEventListener('click', function(){
+  if(!doAutoSave()){
+    toast('氏名を入力してください');
+    return;
+  }
+  toast('保存しました');
 });
 document.getElementById('btn-delete').addEventListener('click', function(){
   if(!confirm('この健診記録を削除します。よろしいですか？')) return;
@@ -1765,7 +1803,7 @@ document.getElementById('btn-new').addEventListener('click', function(){
 });
 document.getElementById('btn-settings').addEventListener('click', function(){ showSettings(); });
 document.getElementById('btn-back').addEventListener('click', function(){
-  if(!document.getElementById('view-form').hidden) readFormBasics();
+  if(!document.getElementById('view-form').hidden) doAutoSave();
   showList();
 });
 document.getElementById('search').addEventListener('input', renderList);
