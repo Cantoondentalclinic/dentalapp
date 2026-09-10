@@ -43,6 +43,8 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 #view-list .toolbar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 #view-list .toolbar input{flex:1;min-width:140px}
 .record-row{display:flex;align-items:center;justify-content:space-between;padding:12px 6px;border-bottom:1px solid rgba(0,0,0,0.06);gap:10px}
+.record-row.group-row{cursor:pointer}
+.record-row.group-row:active{background:#f5f5f3}
 .record-row:last-child{border-bottom:none}
 .record-main{flex:1;min-width:0}
 .record-main .name{font-size:14.5px;font-weight:600}
@@ -183,6 +185,14 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
         <button class="btn sm" id="btn-csv">CSV書き出し</button>
         <button class="btn sm" id="btn-print-blank">📄 空欄シートを印刷</button>
         <button class="btn sm primary" id="btn-pdf-batch">📄 まとめてPDF出力</button>
+      </div>
+      <div class="chip-select no-print" id="group-mode-chips" style="margin-bottom:10px">
+        <div class="chip-opt sel" data-v="date">検診日ごと</div>
+        <div class="chip-opt" data-v="facility">施設名ごと</div>
+      </div>
+      <div id="group-breadcrumb" class="no-print" hidden style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <button class="btn sm" id="btn-group-back">← 一覧へ</button>
+        <span id="group-breadcrumb-label" style="font-size:13px;font-weight:600"></span>
       </div>
       <div id="record-list"></div>
     </div>
@@ -595,27 +605,111 @@ function showForm(rec){
 }
 function recordExists(id){ return records.some(function(r){return r.id===id;}); }
 
-/* ============ list rendering ============ */
+/* ============ list rendering（検診日ごと／施設名ごとに分類して選択） ============ */
+var groupMode = 'date'; // 'date' | 'facility'
+var activeGroupKey = null; // nullならグループ一覧、値が入っていればそのグループの絞り込み表示
+function groupKeyFor(r){
+  return groupMode === 'date' ? (r.date || '（日付未設定）') : (r.facility || '（施設未設定）');
+}
+document.getElementById('group-mode-chips').addEventListener('click', function(e){
+  var chip = e.target.closest('.chip-opt');
+  if(!chip) return;
+  groupMode = chip.getAttribute('data-v');
+  activeGroupKey = null;
+  Array.prototype.forEach.call(document.getElementById('group-mode-chips').children, function(c){
+    c.classList.toggle('sel', c===chip);
+  });
+  renderList();
+});
+document.getElementById('btn-group-back').addEventListener('click', function(){
+  activeGroupKey = null;
+  renderList();
+});
 function renderList(){
   var q = (document.getElementById('search').value || '').trim();
-  var list = records.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
-  if(q){
-    list = list.filter(function(r){
-      return (r.facility+r.name+r.kana).indexOf(q) > -1;
-    });
+  var el = document.getElementById('record-list');
+  var breadcrumb = document.getElementById('group-breadcrumb');
+  var modeChips = document.getElementById('group-mode-chips');
+
+  if(records.length === 0){
+    modeChips.hidden = true;
+    breadcrumb.hidden = true;
+    el.innerHTML = '<div class="empty">健診記録がまだありません。「＋ 新規健診」から作成してください。</div>';
+    return;
   }
+
+  if(q){
+    // 検索中はグループ分けせず、全件から横断検索
+    modeChips.hidden = true;
+    breadcrumb.hidden = true;
+    var found = records.filter(function(r){ return (r.facility+r.name+r.kana).indexOf(q) > -1; });
+    found.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    renderRecordRows(found);
+    return;
+  }
+
+  modeChips.hidden = false;
+  if(activeGroupKey === null){
+    breadcrumb.hidden = true;
+    renderGroupList();
+  }else{
+    breadcrumb.hidden = false;
+    var inGroup = records.filter(function(r){ return groupKeyFor(r) === activeGroupKey; });
+    document.getElementById('group-breadcrumb-label').textContent = activeGroupKey + '（' + inGroup.length + '名）';
+    inGroup.sort(function(a,b){
+      if(groupMode === 'date') return (a.kana||a.name||'').localeCompare(b.kana||b.name||'', 'ja');
+      return (b.date||'').localeCompare(a.date||'') || (a.kana||a.name||'').localeCompare(b.kana||b.name||'', 'ja');
+    });
+    renderRecordRows(inGroup);
+  }
+}
+function renderGroupList(){
+  var el = document.getElementById('record-list');
+  var groups = {};
+  records.forEach(function(r){
+    var key = groupKeyFor(r);
+    (groups[key] = groups[key] || []).push(r);
+  });
+  var keys = Object.keys(groups);
+  if(groupMode === 'date') keys.sort(function(a,b){ return b.localeCompare(a); });
+  else keys.sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+
+  el.innerHTML = keys.map(function(key){
+    var list = groups[key];
+    var referCount = list.filter(function(r){ return r.judge==='refer'; }).length;
+    var watchCount = list.filter(function(r){ return r.judge==='watch'; }).length;
+    var badges = '';
+    if(referCount>0) badges += '<span class="judge-chip refer">要精査 '+referCount+'</span>';
+    if(watchCount>0) badges += '<span class="judge-chip watch">経過観察 '+watchCount+'</span>';
+    return '<div class="record-row group-row" data-key="'+esc(key)+'">'+
+      '<div class="record-main">'+
+        '<div class="name">'+esc(key)+badges+'</div>'+
+        '<div class="meta">'+list.length+'名</div>'+
+      '</div>'+
+      '<div class="record-actions"><button class="btn sm primary">開く</button></div>'+
+    '</div>';
+  }).join('');
+  Array.prototype.forEach.call(el.querySelectorAll('.group-row'), function(row){
+    row.addEventListener('click', function(){
+      activeGroupKey = row.getAttribute('data-key');
+      renderList();
+    });
+  });
+}
+function renderRecordRows(list){
   var el = document.getElementById('record-list');
   if(list.length===0){
-    el.innerHTML = '<div class="empty">健診記録がまだありません。「＋ 新規健診」から作成してください。</div>';
+    el.innerHTML = '<div class="empty">該当する健診記録がありません。</div>';
     return;
   }
   el.innerHTML = list.map(function(r){
     var judgeChip = r.judge ? '<span class="judge-chip ' + r.judge + '">' + judgeLabel(r.judge) + '</span>' : '';
     var photoChip = (r.photos && r.photos.length) ? '<span class="photo-count">📷'+r.photos.length+'</span>' : '';
+    var subline = groupMode === 'date' ? esc(r.facility||'施設未入力') : esc(r.date||'');
     return '<div class="record-row" data-id="'+r.id+'">'+
       '<div class="record-main">'+
         '<div class="name">'+esc(r.name||'（氏名未入力）')+judgeChip+'</div>'+
-        '<div class="meta">'+esc(r.facility||'施設未入力')+' ・ '+esc(r.date||'')+photoChip+'</div>'+
+        '<div class="meta">'+subline+photoChip+'</div>'+
       '</div>'+
       '<div class="record-actions">'+
         '<button class="btn sm" data-act="dup">再検診</button>'+
@@ -1661,7 +1755,14 @@ document.getElementById('btn-pdf-batch').addEventListener('click', function(){
 });
 
 /* ============ nav ============ */
-document.getElementById('btn-new').addEventListener('click', function(){ showForm(newDraft()); });
+document.getElementById('btn-new').addEventListener('click', function(){
+  var d = newDraft();
+  if(activeGroupKey){
+    if(groupMode === 'facility') d.facility = activeGroupKey;
+    else if(groupMode === 'date') d.date = activeGroupKey;
+  }
+  showForm(d);
+});
 document.getElementById('btn-settings').addEventListener('click', function(){ showSettings(); });
 document.getElementById('btn-back').addEventListener('click', function(){
   if(!document.getElementById('view-form').hidden) readFormBasics();
