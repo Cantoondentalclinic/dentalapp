@@ -79,6 +79,8 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 .tooth.missing .sub{background:#5c6bc0;color:#fff}
 .tooth.drawing{box-shadow:0 0 0 2px #1a73e8 inset}
 .arch-label{font-size:10px;color:#999;padding:0 2px 2px}
+.tooth.zankon-on{background:#fdf3e0;border-color:#e8b567}
+.tooth.zankon-on .sym{color:#b06000}
 
 /* ---- popover ---- */
 .popover{position:fixed;z-index:100;background:#fff;border:1px solid rgba(0,0,0,0.15);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.22);padding:8px;min-width:190px}
@@ -124,7 +126,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 .photo-item .cap{width:100%;font-size:11px;padding:5px 6px;border:none;border-top:1px solid rgba(0,0,0,0.08);background:#fff;color:#1a1a1a}
 .photo-item .cap:focus{outline:none;background:#f5f9ff}
 .photo-item .del{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.55);color:#fff;border:none;font-size:13px;line-height:22px;text-align:center;cursor:pointer;padding:0}
-.photo-empty{font-size:12px;color:#999;padding:6px 2px}
+.photo-empty{grid-column:1/-1;font-size:12px;color:#999;padding:6px 2px;white-space:nowrap}
 .photo-count{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#888;margin-left:6px}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:24px}
 .lightbox img{max-width:100%;max-height:100%;border-radius:8px}
@@ -275,25 +277,39 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
       </div>
 
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,0.08)">
-        <div style="font-size:13px;font-weight:600;margin-bottom:2px">義歯（総義歯・FD）の一括入力</div>
-        <div class="hint" style="margin-top:2px">上顎・下顎それぞれ総義歯の場合、ここから一括で「欠損＋全部床義歯」を入力できます</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">無歯顎の一括入力</div>
+        <div class="hint" style="margin-top:2px">上顎・下顎に残存歯が無い場合、義歯の有無を選ぶとその顎16歯を一括で入力できます</div>
         <div class="grid c2" style="margin-top:8px">
           <div>
-            <div style="font-size:11.5px;color:#777;margin-bottom:4px">上顎の義歯</div>
+            <div style="font-size:11.5px;color:#777;margin-bottom:4px">上顎</div>
             <div class="chip-select" id="denture-upper-chips">
-              <div class="chip-opt" data-v="none">なし</div>
-              <div class="chip-opt" data-v="full">総義歯（FD）あり</div>
+              <div class="chip-opt" data-v="none">上顎義歯なし</div>
+              <div class="chip-opt" data-v="full">上顎義歯あり</div>
             </div>
           </div>
           <div>
-            <div style="font-size:11.5px;color:#777;margin-bottom:4px">下顎の義歯</div>
+            <div style="font-size:11.5px;color:#777;margin-bottom:4px">下顎</div>
             <div class="chip-select" id="denture-lower-chips">
-              <div class="chip-opt" data-v="none">なし</div>
-              <div class="chip-opt" data-v="full">総義歯（FD）あり</div>
+              <div class="chip-opt" data-v="none">下顎義歯なし</div>
+              <div class="chip-opt" data-v="full">下顎義歯あり</div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>残根<span class="badge-req" style="background:#fdf3e0;color:#b06000">別枠記録</span></h2>
+      <div class="hint">残根（歯根のみ残存）がある歯をタップして記録してください。上の歯式とは別に、残根の有無だけを記録する表です。</div>
+      <div class="legend">
+        <span class="item"><span class="sym" style="color:#b06000">R</span>残根あり</span>
+        <span class="item"><span class="sym" style="color:#ccc">−</span>残根なし</span>
+      </div>
+      <div style="height:10px"></div>
+      <div class="arch-label">上顎（右 ← → 左）</div>
+      <div class="chart-wrap"><div class="arch upper" id="zankon-upper"></div></div>
+      <div class="arch-label" style="margin-top:8px">下顎（右 ← → 左）</div>
+      <div class="chart-wrap"><div class="arch lower" id="zankon-lower"></div></div>
     </div>
 
     <div class="card">
@@ -380,6 +396,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
     <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px">
       <button class="btn danger" id="btn-delete" hidden>この記録を削除</button>
       <button class="btn" id="btn-print">印刷</button>
+      <button class="btn" id="btn-pdf">📄 PDF出力</button>
       <button class="btn primary" id="btn-save">保存</button>
     </div>
   </section>
@@ -519,12 +536,18 @@ function blankTeeth(){
   TEETH_UPPER.concat(TEETH_LOWER).forEach(function(n){ t[n] = {status:'unset', prosth:null}; });
   return t;
 }
+function blankZankon(){
+  var z = {};
+  TEETH_UPPER.concat(TEETH_LOWER).forEach(function(n){ z[n] = false; });
+  return z;
+}
 function newDraft(){
   return {
     id: uid(),
     facility:'', name:'', kana:'', dob:'', age:'', gender:'',
     date: todayStr(), examiner:'', careLevel:'',
     teeth: blankTeeth(),
+    zankon: blankZankon(),
     hygiene: null, dryness: null, mucus:'',
     notes:'', judge:null, next:'',
     guidance: [], guidanceOther: '',
@@ -645,6 +668,10 @@ function fillForm(r){
   buildArch('arch-upper', TEETH_UPPER, r.teeth);
   buildArch('arch-lower', TEETH_LOWER, r.teeth);
   refreshDentureChips();
+
+  if(!r.zankon) r.zankon = blankZankon(); // 旧データ互換
+  buildZankonArch('zankon-upper', TEETH_UPPER);
+  buildZankonArch('zankon-lower', TEETH_LOWER);
 
   renderPhotoGrid();
 }
@@ -1141,6 +1168,42 @@ function symbolFor(st){
     default: return '−';
   }
 }
+
+/* ============ 残根（別枠記録） ============ */
+function buildZankonArch(containerId, teethNums){
+  var box = document.getElementById(containerId);
+  box.innerHTML = '';
+  teethNums.forEach(function(num, idx){
+    if(idx===8){
+      var gap = document.createElement('div');
+      gap.className = 'quad-gap';
+      box.appendChild(gap);
+    }
+    box.appendChild(makeZankonCell(num));
+  });
+}
+function makeZankonCell(num){
+  var on = !!draft.zankon[num];
+  var cell = document.createElement('div');
+  cell.className = 'tooth' + (on ? ' zankon-on' : '');
+  cell.setAttribute('data-num', num);
+
+  var sym = document.createElement('div');
+  sym.className = 'sym';
+  sym.textContent = on ? 'R' : '−';
+  cell.appendChild(sym);
+
+  var numEl = document.createElement('div');
+  numEl.className = 'num';
+  numEl.textContent = num;
+  cell.appendChild(numEl);
+
+  cell.addEventListener('click', function(){
+    draft.zankon[num] = !draft.zankon[num];
+    cell.replaceWith(makeZankonCell(num));
+  });
+  return cell;
+}
 function refreshTooth(num){
   var cell = document.querySelector('.tooth[data-num="'+num+'"]');
   if(!cell) return;
@@ -1154,36 +1217,36 @@ function setToothStatus(num, status, prosth){
   refreshDentureChips();
 }
 
-/* ============ 義歯（総義歯・FD）一括入力 ============ */
-function isArchFullDenture(archTeethNums){
+/* ============ 無歯顎の一括入力（義歯なし＝欠損補綴なし／義歯あり＝総義歯） ============ */
+function isArchAllMissingWith(archTeethNums, prosthValue){
   return archTeethNums.every(function(n){
     var st = draft.teeth[n];
-    return st && st.status === 'missing' && st.prosth === 'full';
+    return st && st.status === 'missing' && st.prosth === prosthValue;
   });
 }
+function dentureStateFor(archTeethNums){
+  if(isArchAllMissingWith(archTeethNums, 'full')) return 'full';
+  if(isArchAllMissingWith(archTeethNums, 'none')) return 'none';
+  return null; // 一部生存歯あり等、いずれにも一致しない状態
+}
 function refreshDentureChips(){
-  setDentureChip('denture-upper-chips', isArchFullDenture(TEETH_UPPER) ? 'full' : 'none');
-  setDentureChip('denture-lower-chips', isArchFullDenture(TEETH_LOWER) ? 'full' : 'none');
+  setDentureChip('denture-upper-chips', dentureStateFor(TEETH_UPPER));
+  setDentureChip('denture-lower-chips', dentureStateFor(TEETH_LOWER));
 }
 function setDentureChip(containerId, v){
   Array.prototype.forEach.call(document.getElementById(containerId).children, function(c){
-    c.classList.toggle('sel', c.getAttribute('data-v') === v);
+    c.classList.toggle('sel', v!==null && c.getAttribute('data-v') === v);
   });
 }
 function wireDentureChips(containerId, archTeethNums, archContainerId){
   document.getElementById(containerId).addEventListener('click', function(e){
     var chip = e.target.closest('.chip-opt');
     if(!chip) return;
-    var v = chip.getAttribute('data-v');
-    if(v === 'full'){
-      if(isArchFullDenture(archTeethNums)) return;
-      if(!confirm('この顎の歯（16本）をすべて「欠損＋全部床義歯（総義歯）」として一括入力します。個別に入力済みの内容は上書きされます。よろしいですか？')) return;
-      archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'missing', prosth:'full'}; });
-    }else{
-      if(!isArchFullDenture(archTeethNums)) return;
-      if(!confirm('総義歯の一括設定を解除し、この顎の歯をすべて未検査の状態に戻します。よろしいですか？')) return;
-      archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'unset', prosth:null}; });
-    }
+    var v = chip.getAttribute('data-v'); // 'full'=義歯あり（総義歯） / 'none'=義歯なし（欠損補綴なし）
+    if(dentureStateFor(archTeethNums) === v) return;
+    var label = v === 'full' ? '義歯あり（総義歯）' : '義歯なし（欠損・補綴なし）';
+    if(!confirm('この顎の歯（16本）を無歯顎として一括入力します（'+label+'）。個別に入力済みの内容は上書きされます。よろしいですか？')) return;
+    archTeethNums.forEach(function(n){ draft.teeth[n] = {status:'missing', prosth:v}; });
     buildArch(archContainerId, archTeethNums, draft.teeth);
     refreshDentureChips();
   });
@@ -1472,6 +1535,72 @@ document.getElementById('btn-print-blank').addEventListener('click', function(){
   setTimeout(function(){ window.print(); }, 50);
 });
 
+/* ============ PDF出力（1健診分を1つのPDFファイルにまとめて出力） ============ */
+var _pdfLibsPromise = null;
+function loadScriptOnce(src){
+  return new Promise(function(resolve, reject){
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error('load-failed:' + src)); };
+    document.head.appendChild(s);
+  });
+}
+function ensurePdfLibs(){
+  if(window.jspdf && window.html2canvas) return Promise.resolve();
+  if(_pdfLibsPromise) return _pdfLibsPromise;
+  _pdfLibsPromise = loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
+    .then(function(){ return loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'); })
+    .catch(function(){ throw new Error('PDF機能の取得に失敗しました（インターネット接続をご確認のうえ、「印刷」ボタンからのPDF保存もお試しください）'); });
+  return _pdfLibsPromise;
+}
+document.getElementById('btn-pdf').addEventListener('click', function(){
+  readFormBasics();
+  toast('PDFを作成中…');
+  ensurePdfLibs().then(function(){
+    var target = document.getElementById('view-form');
+    return window.html2canvas(target, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      onclone: function(clonedDoc){
+        var root = clonedDoc.getElementById('view-form');
+        if(!root) return;
+        Array.prototype.forEach.call(root.querySelectorAll('.no-print'), function(el){ el.style.display = 'none'; });
+        Array.prototype.forEach.call(clonedDoc.querySelectorAll('.popover,.overlay-catch,.toast,.lightbox'), function(el){ el.style.display = 'none'; });
+        // html2canvasは::placeholderのCSS上書きを反映しないため、空欄の入力欄はplaceholder属性自体を消す
+        Array.prototype.forEach.call(root.querySelectorAll('input,textarea'), function(el){
+          if(!el.value) el.setAttribute('placeholder', '');
+        });
+      }
+    }).then(function(canvas){
+      var jsPDF = window.jspdf.jsPDF;
+      var pdf = new jsPDF('p', 'mm', 'a4');
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var imgWidth = pageWidth;
+      var imgHeight = canvas.height * imgWidth / canvas.width;
+      var imgData = canvas.toDataURL('image/jpeg', 0.92);
+      var heightLeft = imgHeight;
+      var position = 0;
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while(heightLeft > 0){
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      var safeName = (draft.name || '氏名未入力').replace(/[\\/:*?"<>|]/g, '_');
+      var safeDate = (draft.date || todayStr()).replace(/[\\/:*?"<>|]/g, '_');
+      pdf.save('健診表_' + safeName + '_' + safeDate + '.pdf');
+      toast('PDFを書き出しました');
+    });
+  }).catch(function(err){
+    toast((err && err.message) ? err.message : 'PDF書き出しに失敗しました');
+  });
+});
+
 /* ============ nav ============ */
 document.getElementById('btn-new').addEventListener('click', function(){ showForm(newDraft()); });
 document.getElementById('btn-settings').addEventListener('click', function(){ showSettings(); });
@@ -1539,16 +1668,17 @@ document.getElementById('file-import').addEventListener('change', function(e){
   e.target.value = '';
 });
 document.getElementById('btn-csv').addEventListener('click', function(){
-  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','衛生指導','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数','写真枚数'];
+  var header = ['施設名','氏名','フリガナ','生年月日','年齢','性別','検診日','検診者','要介護度','口腔衛生','口腔乾燥','水分計測定値','衛生指導','総合判定','次回予定','特記事項','健全歯数','処置歯数','未処置歯数','欠損歯数','残根歯数','写真枚数'];
   var rows = records.map(function(r){
     var counts = {sound:0,treated:0,caries:0,missing:0};
     Object.keys(r.teeth||{}).forEach(function(n){ var s=r.teeth[n].status; if(counts[s]!==undefined) counts[s]++; });
+    var zankonCount = Object.keys(r.zankon||{}).filter(function(n){ return r.zankon[n]; }).length;
     var guidanceText = (r.guidance||[]).map(function(k){
       return k==='other' ? ('その他'+(r.guidanceOther?'（'+r.guidanceOther+'）':'')) : (GUIDANCE_LABELS[k] || k);
     }).join('・');
     return [r.facility,r.name,r.kana,r.dob,r.age,genderLabel(r.gender),r.date,r.examiner,r.careLevel,
       scoreLabel(r.hygiene),scoreLabel(r.dryness),r.mucus,guidanceText,judgeLabel(r.judge),r.next,r.notes,
-      counts.sound,counts.treated,counts.caries,counts.missing,(r.photos||[]).length];
+      counts.sound,counts.treated,counts.caries,counts.missing,zankonCount,(r.photos||[]).length];
   });
   var csv = [header].concat(rows).map(function(row){
     return row.map(function(v){
