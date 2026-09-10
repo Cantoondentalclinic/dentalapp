@@ -176,6 +176,21 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
 
   <!-- ===== list view ===== -->
   <section id="view-list">
+    <div class="card no-print">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">🏥 施設・検診日を選んで開始</div>
+      <div class="hint" style="margin-top:0;margin-bottom:8px">ここで選んだ施設名・検診日は「＋ 新規健診」を押したときに自動で入力されます</div>
+      <div class="grid c2">
+        <div class="field autocomplete-field">
+          <label>施設名</label>
+          <input type="text" id="start-facility" autocomplete="off" placeholder="〇〇老健">
+          <div class="ac-list" id="start-facility-ac-list" hidden></div>
+        </div>
+        <div class="field">
+          <label>検診日</label>
+          <input type="date" id="start-date">
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="toolbar no-print">
         <input type="text" id="search" placeholder="施設名・氏名で検索">
@@ -695,6 +710,11 @@ function renderGroupList(){
   Array.prototype.forEach.call(el.querySelectorAll('.group-row'), function(row){
     row.addEventListener('click', function(){
       activeGroupKey = row.getAttribute('data-key');
+      var isPlaceholderKey = activeGroupKey.indexOf('未設定') > -1;
+      if(!isPlaceholderKey){
+        if(groupMode === 'facility') document.getElementById('start-facility').value = activeGroupKey;
+        else document.getElementById('start-date').value = activeGroupKey;
+      }
       renderList();
     });
   });
@@ -1795,12 +1815,17 @@ document.getElementById('btn-pdf-batch').addEventListener('click', function(){
 /* ============ nav ============ */
 document.getElementById('btn-new').addEventListener('click', function(){
   var d = newDraft();
-  if(activeGroupKey){
-    if(groupMode === 'facility') d.facility = activeGroupKey;
-    else if(groupMode === 'date') d.date = activeGroupKey;
-  }
+  var startFacility = document.getElementById('start-facility').value.trim();
+  var startDate = document.getElementById('start-date').value;
+  if(startFacility) d.facility = startFacility;
+  if(startDate) d.date = startDate;
   showForm(d);
 });
+wireAutocomplete('start-facility', 'start-facility-ac-list', facilityOptions);
+(function initStartDate(){
+  var el = document.getElementById('start-date');
+  if(!el.value) el.value = todayStr();
+})();
 document.getElementById('btn-settings').addEventListener('click', function(){ showSettings(); });
 document.getElementById('btn-back').addEventListener('click', function(){
   if(!document.getElementById('view-form').hidden) doAutoSave();
