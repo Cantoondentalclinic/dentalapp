@@ -182,6 +182,7 @@ header.top .sub{font-size:11px;color:#888;font-weight:400;margin-top:2px}
         <input type="file" id="file-import" accept="application/json" hidden>
         <button class="btn sm" id="btn-csv">CSV書き出し</button>
         <button class="btn sm" id="btn-print-blank">📄 空欄シートを印刷</button>
+        <button class="btn sm primary" id="btn-pdf-batch">📄 まとめてPDF出力</button>
       </div>
       <div id="record-list"></div>
     </div>
@@ -590,7 +591,7 @@ function showForm(rec){
   document.getElementById('btn-settings').hidden = true;
   document.getElementById('header-sub').textContent = (rec.name || '氏名未入力') + ' の健診記録';
   document.getElementById('btn-delete').hidden = !recordExists(rec.id);
-  fillForm(rec);
+  return fillForm(rec);
 }
 function recordExists(id){ return records.some(function(r){return r.id===id;}); }
 
@@ -673,7 +674,7 @@ function fillForm(r){
   buildZankonArch('zankon-upper', TEETH_UPPER);
   buildZankonArch('zankon-lower', TEETH_LOWER);
 
-  renderPhotoGrid();
+  return renderPhotoGrid();
 }
 function readFormBasics(){
   draft.facility = document.getElementById('f-facility').value.trim();
@@ -959,9 +960,10 @@ function renderPhotoGrid(){
   var box = document.getElementById('photo-grid');
   if(draft.photos.length===0){
     box.innerHTML = '<div class="photo-empty">まだ写真がありません</div>';
-    return;
+    return Promise.resolve();
   }
   box.innerHTML = '';
+  var loadPromises = [];
   draft.photos.forEach(function(p){
     var item = document.createElement('div');
     item.className = 'photo-item';
@@ -971,9 +973,9 @@ function renderPhotoGrid(){
       '<input type="text" class="cap" data-id="'+p.id+'" placeholder="部位・メモ" value="'+esc(p.caption||'')+'">';
     box.appendChild(item);
     var imgEl = item.querySelector('img');
-    getPhotoRecord(p.id).then(function(rec){
+    loadPromises.push(getPhotoRecord(p.id).then(function(rec){
       if(rec) imgEl.src = rec.dataUrl;
-    });
+    }));
     imgEl.addEventListener('click', function(){
       if(imgEl.src) openLightbox(imgEl.src);
     });
@@ -987,6 +989,7 @@ function renderPhotoGrid(){
       p.caption = e.target.value;
     });
   });
+  return Promise.all(loadPromises);
 }
 function addPhotosFromFiles(files){
   files = Array.prototype.slice.call(files || []);
@@ -1554,50 +1557,106 @@ function ensurePdfLibs(){
     .catch(function(){ throw new Error('PDF機能の取得に失敗しました（インターネット接続をご確認のうえ、「印刷」ボタンからのPDF保存もお試しください）'); });
   return _pdfLibsPromise;
 }
+function captureViewFormCanvas(){
+  var target = document.getElementById('view-form');
+  return window.html2canvas(target, {
+    scale: 2,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    onclone: function(clonedDoc){
+      var root = clonedDoc.getElementById('view-form');
+      if(!root) return;
+      Array.prototype.forEach.call(root.querySelectorAll('.no-print'), function(el){ el.style.display = 'none'; });
+      Array.prototype.forEach.call(clonedDoc.querySelectorAll('.popover,.overlay-catch,.toast,.lightbox'), function(el){ el.style.display = 'none'; });
+      // html2canvasは::placeholderのCSS上書きを反映しないため、空欄の入力欄はplaceholder属性自体を消す
+      Array.prototype.forEach.call(root.querySelectorAll('input,textarea'), function(el){
+        if(!el.value) el.setAttribute('placeholder', '');
+      });
+    }
+  });
+}
+/* canvasをA4ページに敷き詰めて追加。isFirstPageがfalseなら新しいページから開始（複数名分をまとめる際、1名ごとに新ページで区切るため） */
+function addCanvasToPdf(pdf, canvas, isFirstPage){
+  var pageWidth = pdf.internal.pageSize.getWidth();
+  var pageHeight = pdf.internal.pageSize.getHeight();
+  var imgWidth = pageWidth;
+  var imgHeight = canvas.height * imgWidth / canvas.width;
+  var imgData = canvas.toDataURL('image/jpeg', 0.92);
+  var heightLeft = imgHeight;
+  var position = 0;
+  if(!isFirstPage) pdf.addPage();
+  pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+  while(heightLeft > 0){
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+  }
+}
+function sanitizeFilename(s){
+  return (s || '').replace(/[\\/:*?"<>|]/g, '_');
+}
+/* 現在表示中のフォームの内容が確実に画面に反映されるのを待つ（値の書き込み・写真読み込み後、レイアウト確定まで数フレーム待つ） */
+function waitForRenderSettle(){
+  return new Promise(function(resolve){
+    requestAnimationFrame(function(){ requestAnimationFrame(resolve); });
+  });
+}
 document.getElementById('btn-pdf').addEventListener('click', function(){
   readFormBasics();
   toast('PDFを作成中…');
   ensurePdfLibs().then(function(){
-    var target = document.getElementById('view-form');
-    return window.html2canvas(target, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-      onclone: function(clonedDoc){
-        var root = clonedDoc.getElementById('view-form');
-        if(!root) return;
-        Array.prototype.forEach.call(root.querySelectorAll('.no-print'), function(el){ el.style.display = 'none'; });
-        Array.prototype.forEach.call(clonedDoc.querySelectorAll('.popover,.overlay-catch,.toast,.lightbox'), function(el){ el.style.display = 'none'; });
-        // html2canvasは::placeholderのCSS上書きを反映しないため、空欄の入力欄はplaceholder属性自体を消す
-        Array.prototype.forEach.call(root.querySelectorAll('input,textarea'), function(el){
-          if(!el.value) el.setAttribute('placeholder', '');
-        });
-      }
-    }).then(function(canvas){
-      var jsPDF = window.jspdf.jsPDF;
-      var pdf = new jsPDF('p', 'mm', 'a4');
-      var pageWidth = pdf.internal.pageSize.getWidth();
-      var pageHeight = pdf.internal.pageSize.getHeight();
-      var imgWidth = pageWidth;
-      var imgHeight = canvas.height * imgWidth / canvas.width;
-      var imgData = canvas.toDataURL('image/jpeg', 0.92);
-      var heightLeft = imgHeight;
-      var position = 0;
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      while(heightLeft > 0){
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      var safeName = (draft.name || '氏名未入力').replace(/[\\/:*?"<>|]/g, '_');
-      var safeDate = (draft.date || todayStr()).replace(/[\\/:*?"<>|]/g, '_');
-      pdf.save('健診表_' + safeName + '_' + safeDate + '.pdf');
-      toast('PDFを書き出しました');
+    return waitForRenderSettle();
+  }).then(function(){
+    return captureViewFormCanvas();
+  }).then(function(canvas){
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF('p', 'mm', 'a4');
+    addCanvasToPdf(pdf, canvas, true);
+    pdf.save('健診表_' + sanitizeFilename(draft.name || '氏名未入力') + '_' + sanitizeFilename(draft.date || todayStr()) + '.pdf');
+    toast('PDFを書き出しました');
+  }).catch(function(err){
+    toast((err && err.message) ? err.message : 'PDF書き出しに失敗しました');
+  });
+});
+
+/* ============ まとめてPDF出力（同じ検診日の複数名分を1つのPDFに） ============ */
+document.getElementById('btn-pdf-batch').addEventListener('click', function(){
+  if(records.length === 0){ toast('健診記録がありません'); return; }
+  var latestDate = records.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); })[0].date || todayStr();
+  var dateStr = prompt('まとめて出力する検診日を入力してください（例：' + todayStr() + '）', latestDate);
+  if(!dateStr) return;
+  dateStr = dateStr.trim();
+  var targets = records.filter(function(r){ return r.date === dateStr; });
+  if(targets.length === 0){ toast('「' + dateStr + '」の健診記録が見つかりませんでした'); return; }
+  targets.sort(function(a,b){ return (a.kana||a.name||'').localeCompare(b.kana||b.name||'', 'ja'); });
+
+  toast('PDFを作成中…（0/' + targets.length + '）');
+  ensurePdfLibs().then(function(){
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF('p', 'mm', 'a4');
+    var chain = Promise.resolve();
+    targets.forEach(function(rec, idx){
+      chain = chain.then(function(){
+        toast('PDFを作成中…（' + (idx+1) + '/' + targets.length + '）' + (rec.name || '氏名未入力'));
+        return showForm(JSON.parse(JSON.stringify(rec)));
+      }).then(function(){
+        return waitForRenderSettle();
+      }).then(function(){
+        return captureViewFormCanvas();
+      }).then(function(canvas){
+        addCanvasToPdf(pdf, canvas, idx === 0);
+      });
+    });
+    return chain.then(function(){
+      pdf.save('健診表_まとめ_' + sanitizeFilename(dateStr) + '.pdf');
+      toast(targets.length + '名分のPDFを書き出しました');
+      showList();
     });
   }).catch(function(err){
     toast((err && err.message) ? err.message : 'PDF書き出しに失敗しました');
+    showList();
   });
 });
 
