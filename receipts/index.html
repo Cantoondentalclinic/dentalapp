@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レシート一覧</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+header{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:16px;font-weight:600;margin-right:auto}
+.folder-name{font-size:12px;color:#888}
+.main{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-width:1600px;margin:0 auto}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px}
+.section-title{font-size:14px;font-weight:600;margin-bottom:10px}
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:end}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:#888}
+.range{display:flex;gap:4px;align-items:center}
+.range span{color:#888;font-size:12px}
+input,select{font-family:inherit;font-size:13px;padding:6px 8px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;width:100%;min-width:0}
+input:focus,select:focus{outline:none;border-color:#1a73e8}
+.btn{font-family:inherit;font-size:13px;padding:6px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f5f5f3}
+.btn.primary{background:#e8f0fe;color:#1a73e8;border-color:rgba(26,115,232,0.3)}
+.btn.success{background:#e6f4ea;color:#137333;border-color:rgba(19,115,51,0.3)}
+.btn:disabled{opacity:.5;cursor:default}
+.stats{display:flex;gap:28px;flex-wrap:wrap;align-items:baseline}
+.stat .lbl{font-size:12px;color:#888}
+.stat .val{font-size:20px;font-weight:600}
+.stat .val.warn{color:#b06000}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:14px;align-items:start}
+.table-wrap{overflow:auto;max-height:calc(100vh - 330px);min-height:300px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:12px;font-weight:500;color:#888;border-bottom:0.5px solid rgba(0,0,0,0.1);position:sticky;top:0;background:#fff;cursor:pointer;user-select:none;white-space:nowrap}
+th.num,td.num{text-align:right}
+th .arrow{color:#1a73e8}
+td{padding:7px 10px;border-bottom:0.5px solid rgba(0,0,0,0.07);vertical-align:top}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:#f9f9f9}
+tbody tr.sel td{background:#e8f0fe}
+td.fname{color:#888;font-size:12px;word-break:break-all}
+td.date{white-space:nowrap}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;margin-left:4px;white-space:nowrap}
+.badge.warn{background:#fef7e0;color:#b06000}
+.badge.dup{background:#fce8e6;color:#d93025}
+.preview{position:sticky;top:12px}
+.preview-body{height:calc(100vh - 380px);min-height:320px;background:#f5f5f3;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.preview-body img{max-width:100%;max-height:100%;object-fit:contain}
+.preview-body iframe{width:100%;height:100%;border:none;background:#fff}
+.preview-meta{font-size:12px;color:#666;margin-top:8px;word-break:break-all;line-height:1.7}
+.empty{color:#888;font-size:13px;text-align:center;padding:30px 10px;line-height:1.8}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.bar-row{display:grid;grid-template-columns:110px 1fr 110px;gap:8px;align-items:center;font-size:12px;padding:2px 0;cursor:pointer}
+.bar-row:hover{background:#f9f9f9}
+.bar{height:10px;background:#1a73e8;border-radius:3px;min-width:2px}
+.bar-row .amt{text-align:right}
+.bar-row .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details summary{cursor:pointer;font-size:14px;font-weight:600}
+.help{font-size:13px;line-height:1.8;color:#333}
+.help code{background:#f5f5f3;padding:1px 6px;border-radius:4px}
+.help ul{padding-left:20px}
+.welcome{max-width:720px;margin:40px auto;text-align:center}
+.welcome p{color:#555;line-height:1.9;margin:10px 0}
+.welcome .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:18px 0}
+.hidden{display:none!important}
+@media (max-width:1000px){
+  .layout{grid-template-columns:1fr}
+  .preview{position:static}
+  .preview-body{height:60vh}
+  .table-wrap{max-height:none}
+  .summary-grid{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .main{padding:12px}
+  header{padding:10px 12px}
+  td.fname,th.fname{display:none}
+}
+@media print{
+  header .btn,.filters,.preview,#summaryCard,#helpCard{display:none!important}
+  .layout{grid-template-columns:1fr}
+  .table-wrap{max-height:none;overflow:visible}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧾 レシート一覧</h1>
+  <span class="folder-name" id="folderName"></span>
+  <button class="btn primary" id="pickBtn">フォルダを選択</button>
+  <button class="btn hidden" id="reloadBtn" title="フォルダの中身を読み直します">再読み込み</button>
+  <button class="btn success hidden" id="csvBtn">CSV出力</button>
+  <input type="file" id="dirInput" webkitdirectory multiple class="hidden">
+</header>
+
+<div class="main">
+  <div id="welcome" class="welcome">
+    <p>レシート・領収書を保存しているフォルダを選ぶと、<br>ファイル名から <b>日付・金額・取引先</b> を読み取って一覧にします。</p>
+    <div class="btns">
+      <button class="btn primary" id="pickBtn2">フォルダを選択</button>
+      <button class="btn hidden" id="resumeBtn">前回のフォルダを開く</button>
+    </div>
+    <p style="font-size:12px;color:#888">ファイルはこの端末の中で読むだけで、どこにも送信されません。<br>Google ドライブのフォルダも、パソコンに同期したフォルダ（「マイドライブ」等）を選べば使えます。</p>
+  </div>
+
+  <div id="app" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+    <div class="card">
+      <div class="filters">
+        <div class="form-group" style="grid-column:span 2">
+          <label>取引年月日（範囲）</label>
+          <div class="range"><input type="date" id="fDateFrom"><span>〜</span><input type="date" id="fDateTo"></div>
+        </div>
+        <div class="form-group" style="grid-column:span 2">
+          <label>取引金額（範囲・円）</label>
+          <div class="range"><input type="number" id="fAmtMin" placeholder="下限" inputmode="numeric"><span>〜</span><input type="number" id="fAmtMax" placeholder="上限" inputmode="numeric"></div>
+        </div>
+        <div class="form-group"><label>取引先</label><input type="search" id="fVendor" placeholder="一部でも可"></div>
+        <div class="form-group"><label>フォルダ</label><select id="fFolder"><option value="">すべて</option></select></div>
+        <div class="form-group"><label>キーワード</label><input type="search" id="fText" placeholder="ファイル名・メモ"></div>
+        <div class="form-group"><label>状態</label>
+          <select id="fState"><option value="">すべて</option><option value="warn">要確認（読取不可）</option><option value="dup">重複の可能性</option></select>
+        </div>
+        <div class="form-group"><label>&nbsp;</label><button class="btn" id="clearBtn">条件クリア</button></div>
+      </div>
+    </div>
+
+    <div class="card stats">
+      <div class="stat"><div class="lbl">表示件数</div><div class="val" id="sCount">0</div></div>
+      <div class="stat"><div class="lbl">合計金額</div><div class="val" id="sSum">¥0</div></div>
+      <div class="stat"><div class="lbl">全ファイル</div><div class="val" id="sAll">0</div></div>
+      <div class="stat"><div class="lbl">要確認</div><div class="val warn" id="sWarn">0</div></div>
+      <div class="stat"><div class="lbl">重複の可能性</div><div class="val warn" id="sDup">0</div></div>
+    </div>
+
+    <div class="layout">
+      <div class="card" style="padding:6px 6px">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-key="date">取引日</th>
+              <th data-key="vendor">取引先</th>
+              <th data-key="amount" class="num">金額</th>
+              <th data-key="folder">フォルダ</th>
+              <th data-key="name" class="fname">ファイル名</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div id="noRows" class="empty hidden">条件に合うファイルはありません</div>
+        </div>
+      </div>
+      <div class="card preview">
+        <div class="section-title" id="pvTitle">プレビュー</div>
+        <div class="preview-body" id="pvBody"><div class="empty">一覧の行をクリックすると<br>ここに表示されます<br><span style="font-size:11px">↑↓キーで前後に移動できます</span></div></div>
+        <div class="preview-meta" id="pvMeta"></div>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button class="btn hidden" id="pvOpen">別タブで開く</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="summaryCard">
+      <details open>
+        <summary>集計（いまの絞り込み条件で集計）</summary>
+        <div class="summary-grid" style="margin-top:12px">
+          <div><div class="section-title" style="font-size:13px">月別</div><div id="byMonth"></div></div>
+          <div><div class="section-title" style="font-size:13px">取引先別（上位20）</div><div id="byVendor"></div></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="card help" id="helpCard">
+      <details>
+        <summary>ファイル名の読み取りルール</summary>
+        <div style="margin-top:10px">
+          <p>ファイル名を <code>_</code>（アンダーバー）か空白で区切り、各部分を自動で判別します。<b>順番は問いません。</b></p>
+          <ul>
+            <li>日付：<code>20240115</code> <code>2024-01-15</code> <code>2024.1.15</code> <code>R6.1.15</code> <code>令和6年1月15日</code></li>
+            <li>金額：<code>11000</code> <code>11,000</code> <code>¥11000</code> <code>11000円</code>（日付でない数字）</li>
+            <li>取引先：上記以外で最初の部分。残りはメモとして扱います。</li>
+          </ul>
+          <p>例：<code>20240115_○○歯科材料_11000.pdf</code>、<code>20240115_11000_○○歯科材料_印象材.jpg</code></p>
+          <p>日付か金額が読み取れないファイルは「要確認」と表示します。同じ日付・金額・取引先のファイルが複数あると「重複の可能性」と表示します。</p>
+          <p>対応形式：PDF・JPEG・PNG・WebP・GIF（プレビュー可）、HEIC・Excel 等（一覧のみ）。</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXTS = ['pdf','jpg','jpeg','png','webp','gif','heic','heif','tif','tiff','xlsx','xls','csv','xml','html','htm','txt'];
+const PREVIEW_IMG = ['jpg','jpeg','png','webp','gif'];
+const MIME = {pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif'};
+
+let rows = [];          // 全ファイル
+let view = [];          // 絞り込み後
+let sortKey = 'date', sortDir = 1;
+let selIdx = -1;
+let currentUrl = null;
+let rootHandle = null;
+
+const $ = id => document.getElementById(id);
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- ファイル名の解析 ----------
+const ERA = {R:2018, H:1988, '令和':2018, '平成':1988};
+
+function toHalf(s){
+  return s.replace(/[０-９Ａ-Ｚａ-ｚ，．－／]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+}
+
+function validDate(y, m, d){
+  if (y < 1990 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(y, m - 1, d);
+  if (dt.getMonth() !== m - 1) return null;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function parseDate(t){
+  let m;
+  if ((m = t.match(/^(\d{4})(\d{2})(\d{2})$/))) return validDate(+m[1], +m[2], +m[3]);
+  if ((m = t.match(/^(\d{4})[-.\/年](\d{1,2})[-.\/月](\d{1,2})日?$/))) return validDate(+m[1], +m[2], +m[3]);
+  if ((m = t.match(/^(R|H|令和|平成)(\d{1,2})[-.\/年](\d{1,2})[-.\/月](\d{1,2})日?$/i))) return validDate(ERA[m[1].toUpperCase()] + +m[2], +m[3], +m[4]);
+  return null;
+}
+
+function parseAmount(t){
+  let m = t.match(/^[¥￥\\]?(-?\d{1,3}(?:,\d{3})+|-?\d+)円?$/);
+  if (!m) return null;
+  return { value: parseInt(m[1].replace(/,/g, ''), 10), explicit: /[¥￥\\円,]/.test(t) };
+}
+
+function parseName(base){
+  const name = base.replace(/\.[^.]+$/, '');
+  let tokens = toHalf(name).split(/[_\s　]+/).filter(Boolean);
+  if (tokens.length === 1) tokens = tokens[0].split('-').filter(Boolean);  // 区切りがハイフンだけの場合
+  let date = null, amount = null, dateI = -1, amtI = -1, amtExplicit = false;
+  tokens.forEach((t, i) => {
+    if (date === null) { const d = parseDate(t); if (d) { date = d; dateI = i; return; } }
+    const a = parseAmount(t);
+    // 「円」「¥」「,」付きを優先。なければ最初の数字
+    if (a && (amount === null || (a.explicit && !amtExplicit))) { amount = a.value; amtI = i; amtExplicit = a.explicit; }
+  });
+  const rest = tokens.filter((_, i) => i !== dateI && i !== amtI);
+  return { date, amount, vendor: rest[0] || '', memo: rest.slice(1).join(' ') };
+}
+
+// ---------- フォルダ読み込み ----------
+async function walk(dirHandle, path, out){
+  for await (const [name, h] of dirHandle.entries()){
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'directory') await walk(h, path ? path + '/' + name : name, out);
+    else {
+      const ext = name.split('.').pop().toLowerCase();
+      if (EXTS.includes(ext)) out.push({ name, folder: path, ext, getFile: () => h.getFile() });
+    }
+  }
+}
+
+function buildRows(list){
+  rows = list.map((f, i) => ({ id: i, ...f, ...parseName(f.name) }));
+  const key = r => r.date && r.amount !== null ? `${r.date}|${r.amount}|${r.vendor}` : null;
+  const cnt = {};
+  rows.forEach(r => { const k = key(r); if (k) cnt[k] = (cnt[k] || 0) + 1; });
+  rows.forEach(r => { r.warn = !r.date || r.amount === null; r.dup = !!(key(r) && cnt[key(r)] > 1); });
+
+  const folders = [...new Set(rows.map(r => r.folder))].sort();
+  $('fFolder').innerHTML = '<option value="">すべて</option>' + folders.map(f => `<option value="${esc(f)}">${esc(f || '（直下）')}</option>`).join('');
+  $('welcome').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  ['csvBtn'].forEach(id => $(id).classList.remove('hidden'));
+  $('reloadBtn').classList.toggle('hidden', !rootHandle);
+  selIdx = -1;
+  render();
+}
+
+async function openHandle(h){
+  rootHandle = h;
+  $('folderName').textContent = '📁 ' + h.name + '（読み込み中…）';
+  const out = [];
+  await walk(h, '', out);
+  $('folderName').textContent = '📁 ' + h.name;
+  buildRows(out);
+}
+
+async function pickFolder(){
+  if (window.showDirectoryPicker){
+    try {
+      const h = await window.showDirectoryPicker({ mode: 'read', id: 'receipts' });
+      await saveHandle(h);
+      await openHandle(h);
+    } catch (e) { if (e.name !== 'AbortError') alert('フォルダを開けませんでした: ' + e.message); }
+  } else {
+    $('dirInput').click();   // Safari・スマホ等
+  }
+}
+
+$('dirInput').addEventListener('change', e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  rootHandle = null;
+  const top = (files[0].webkitRelativePath || '').split('/')[0];
+  $('folderName').textContent = '📁 ' + top;
+  const list = files.filter(f => !f.name.startsWith('.')).map(f => {
+    const parts = (f.webkitRelativePath || f.name).split('/');
+    return { name: f.name, folder: parts.slice(1, -1).join('/'), ext: f.name.split('.').pop().toLowerCase(), getFile: async () => f };
+  }).filter(f => EXTS.includes(f.ext));
+  buildRows(list);
+});
+
+// 前回のフォルダを記憶（Chrome / Edge のみ）
+function idb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('receipt-viewer', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function saveHandle(h){
+  try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').put(h, 'root'); } catch (e) {}
+}
+async function loadHandle(){
+  try {
+    const db = await idb();
+    return await new Promise(res => { const r = db.transaction('kv').objectStore('kv').get('root'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); });
+  } catch (e) { return null; }
+}
+
+(async () => {
+  if (!window.showDirectoryPicker) return;
+  const h = await loadHandle();
+  if (!h) return;
+  const btn = $('resumeBtn');
+  btn.textContent = `前回のフォルダを開く（${h.name}）`;
+  btn.classList.remove('hidden');
+  btn.onclick = async () => {
+    try {
+      if ((await h.queryPermission({ mode: 'read' })) !== 'granted' && (await h.requestPermission({ mode: 'read' })) !== 'granted') return;
+      await openHandle(h);
+    } catch (e) { alert('前回のフォルダを開けませんでした。もう一度「フォルダを選択」してください。'); }
+  };
+})();
+
+$('pickBtn').onclick = pickFolder;
+$('pickBtn2').onclick = pickFolder;
+$('reloadBtn').onclick = () => rootHandle && openHandle(rootHandle);
+
+// ---------- 絞り込み・表示 ----------
+function filtered(){
+  const df = $('fDateFrom').value, dt = $('fDateTo').value;
+  const amin = $('fAmtMin').value, amax = $('fAmtMax').value;
+  const v = $('fVendor').value.trim().toLowerCase();
+  const fo = $('fFolder').value, tx = $('fText').value.trim().toLowerCase(), st = $('fState').value;
+  return rows.filter(r => {
+    if ((df || dt) && !r.date) return false;
+    if (df && r.date < df) return false;
+    if (dt && r.date > dt) return false;
+    if ((amin !== '' || amax !== '') && r.amount === null) return false;
+    if (amin !== '' && r.amount < +amin) return false;
+    if (amax !== '' && r.amount > +amax) return false;
+    if (v && !r.vendor.toLowerCase().includes(v)) return false;
+    if (fo && r.folder !== fo && !r.folder.startsWith(fo + '/')) return false;
+    if (tx && !(r.name + ' ' + r.memo + ' ' + r.folder).toLowerCase().includes(tx)) return false;
+    if (st === 'warn' && !r.warn) return false;
+    if (st === 'dup' && !r.dup) return false;
+    return true;
+  });
+}
+
+function cmp(a, b){
+  let x = a[sortKey], y = b[sortKey];
+  if (x === null || x === '') return 1;
+  if (y === null || y === '') return -1;
+  if (typeof x === 'number') return (x - y) * sortDir;
+  return String(x).localeCompare(String(y), 'ja') * sortDir || a.name.localeCompare(b.name, 'ja');
+}
+
+function render(){
+  const selId = view[selIdx]?.id;
+  view = filtered().sort(cmp);
+  selIdx = view.findIndex(r => r.id === selId);
+
+  document.querySelectorAll('th[data-key]').forEach(th => {
+    const base = th.textContent.replace(/[ ▲▼]/g, '');
+    th.innerHTML = esc(base) + (th.dataset.key === sortKey ? ` <span class="arrow">${sortDir > 0 ? '▲' : '▼'}</span>` : '');
+  });
+
+  $('tbody').innerHTML = view.map((r, i) => `
+    <tr data-i="${i}" class="${i === selIdx ? 'sel' : ''}">
+      <td class="date">${r.date ? r.date.replace(/-/g, '/') : '<span class="badge warn">日付なし</span>'}</td>
+      <td>${esc(r.vendor)}${r.memo ? `<div style="font-size:11px;color:#888">${esc(r.memo)}</div>` : ''}${r.dup ? '<span class="badge dup">重複?</span>' : ''}</td>
+      <td class="num">${r.amount !== null ? yen(r.amount) : '<span class="badge warn">金額なし</span>'}</td>
+      <td style="font-size:12px;color:#666">${esc(r.folder || '—')}</td>
+      <td class="fname">${esc(r.name)}</td>
+    </tr>`).join('');
+  $('noRows').classList.toggle('hidden', view.length > 0);
+
+  const sum = view.reduce((s, r) => s + (r.amount || 0), 0);
+  $('sCount').textContent = view.length.toLocaleString();
+  $('sSum').textContent = yen(sum);
+  $('sAll').textContent = rows.length.toLocaleString();
+  $('sWarn').textContent = rows.filter(r => r.warn).length;
+  $('sDup').textContent = rows.filter(r => r.dup).length;
+  renderSummary();
+}
+
+function bars(el, entries, onClick){
+  const max = Math.max(1, ...entries.map(e => e[1]));
+  el.innerHTML = entries.length ? entries.map(([k, v, n]) => `
+    <div class="bar-row" data-k="${esc(k)}" title="${esc(k)}：${n}件 ${yen(v)}">
+      <div class="lab">${esc(k)} <span style="color:#888">(${n})</span></div>
+      <div><div class="bar" style="width:${(v / max * 100).toFixed(1)}%"></div></div>
+      <div class="amt">${yen(v)}</div>
+    </div>`).join('') : '<div class="empty">データなし</div>';
+  el.querySelectorAll('.bar-row').forEach(row => row.onclick = () => onClick(row.dataset.k));
+}
+
+function renderSummary(){
+  const m = {}, v = {};
+  view.forEach(r => {
+    if (r.date){ const k = r.date.slice(0, 7); m[k] = m[k] || [0, 0]; m[k][0] += r.amount || 0; m[k][1]++; }
+    const vk = r.vendor || '（不明）'; v[vk] = v[vk] || [0, 0]; v[vk][0] += r.amount || 0; v[vk][1]++;
+  });
+  bars($('byMonth'), Object.entries(m).sort().map(([k, [s, n]]) => [k, s, n]), k => {
+    const [y, mo] = k.split('-').map(Number);
+    $('fDateFrom').value = `${k}-01`;
+    $('fDateTo').value = `${k}-${String(new Date(y, mo, 0).getDate()).padStart(2, '0')}`;
+    render();
+  });
+  bars($('byVendor'), Object.entries(v).sort((a, b) => b[1][0] - a[1][0]).slice(0, 20).map(([k, [s, n]]) => [k, s, n]), k => {
+    $('fVendor').value = k === '（不明）' ? '' : k; render();
+  });
+}
+
+['fDateFrom','fDateTo','fAmtMin','fAmtMax','fVendor','fFolder','fText','fState'].forEach(id => $(id).addEventListener('input', render));
+$('clearBtn').onclick = () => {
+  ['fDateFrom','fDateTo','fAmtMin','fAmtMax','fVendor','fText'].forEach(id => $(id).value = '');
+  $('fFolder').value = ''; $('fState').value = '';
+  render();
+};
+document.querySelectorAll('th[data-key]').forEach(th => th.onclick = () => {
+  const k = th.dataset.key;
+  if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; }
+  render();
+});
+
+// ---------- プレビュー ----------
+$('tbody').addEventListener('click', e => {
+  const tr = e.target.closest('tr'); if (tr) select(+tr.dataset.i);
+});
+document.addEventListener('keydown', e => {
+  if (!view.length || ['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (e.key === 'ArrowDown'){ e.preventDefault(); select(Math.min(view.length - 1, selIdx + 1)); }
+  if (e.key === 'ArrowUp'){ e.preventDefault(); select(Math.max(0, selIdx - 1)); }
+});
+
+async function select(i){
+  selIdx = i;
+  document.querySelectorAll('#tbody tr').forEach(tr => tr.classList.toggle('sel', +tr.dataset.i === i));
+  const tr = document.querySelector(`#tbody tr[data-i="${i}"]`);
+  tr && tr.scrollIntoView({ block: 'nearest' });
+  const r = view[i];
+  if (currentUrl){ URL.revokeObjectURL(currentUrl); currentUrl = null; }
+  $('pvTitle').textContent = r.vendor || r.name;
+  let file;
+  try { file = await r.getFile(); }
+  catch (e) { $('pvBody').innerHTML = '<div class="empty">ファイルを読み込めませんでした。<br>「再読み込み」を押してください。</div>'; return; }
+  if (view[selIdx] !== r) return;   // 連打対策
+  const type = MIME[r.ext] || file.type;
+  currentUrl = URL.createObjectURL(type && type !== file.type ? new Blob([file], { type }) : file);
+  if (PREVIEW_IMG.includes(r.ext)) $('pvBody').innerHTML = `<img src="${currentUrl}" alt="">`;
+  else if (r.ext === 'pdf') $('pvBody').innerHTML = `<iframe src="${currentUrl}#view=FitH"></iframe>`;
+  else $('pvBody').innerHTML = `<div class="empty">この形式（.${esc(r.ext)}）はプレビューできません。<br>「別タブで開く」で保存・表示できます。</div>`;
+  $('pvOpen').classList.remove('hidden');
+  $('pvMeta').innerHTML = [
+    `取引日：${r.date ? r.date.replace(/-/g, '/') : '—'}`,
+    `金額：${r.amount !== null ? yen(r.amount) : '—'}`,
+    `取引先：${esc(r.vendor || '—')}${r.memo ? `（${esc(r.memo)}）` : ''}`,
+    `場所：${esc((r.folder ? r.folder + '/' : '') + r.name)}`,
+    `更新日時：${new Date(file.lastModified).toLocaleString('ja-JP')}　サイズ：${(file.size / 1024).toFixed(0)} KB`
+  ].join('<br>');
+}
+$('pvOpen').onclick = () => {
+  if (!currentUrl) return;
+  const r = view[selIdx];
+  if (PREVIEW_IMG.includes(r.ext) || r.ext === 'pdf') window.open(currentUrl, '_blank');
+  else { const a = document.createElement('a'); a.href = currentUrl; a.download = r.name; a.click(); }
+};
+
+// ---------- CSV ----------
+$('csvBtn').onclick = () => {
+  const q = s => `"${String(s ?? '').replace(/"/g, '""')}"`;
+  const lines = [['取引年月日','取引先','取引金額','メモ','フォルダ','ファイル名','状態'].map(q).join(',')];
+  view.forEach(r => lines.push([r.date || '', r.vendor, r.amount ?? '', r.memo, r.folder, r.name, [r.warn && '要確認', r.dup && '重複の可能性'].filter(Boolean).join('/')].map(q).join(',')));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `レシート一覧_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+</script>
+</body>
+</html>
