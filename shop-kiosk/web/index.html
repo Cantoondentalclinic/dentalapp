@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>院内物販</title>
+<style id="page-style"></style>
+<style>
+:root{
+  --bg:#f4f6f5;--card:#fff;--ink:#1d2421;--muted:#6b7570;--line:rgba(0,0,0,.09);
+  --accent:#0f8a6c;--accent-ink:#fff;--accent-soft:#e3f3ee;--danger:#c8463b;--warn:#b7791f;
+  --radius:16px;--shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP','Yu Gothic',sans-serif;background:var(--bg);color:var(--ink);font-size:16px;overflow:hidden;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;border:none;background:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit;user-select:text;-webkit-user-select:text}
+
+/* ---------- layout ---------- */
+.app{display:grid;grid-template-columns:1fr 360px;grid-template-rows:auto 1fr;height:100vh}
+.header{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:14px 22px;background:var(--card);border-bottom:1px solid var(--line)}
+.header .logo{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;font-size:22px}
+.header h1{font-size:20px;font-weight:700}
+.header .sub{font-size:13px;color:var(--muted)}
+.header .spacer{flex:1}
+.gear{width:44px;height:44px;border-radius:12px;color:#b9c0bc;font-size:20px;display:grid;place-items:center}
+.shop{display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;gap:8px;padding:14px 22px 6px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:10px 18px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:15px;font-weight:600;color:var(--muted)}
+.tab.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.grid{flex:1;overflow-y:auto;padding:12px 22px 28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;align-content:start}
+.item{position:relative;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;text-align:left;display:flex;flex-direction:column;transition:transform .08s}
+.item:active{transform:scale(.97)}
+.item .ph{aspect-ratio:4/3;background:#eef2f0;display:grid;place-items:center;font-size:52px;overflow:hidden}
+.item .ph img{width:100%;height:100%;object-fit:cover}
+.item .body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.item .name{font-size:15px;font-weight:600;line-height:1.35}
+.item .desc{font-size:12px;color:var(--muted);line-height:1.4}
+.item .price{margin-top:auto;font-size:18px;font-weight:700;color:var(--accent)}
+.item .price small{font-size:11px;color:var(--muted);font-weight:500;margin-left:2px}
+.item .qty{position:absolute;top:8px;right:8px;min-width:32px;height:32px;padding:0 8px;border-radius:999px;background:var(--accent);color:#fff;font-weight:700;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.item.soldout{opacity:.45;pointer-events:none}
+.item.soldout::after{content:'売り切れ';position:absolute;top:30%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);background:var(--danger);color:#fff;font-weight:700;padding:6px 16px;border-radius:8px}
+.empty-shop{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0}
+
+/* ---------- cart ---------- */
+.cart{background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.cart-head{padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between}
+.cart-head h2{font-size:17px}
+.link-btn{font-size:13px;color:var(--danger);padding:6px 4px}
+.cart-list{flex:1;overflow-y:auto;padding:0 12px}
+.cart-empty{color:var(--muted);text-align:center;padding:48px 16px;line-height:1.8;font-size:14px}
+.cart-empty .big{font-size:44px;display:block;margin-bottom:6px}
+.line{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:12px 6px;border-bottom:1px solid var(--line)}
+.line .n{font-size:14px;font-weight:600;line-height:1.35}
+.line .p{font-size:14px;font-weight:700;text-align:right}
+.line .u{font-size:12px;color:var(--muted)}
+.stepper{display:flex;align-items:center;gap:6px;justify-self:end}
+.stepper button{width:40px;height:40px;border-radius:12px;background:var(--bg);font-size:20px;font-weight:700}
+.stepper span{min-width:28px;text-align:center;font-weight:700}
+.cart-foot{padding:14px 18px 18px;border-top:1px solid var(--line)}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+.total .l{font-size:14px;color:var(--muted)}
+.total .v{font-size:28px;font-weight:800}
+.total .v small{font-size:12px;color:var(--muted);font-weight:500;margin-left:4px}
+.primary{width:100%;padding:18px;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-size:18px;font-weight:700}
+.primary:disabled{background:#c5ccc9}
+.secondary{padding:14px 20px;border-radius:14px;background:var(--bg);font-weight:600}
+.danger-btn{padding:10px 16px;border-radius:12px;background:#fbeceb;color:var(--danger);font-weight:600}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+
+/* ---------- modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(20,28,25,.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+.overlay.show{display:flex}
+.modal{background:var(--card);border-radius:20px;max-width:560px;width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.modal-head{padding:18px 20px 8px;font-size:18px;font-weight:700}
+.modal-body{padding:8px 20px;overflow-y:auto}
+.modal-foot{padding:14px 20px 20px;display:flex;gap:10px;justify-content:flex-end}
+.modal-foot .primary{width:auto;padding:14px 28px;font-size:16px}
+.center{text-align:center}
+
+/* receipt (preview + print) */
+.receipt{width:72mm;max-width:100%;margin:8px auto;padding:14px 12px;background:#fff;border:1px dashed #c9d0cc;font-family:'Noto Sans JP','Hiragino Sans',sans-serif;color:#000;font-size:12px;line-height:1.5}
+.receipt .r-title{text-align:center;font-size:16px;font-weight:700;letter-spacing:.1em}
+.receipt .r-clinic{text-align:center;font-size:12px;margin-top:2px}
+.receipt .r-no{text-align:center;font-size:30px;font-weight:800;margin:8px 0 2px}
+.receipt .r-date{text-align:center;font-size:11px}
+.receipt hr{border:none;border-top:1px dashed #000;margin:8px 0}
+.receipt table{width:100%;border-collapse:collapse}
+.receipt td{padding:2px 0;vertical-align:top}
+.receipt td.q{width:3em;text-align:right;white-space:nowrap}
+.receipt td.a{width:5.5em;text-align:right;white-space:nowrap}
+.receipt .r-total{display:flex;justify-content:space-between;font-size:16px;font-weight:800}
+.receipt .r-note{font-size:11px;margin-top:6px;white-space:pre-wrap}
+.receipt .r-notice{font-size:10px;text-align:center;margin-top:8px}
+
+/* done screen */
+.done-no{font-size:64px;font-weight:800;color:var(--accent);margin:6px 0}
+.done-msg{font-size:18px;line-height:1.7}
+.countdown{font-size:13px;color:var(--muted);margin-top:10px}
+
+/* PIN pad */
+.pin-dots{display:flex;gap:14px;justify-content:center;margin:10px 0 18px}
+.pin-dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--accent)}
+.pin-dots i.on{background:var(--accent)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,76px);gap:12px;justify-content:center}
+.pin-pad button{height:64px;border-radius:16px;background:var(--bg);font-size:24px;font-weight:600}
+.pin-err{color:var(--danger);text-align:center;font-size:13px;min-height:20px;margin-top:8px}
+
+/* ---------- admin ---------- */
+.admin{position:fixed;inset:0;background:var(--bg);z-index:40;display:none;flex-direction:column}
+.admin.show{display:flex}
+.admin-head{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--card);border-bottom:1px solid var(--line)}
+.admin-head h2{font-size:18px;flex:1}
+.admin-tabs{display:flex;gap:6px;padding:10px 18px 0}
+.admin-tabs button{padding:10px 18px;border-radius:12px 12px 0 0;font-weight:600;color:var(--muted)}
+.admin-tabs button.active{background:var(--card);color:var(--ink)}
+.admin-body{flex:1;overflow-y:auto;background:var(--card);margin:0 18px 18px;border-radius:0 14px 14px 14px;padding:16px}
+.prow{display:grid;grid-template-columns:56px 1fr auto auto;gap:12px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.prow .thumb{width:56px;height:56px;border-radius:10px;background:#eef2f0;display:grid;place-items:center;font-size:26px;overflow:hidden}
+.prow .thumb img{width:100%;height:100%;object-fit:cover}
+.prow .meta{font-size:12px;color:var(--muted)}
+.prow .acts{display:flex;gap:6px}
+.icon-btn{width:40px;height:40px;border-radius:10px;background:var(--bg);font-size:16px}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:#fbeceb;color:var(--danger);margin-left:6px;font-weight:600}
+.form{display:grid;gap:14px}
+.form label{display:grid;gap:6px;font-size:13px;color:var(--muted)}
+.form input[type=text],.form input[type=number],.form input[type=password],.form select,.form textarea{padding:12px;border:1px solid #cfd6d2;border-radius:10px;background:#fff;font-size:16px;color:var(--ink)}
+.form textarea{min-height:72px;resize:vertical}
+.form .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check{display:flex!important;grid-template-columns:none;align-items:center;gap:10px;color:var(--ink)!important;font-size:15px!important}
+.check input{width:22px;height:22px}
+.img-edit{display:flex;align-items:center;gap:12px}
+.img-edit .thumb{width:96px;height:72px;border-radius:10px;background:#eef2f0;display:grid;place-items:center;font-size:32px;overflow:hidden}
+.img-edit .thumb img{width:100%;height:100%;object-fit:cover}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.toolbar .primary{width:auto;padding:12px 20px;font-size:15px}
+.section{margin-bottom:22px}
+.section h3{font-size:15px;margin-bottom:10px}
+.muted{color:var(--muted);font-size:13px;line-height:1.6}
+.hist{width:100%;border-collapse:collapse;font-size:14px}
+.hist th,.hist td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.hist th{font-size:12px;color:var(--muted);font-weight:600}
+.hist td.r,.hist th.r{text-align:right;white-space:nowrap}
+.toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#1d2421;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ---------- portrait / phone ---------- */
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
+  .cart{border-left:none;border-top:1px solid var(--line);max-height:46vh}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));padding:10px 14px 20px;gap:10px}
+  .tabs{padding:10px 14px 4px}
+  .header{padding:10px 14px}
+}
+
+/* ---------- print: only the receipt ---------- */
+#print-area{display:none}
+@media print{
+  html,body{height:auto;overflow:visible;background:#fff}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block}
+  #print-area .receipt{border:none;margin:0;padding:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header class="header">
+    <div class="logo">🦷</div>
+    <div>
+      <h1 id="h-clinic">院内物販</h1>
+      <div class="sub">ほしい商品をタッチしてください</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="gear" id="gear" aria-label="管理画面（長押し）">⚙</button>
+  </header>
+
+  <main class="shop">
+    <nav class="tabs" id="tabs"></nav>
+    <section class="grid" id="grid"></section>
+  </main>
+
+  <aside class="cart">
+    <div class="cart-head">
+      <h2>🛒 買い物かご</h2>
+      <button class="link-btn" id="clear-cart">すべて取り消す</button>
+    </div>
+    <div class="cart-list" id="cart-list"></div>
+    <div class="cart-foot">
+      <div class="total"><span class="l">合計</span><span class="v" id="total">¥0<small>（税込）</small></span></div>
+      <button class="primary" id="checkout" disabled>注文票を印刷する</button>
+      <div class="hint">印刷した注文票を受付にお持ちください</div>
+    </div>
+  </aside>
+</div>
+
+<!-- confirm -->
+<div class="overlay" id="ov-confirm">
+  <div class="modal">
+    <div class="modal-head">この内容で印刷しますか？</div>
+    <div class="modal-body"><div id="preview"></div></div>
+    <div class="modal-foot">
+      <button class="secondary" data-close>戻る</button>
+      <button class="primary" id="do-print">印刷する</button>
+    </div>
+  </div>
+</div>
+
+<!-- done -->
+<div class="overlay" id="ov-done">
+  <div class="modal center">
+    <div class="modal-body" style="padding-top:28px">
+      <div class="done-msg">注文票が出てきます。<br>受付にお持ちください。</div>
+      <div class="done-no" id="done-no"></div>
+      <div class="muted">受付番号</div>
+      <div class="countdown" id="done-count"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:center">
+      <button class="secondary" id="reprint">もう一度印刷</button>
+      <button class="primary" id="finish">最初の画面にもどる</button>
+    </div>
+  </div>
+</div>
+
+<!-- idle -->
+<div class="overlay" id="ov-idle">
+  <div class="modal center">
+    <div class="modal-body" style="padding-top:28px">
+      <div class="done-msg">お買い物を続けますか？</div>
+      <div class="countdown" id="idle-count"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:center">
+      <button class="secondary" id="idle-reset">最初からやり直す</button>
+      <button class="primary" id="idle-continue">続ける</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN -->
+<div class="overlay" id="ov-pin">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-head center">管理者用暗証番号</div>
+    <div class="modal-body">
+      <div class="pin-dots" id="pin-dots"></div>
+      <div class="pin-pad" id="pin-pad"></div>
+      <div class="pin-err" id="pin-err"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:center"><button class="secondary" data-close>キャンセル</button></div>
+  </div>
+</div>
+
+<!-- product editor -->
+<div class="overlay" id="ov-edit" style="z-index:60">
+  <div class="modal">
+    <div class="modal-head" id="edit-title">商品を追加</div>
+    <div class="modal-body">
+      <div class="form">
+        <div class="img-edit">
+          <div class="thumb" id="e-thumb"></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="secondary" id="e-pick">写真を選ぶ</button>
+            <button class="link-btn" id="e-noimg" style="text-align:left">写真を外す</button>
+          </div>
+          <input type="file" id="e-file" accept="image/*" hidden>
+        </div>
+        <label>商品名<input type="text" id="e-name" maxlength="40"></label>
+        <div class="row2">
+          <label>価格（税込・円）<input type="number" id="e-price" min="0" step="1" inputmode="numeric"></label>
+          <label>分類<input type="text" id="e-cat" list="cat-list" maxlength="16"></label>
+        </div>
+        <datalist id="cat-list"></datalist>
+        <label>ひとこと説明（任意）<input type="text" id="e-desc" maxlength="40"></label>
+        <label class="check"><input type="checkbox" id="e-sold"> 売り切れにする</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="danger-btn" id="e-del" style="margin-right:auto">削除</button>
+      <button class="secondary" data-close>キャンセル</button>
+      <button class="primary" id="e-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- admin -->
+<div class="admin" id="admin">
+  <div class="admin-head">
+    <h2>⚙ 管理画面</h2>
+    <button class="primary" id="admin-close" style="width:auto;padding:12px 22px;font-size:15px">販売画面にもどる</button>
+  </div>
+  <div class="admin-tabs" id="admin-tabs">
+    <button data-tab="products" class="active">商品</button>
+    <button data-tab="history">注文履歴</button>
+    <button data-tab="settings">設定</button>
+  </div>
+  <div class="admin-body" id="admin-body"></div>
+</div>
+
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   データ
+   ========================================================= */
+const KEY = 'clinicShopKiosk.v1';
+const CAT_ICON = {'歯ブラシ':'🪥','歯みがき粉':'🧴','歯間ケア':'🧵','洗口液':'💧','入れ歯ケア':'🫧','その他':'🛍️'};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function defaultData(){
+  const p = (name, price, cat, desc) => ({id: uid(), name, price, cat, desc: desc || '', img: '', soldOut: false});
+  return {
+    products: [
+      p('歯ブラシ（ふつう）', 330, '歯ブラシ', 'ヘッド小さめ'),
+      p('歯ブラシ（やわらかめ）', 330, '歯ブラシ', '歯ぐきが気になる方に'),
+      p('子ども用歯ブラシ', 275, '歯ブラシ', '仕上げみがきにも'),
+      p('フッ素配合歯みがき粉', 880, '歯みがき粉', '1450ppm'),
+      p('子ども用フッ素ジェル', 770, '歯みがき粉', ''),
+      p('デンタルフロス', 440, '歯間ケア', ''),
+      p('歯間ブラシ SSS', 550, '歯間ケア', ''),
+      p('歯間ブラシ S', 550, '歯間ケア', ''),
+      p('洗口液', 550, '洗口液', 'ノンアルコール'),
+      p('入れ歯洗浄剤', 660, '入れ歯ケア', ''),
+      p('舌ブラシ', 385, 'その他', ''),
+      p('キシリトールガム', 495, 'その他', '')
+    ],
+    settings: {
+      clinicName: '〇〇歯科クリニック',
+      receiptNote: 'お会計は受付でお願いいたします。',
+      paper: '80mm',
+      pin: '1234',
+      idleSec: 120,
+      doneSec: 20
+    },
+    seq: {date: '', n: 0},
+    history: []
+  };
+}
+
+let db = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if (raw){
+      const d = JSON.parse(raw), def = defaultData();
+      d.settings = Object.assign(def.settings, d.settings || {});
+      d.products = d.products || [];
+      d.seq = d.seq || def.seq;
+      d.history = d.history || [];
+      return d;
+    }
+  }catch(e){ console.warn(e); }
+  return defaultData();
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(db)); return true; }
+  catch(e){ toast('保存できませんでした（容量不足の可能性があります。写真を減らしてください）'); return false; }
+}
+
+/* =========================================================
+   ユーティリティ
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const yen = n => '¥' + Number(n || 0).toLocaleString('ja-JP');
+const pad = (n, w) => String(n).padStart(w, '0');
+function el(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const k in (attrs || {})){
+    if (k === 'class') e.className = attrs[k];
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+function iconFor(p){ return CAT_ICON[p.cat] || '🛍️'; }
+function thumb(p){ return p.img ? el('img', {src: p.img, alt: ''}) : iconFor(p); }
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+function openOv(id){ $(id).classList.add('show'); }
+function closeOv(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', e => e.target.closest('.overlay').classList.remove('show')));
+function todayStr(d){ d = d || new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1, 2) + '-' + pad(d.getDate(), 2); }
+function fmtDateTime(d){ return d.getFullYear() + '/' + pad(d.getMonth() + 1, 2) + '/' + pad(d.getDate(), 2) + ' ' + pad(d.getHours(), 2) + ':' + pad(d.getMinutes(), 2); }
+
+/* =========================================================
+   販売画面
+   ========================================================= */
+let cart = {};          // productId -> qty
+let currentCat = 'すべて';
+
+function categories(){
+  const cats = [];
+  db.products.forEach(p => { if (p.cat && !cats.includes(p.cat)) cats.push(p.cat); });
+  return cats;
+}
+
+function renderHeader(){
+  $('#h-clinic').textContent = db.settings.clinicName ? db.settings.clinicName + '　院内物販' : '院内物販';
+}
+
+function renderTabs(){
+  const cats = ['すべて', ...categories()];
+  if (!cats.includes(currentCat)) currentCat = 'すべて';
+  const tabs = $('#tabs'); tabs.innerHTML = '';
+  cats.forEach(c => tabs.append(el('button', {class: 'tab' + (c === currentCat ? ' active' : ''), onclick: () => { currentCat = c; renderTabs(); renderGrid(); }}, c)));
+}
+
+function renderGrid(){
+  const grid = $('#grid'); grid.innerHTML = '';
+  const list = db.products.filter(p => currentCat === 'すべて' || p.cat === currentCat);
+  if (!list.length){ grid.append(el('div', {class: 'empty-shop'}, '商品が登録されていません')); return; }
+  list.forEach(p => {
+    const q = cart[p.id] || 0;
+    grid.append(el('button', {class: 'item' + (p.soldOut ? ' soldout' : ''), onclick: () => addToCart(p.id)},
+      el('div', {class: 'ph'}, thumb(p)),
+      el('div', {class: 'body'},
+        el('div', {class: 'name'}, p.name),
+        p.desc ? el('div', {class: 'desc'}, p.desc) : null,
+        el('div', {class: 'price'}, yen(p.price), el('small', null, '税込'))
+      ),
+      q ? el('div', {class: 'qty'}, '×' + q) : null
+    ));
+  });
+}
+
+function cartLines(){
+  return Object.keys(cart).map(id => {
+    const p = db.products.find(x => x.id === id);
+    return p ? {id, name: p.name, price: p.price, qty: cart[id], amount: p.price * cart[id]} : null;
+  }).filter(Boolean);
+}
+const cartTotal = lines => lines.reduce((s, l) => s + l.amount, 0);
+
+function renderCart(){
+  const lines = cartLines(), list = $('#cart-list'); list.innerHTML = '';
+  if (!lines.length){
+    list.append(el('div', {class: 'cart-empty'}, el('span', {class: 'big'}, '🛒'), '商品をタッチすると', el('br'), 'ここに入ります'));
+  }
+  lines.forEach(l => list.append(el('div', {class: 'line'},
+    el('div', null, el('div', {class: 'n'}, l.name), el('div', {class: 'u'}, yen(l.price) + ' × ' + l.qty)),
+    el('div', {class: 'p'}, yen(l.amount)),
+    el('div'),
+    el('div', {class: 'stepper'},
+      el('button', {onclick: () => changeQty(l.id, -1), 'aria-label': '減らす'}, '−'),
+      el('span', null, l.qty),
+      el('button', {onclick: () => changeQty(l.id, 1), 'aria-label': '増やす'}, '+'))
+  )));
+  $('#total').firstChild.textContent = yen(cartTotal(lines));
+  $('#checkout').disabled = !lines.length;
+  $('#clear-cart').style.visibility = lines.length ? 'visible' : 'hidden';
+}
+
+function addToCart(id){
+  cart[id] = Math.min((cart[id] || 0) + 1, 99);
+  renderGrid(); renderCart();
+  const p = db.products.find(x => x.id === id);
+  if (p) toast(p.name + ' を入れました');
+}
+function changeQty(id, d){
+  const q = (cart[id] || 0) + d;
+  if (q <= 0) delete cart[id]; else cart[id] = Math.min(q, 99);
+  renderGrid(); renderCart();
+}
+function resetShop(){
+  cart = {}; currentOrder = null; currentCat = 'すべて';
+  ['#ov-confirm', '#ov-done', '#ov-idle'].forEach(closeOv);
+  renderTabs(); renderGrid(); renderCart();
+  $('#grid').scrollTop = 0;
+}
+$('#clear-cart').onclick = () => { cart = {}; renderGrid(); renderCart(); };
+
+/* =========================================================
+   注文票（レシート）と印刷
+   ========================================================= */
+let currentOrder = null;
+
+function receiptNode(order){
+  const s = db.settings;
+  return el('div', {class: 'receipt'},
+    el('div', {class: 'r-title'}, '注 文 票'),
+    s.clinicName ? el('div', {class: 'r-clinic'}, s.clinicName) : null,
+    el('div', {class: 'r-no'}, order.no ? 'No. ' + order.no : 'No. ---'),
+    el('div', {class: 'r-date'}, fmtDateTime(new Date(order.time))),
+    el('hr'),
+    el('table', null, order.lines.map(l => el('tr', null,
+      el('td', null, l.name, el('br'), el('span', {style: 'font-size:10px'}, '　@' + yen(l.price))),
+      el('td', {class: 'q'}, '×' + l.qty),
+      el('td', {class: 'a'}, yen(l.amount))))),
+    el('hr'),
+    el('div', {class: 'r-total'}, el('span', null, '合計（税込）'), el('span', null, yen(order.total))),
+    el('div', {style: 'text-align:right;font-size:11px'}, '点数 ' + order.lines.reduce((s, l) => s + l.qty, 0) + '点'),
+    el('hr'),
+    el('div', {class: 'r-note'}, '★この注文票を受付にお持ちください★' + (s.receiptNote ? '\n' + s.receiptNote : '')),
+    el('div', {class: 'r-notice'}, '※本票は注文票であり、領収書ではありません')
+  );
+}
+
+function applyPaper(){
+  const w = db.settings.paper;
+  // 用紙サイズはプリンター側の設定に任せ、注文票の幅だけを用紙に合わせる
+  const width = {'58mm': '48mm', '80mm': '72mm', 'A4': '80mm'}[w] || '72mm';
+  $('#page-style').textContent = '@page{margin:' + (w === 'A4' ? '12mm' : '2mm') + '}#print-area .receipt{width:' + width + '!important}';
+}
+
+$('#checkout').onclick = () => {
+  const lines = cartLines(); if (!lines.length) return;
+  currentOrder = {no: null, time: Date.now(), lines, total: cartTotal(lines)};
+  const pv = $('#preview'); pv.innerHTML = ''; pv.append(receiptNode(currentOrder));
+  openOv('#ov-confirm');
+};
+
+function nextOrderNo(){
+  const t = todayStr();
+  if (db.seq.date !== t){ db.seq = {date: t, n: 0}; }
+  db.seq.n += 1;
+  return pad(db.seq.n, 3);
+}
+
+$('#do-print').onclick = () => {
+  if (!currentOrder) return;
+  if (!currentOrder.no){
+    currentOrder.no = nextOrderNo();
+    currentOrder.time = Date.now();
+    db.history.unshift({no: currentOrder.no, time: currentOrder.time, total: currentOrder.total,
+      lines: currentOrder.lines.map(l => ({name: l.name, price: l.price, qty: l.qty}))});
+    db.history = db.history.slice(0, 500);
+    save();
+  }
+  closeOv('#ov-confirm');
+  printOrder(currentOrder);
+};
+$('#reprint').onclick = () => { if (currentOrder) printOrder(currentOrder); };
+$('#finish').onclick = resetShop;
+
+function printOrder(order){
+  applyPaper();
+  const area = $('#print-area'); area.innerHTML = ''; area.append(receiptNode(order));
+  stopDoneTimer();
+  if (window.AndroidBridge && window.AndroidBridge.print){
+    // Android: ネイティブの印刷画面を開く。完了時に onPrintFinished() が呼ばれる
+    window.AndroidBridge.print('注文票 No.' + order.no);
+  } else {
+    setTimeout(() => { window.print(); onPrintFinished(); }, 50);
+  }
+}
+
+let doneTimer = null;
+function stopDoneTimer(){ clearInterval(doneTimer); doneTimer = null; }
+window.onPrintFinished = function(){
+  if (!currentOrder) return;
+  $('#done-no').textContent = 'No. ' + currentOrder.no;
+  openOv('#ov-done');
+  let left = Number(db.settings.doneSec) || 20;
+  const tick = () => { $('#done-count').textContent = left + '秒後に最初の画面にもどります'; if (left-- <= 0) resetShop(); };
+  stopDoneTimer(); tick(); doneTimer = setInterval(tick, 1000);
+};
+
+/* =========================================================
+   放置時のリセット（次の患者さんのため）
+   ========================================================= */
+let lastTouch = Date.now(), idleTimer = null;
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { lastTouch = Date.now(); }, true));
+setInterval(() => {
+  const limit = Number(db.settings.idleSec) || 0;
+  if (!limit || $('#admin').classList.contains('show') || idleTimer) return;
+  if (!Object.keys(cart).length || $('#ov-done').classList.contains('show')) return;
+  if (Date.now() - lastTouch > limit * 1000) startIdleCountdown();
+}, 1000);
+function startIdleCountdown(){
+  let left = 15;
+  openOv('#ov-idle');
+  const tick = () => { $('#idle-count').textContent = left + '秒後に買い物かごを空にします'; if (left-- <= 0){ stopIdle(); resetShop(); } };
+  tick(); idleTimer = setInterval(tick, 1000);
+}
+function stopIdle(){ clearInterval(idleTimer); idleTimer = null; closeOv('#ov-idle'); }
+$('#idle-continue').onclick = stopIdle;
+$('#idle-reset').onclick = () => { stopIdle(); resetShop(); };
+
+/* =========================================================
+   管理画面への入口（⚙を2秒長押し → 暗証番号）
+   ========================================================= */
+(function(){
+  const g = $('#gear'); let t = null;
+  const start = e => { e.preventDefault(); t = setTimeout(openPin, 1500); };
+  const cancel = () => { clearTimeout(t); };
+  g.addEventListener('pointerdown', start);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => g.addEventListener(ev, cancel));
+  g.addEventListener('click', () => toast('管理画面は⚙を長押ししてください'));
+  g.addEventListener('contextmenu', e => e.preventDefault());
+})();
+
+let pinBuf = '';
+function openPin(){
+  pinBuf = ''; $('#pin-err').textContent = ''; drawPin(); openOv('#ov-pin');
+}
+function drawPin(){
+  const len = Math.max(4, String(db.settings.pin).length);
+  $('#pin-dots').innerHTML = '';
+  for (let i = 0; i < len; i++) $('#pin-dots').append(el('i', {class: i < pinBuf.length ? 'on' : ''}));
+}
+(function(){
+  const pad = $('#pin-pad');
+  ['1','2','3','4','5','6','7','8','9','C','0','⌫'].forEach(k => pad.append(el('button', {onclick: () => pinKey(k)}, k)));
+})();
+function pinKey(k){
+  $('#pin-err').textContent = '';
+  if (k === 'C') pinBuf = '';
+  else if (k === '⌫') pinBuf = pinBuf.slice(0, -1);
+  else if (pinBuf.length < 8) pinBuf += k;
+  drawPin();
+  if (pinBuf.length === String(db.settings.pin).length){
+    if (pinBuf === String(db.settings.pin)){ closeOv('#ov-pin'); openAdmin(); }
+    else { pinBuf = ''; drawPin(); $('#pin-err').textContent = '暗証番号が違います'; }
+  }
+}
+
+/* =========================================================
+   管理画面
+   ========================================================= */
+let adminTab = 'products';
+function openAdmin(){ $('#admin').classList.add('show'); renderAdmin(); }
+$('#admin-close').onclick = () => { $('#admin').classList.remove('show'); resetShop(); renderHeader(); };
+$('#admin-tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  adminTab = b.dataset.tab;
+  document.querySelectorAll('#admin-tabs button').forEach(x => x.classList.toggle('active', x === b));
+  renderAdmin();
+});
+function renderAdmin(){
+  const body = $('#admin-body'); body.innerHTML = ''; body.scrollTop = 0;
+  ({products: adminProducts, history: adminHistory, settings: adminSettings})[adminTab](body);
+}
+
+function adminProducts(body){
+  body.append(el('div', {class: 'toolbar'},
+    el('button', {class: 'primary', onclick: () => openEditor(null)}, '＋ 商品を追加'),
+    el('span', {class: 'muted'}, '並び順は ▲▼ で変えられます。分類ごとにタブが作られます。')));
+  if (!db.products.length) body.append(el('div', {class: 'muted'}, 'まだ商品がありません。'));
+  db.products.forEach((p, i) => body.append(el('div', {class: 'prow'},
+    el('div', {class: 'thumb'}, thumb(p)),
+    el('div', null,
+      el('div', {style: 'font-weight:600'}, p.name, p.soldOut ? el('span', {class: 'tag'}, '売り切れ') : null),
+      el('div', {class: 'meta'}, yen(p.price) + '（税込）・' + (p.cat || '分類なし'))),
+    el('div', {class: 'acts'},
+      el('button', {class: 'icon-btn', onclick: () => move(i, -1), 'aria-label': '上へ'}, '▲'),
+      el('button', {class: 'icon-btn', onclick: () => move(i, 1), 'aria-label': '下へ'}, '▼')),
+    el('button', {class: 'secondary', onclick: () => openEditor(p.id)}, '編集')
+  )));
+}
+function move(i, d){
+  const j = i + d; if (j < 0 || j >= db.products.length) return;
+  [db.products[i], db.products[j]] = [db.products[j], db.products[i]];
+  save(); renderAdmin();
+}
+
+/* ---- 商品編集 ---- */
+let editId = null, editImg = '';
+function openEditor(id){
+  editId = id;
+  const p = id ? db.products.find(x => x.id === id) : {name: '', price: '', cat: categories()[0] || '', desc: '', img: '', soldOut: false};
+  editImg = p.img || '';
+  $('#edit-title').textContent = id ? '商品を編集' : '商品を追加';
+  $('#e-name').value = p.name; $('#e-price').value = p.price; $('#e-cat').value = p.cat;
+  $('#e-desc').value = p.desc || ''; $('#e-sold').checked = !!p.soldOut;
+  $('#e-del').style.display = id ? '' : 'none';
+  $('#cat-list').innerHTML = ''; categories().concat(Object.keys(CAT_ICON)).filter((c, i, a) => a.indexOf(c) === i).forEach(c => $('#cat-list').append(el('option', {value: c})));
+  drawEditThumb(); openOv('#ov-edit');
+}
+function drawEditThumb(){
+  const t = $('#e-thumb'); t.innerHTML = '';
+  t.append(editImg ? el('img', {src: editImg, alt: ''}) : (CAT_ICON[$('#e-cat').value] || '🛍️'));
+}
+$('#e-cat').addEventListener('input', drawEditThumb);
+$('#e-pick').onclick = () => $('#e-file').click();
+$('#e-noimg').onclick = () => { editImg = ''; drawEditThumb(); };
+$('#e-file').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => {
+    // 端末内に保存するため、400px角程度に縮小して容量を抑える
+    const max = 400, r = Math.min(1, max / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * r); c.height = Math.round(img.height * r);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    editImg = c.toDataURL('image/jpeg', 0.8); URL.revokeObjectURL(url); drawEditThumb();
+  };
+  img.onerror = () => toast('画像を読み込めませんでした');
+  img.src = url;
+};
+$('#e-save').onclick = () => {
+  const name = $('#e-name').value.trim(), price = Math.round(Number($('#e-price').value));
+  if (!name){ toast('商品名を入力してください'); return; }
+  if (!(price >= 0) || $('#e-price').value === ''){ toast('価格を入力してください'); return; }
+  const data = {name, price, cat: $('#e-cat').value.trim() || 'その他', desc: $('#e-desc').value.trim(), img: editImg, soldOut: $('#e-sold').checked};
+  if (editId) Object.assign(db.products.find(x => x.id === editId), data);
+  else db.products.push(Object.assign({id: uid()}, data));
+  if (save()){ closeOv('#ov-edit'); renderAdmin(); toast('保存しました'); }
+};
+$('#e-del').onclick = () => {
+  if (!editId || !confirm('この商品を削除しますか？')) return;
+  db.products = db.products.filter(x => x.id !== editId); delete cart[editId];
+  save(); closeOv('#ov-edit'); renderAdmin(); toast('削除しました');
+};
+
+/* ---- 注文履歴 ---- */
+function adminHistory(body){
+  const t = todayStr(), today = db.history.filter(h => todayStr(new Date(h.time)) === t);
+  body.append(el('div', {class: 'toolbar'},
+    el('div', {style: 'font-weight:600'}, '本日 ' + today.length + '件・' + yen(today.reduce((s, h) => s + h.total, 0))),
+    el('span', {class: 'muted'}, '（印刷された注文票の記録です。実際の会計とは別です）'),
+    el('div', {style: 'flex:1'}),
+    el('button', {class: 'danger-btn', onclick: () => { if (confirm('注文履歴をすべて消去しますか？')){ db.history = []; save(); renderAdmin(); } }}, '履歴を消去')));
+  if (!db.history.length){ body.append(el('div', {class: 'muted'}, '履歴はまだありません。')); return; }
+  body.append(el('table', {class: 'hist'},
+    el('tr', null, el('th', null, '番号'), el('th', null, '日時'), el('th', null, '内容'), el('th', {class: 'r'}, '合計')),
+    db.history.slice(0, 200).map(h => el('tr', null,
+      el('td', null, 'No. ' + h.no),
+      el('td', null, fmtDateTime(new Date(h.time))),
+      el('td', null, h.lines.map(l => l.name + ' ×' + l.qty).join('、')),
+      el('td', {class: 'r'}, yen(h.total))))));
+}
+
+/* ---- 設定 ---- */
+function adminSettings(body){
+  const s = db.settings;
+  const f = (label, input) => el('label', null, label, input);
+  const iName = el('input', {type: 'text', value: s.clinicName, maxlength: 30});
+  const iNote = el('textarea', {maxlength: 120}); iNote.value = s.receiptNote;
+  const iPaper = el('select', null, [['58mm', 'レシート 58mm幅'], ['80mm', 'レシート 80mm幅'], ['A4', 'A4用紙（左上に印刷）']].map(([v, t]) => {
+    const o = el('option', {value: v}, t); if (v === s.paper) o.selected = true; return o; }));
+  const iIdle = el('input', {type: 'number', min: 0, value: s.idleSec, inputmode: 'numeric'});
+  const iDone = el('input', {type: 'number', min: 5, value: s.doneSec, inputmode: 'numeric'});
+  const iPin = el('input', {type: 'password', inputmode: 'numeric', maxlength: 8, placeholder: '変更する場合のみ入力（4〜8桁の数字）'});
+
+  body.append(
+    el('div', {class: 'section'}, el('h3', null, '表示・注文票'),
+      el('div', {class: 'form'},
+        f('医院名（画面上部と注文票に表示）', iName),
+        f('注文票の下に入れる一言', iNote),
+        f('用紙', iPaper),
+        el('div', {class: 'row2'},
+          f('操作がないとき、何秒で買い物かごを空にするか（0で無効）', iIdle),
+          f('印刷後、何秒で最初の画面にもどるか', iDone)),
+        f('管理者用暗証番号', iPin),
+        el('div', null, el('button', {class: 'primary', style: 'width:auto;padding:12px 28px', onclick: () => {
+          const pin = iPin.value.trim();
+          if (pin && !/^\d{4,8}$/.test(pin)){ toast('暗証番号は4〜8桁の数字にしてください'); return; }
+          Object.assign(s, {clinicName: iName.value.trim(), receiptNote: iNote.value.trim(), paper: iPaper.value,
+            idleSec: Math.max(0, Math.round(Number(iIdle.value) || 0)), doneSec: Math.max(5, Math.round(Number(iDone.value) || 20))});
+          if (pin) s.pin = pin;
+          if (save()){ renderHeader(); toast('設定を保存しました'); iPin.value = ''; }
+        }}, '設定を保存')),
+        el('div', null, el('button', {class: 'secondary', onclick: testPrint}, 'テスト印刷')))),
+    el('div', {class: 'section'}, el('h3', null, 'バックアップ'),
+      el('p', {class: 'muted', style: 'margin-bottom:10px'}, '商品・設定・注文履歴をファイルに書き出したり、読み込んだりできます。端末の入れ替え時に使ってください。'),
+      el('div', {class: 'toolbar'},
+        el('button', {class: 'secondary', onclick: exportData}, '書き出す'),
+        el('button', {class: 'secondary', onclick: () => $('#imp-file').click()}, '読み込む'),
+        el('input', {type: 'file', id: 'imp-file', accept: 'application/json,.json', hidden: '', onchange: importData}))),
+    el('div', {class: 'section'}, el('h3', null, '初期化'),
+      el('button', {class: 'danger-btn', onclick: () => {
+        if (!confirm('商品・設定・履歴をすべて消して、最初のサンプル状態に戻しますか？')) return;
+        db = defaultData(); save(); renderAdmin(); renderHeader(); toast('初期状態に戻しました');
+      }}, 'すべて初期状態に戻す'))
+  );
+}
+function testPrint(){
+  currentOrder = null;
+  const order = {no: 'TEST', time: Date.now(), lines: [{name: 'テスト商品', price: 100, qty: 1, amount: 100}], total: 100};
+  applyPaper();
+  const area = $('#print-area'); area.innerHTML = ''; area.append(receiptNode(order));
+  if (window.AndroidBridge && window.AndroidBridge.print) window.AndroidBridge.print('テスト印刷');
+  else window.print();
+}
+function exportData(){
+  const json = JSON.stringify(db), name = 'shop-backup-' + todayStr() + '.json';
+  if (window.AndroidBridge && window.AndroidBridge.saveFile){ window.AndroidBridge.saveFile(name, json); return; }
+  const a = el('a', {href: URL.createObjectURL(new Blob([json], {type: 'application/json'})), download: name});
+  document.body.append(a); a.click(); a.remove();
+}
+window.onFileSaved = ok => toast(ok ? 'バックアップを保存しました' : '保存できませんでした');
+function importData(e){
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if (!Array.isArray(d.products)) throw new Error('format');
+      if (!confirm('今のデータを、このファイルの内容で置き換えますか？')) return;
+      localStorage.setItem(KEY, JSON.stringify(d)); db = load(); save(); renderAdmin(); renderHeader(); toast('読み込みました');
+    }catch(err){ toast('このファイルは読み込めません'); }
+  };
+  r.readAsText(f);
+}
+
+/* Android の戻るボタン：開いている画面を閉じる。閉じるものがなければ false */
+window.onAndroidBack = function(){
+  const ov = [...document.querySelectorAll('.overlay.show')].pop();
+  if (ov && ov.id !== 'ov-done' && ov.id !== 'ov-idle'){ ov.classList.remove('show'); return true; }
+  if ($('#admin').classList.contains('show')){ $('#admin-close').click(); return true; }
+  return true; // 販売画面ではアプリを閉じない
+};
+
+/* 起動 */
+save();
+renderHeader(); renderTabs(); renderGrid(); renderCart();
+</script>
+</body>
+</html>
