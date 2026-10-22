@@ -7,6 +7,7 @@
 | 🦷 **歯科自費管理** | 自費診療の管理、FAX 発注書の作成 | https://cantoondentalclinic.github.io/dentalapp/ |
 | 📋 **老健訪問歯科健診表** | 訪問歯科健診の入力（オフライン対応） | https://cantoondentalclinic.github.io/dentalapp/kenshin/roken_checkup.html |
 | 🛒 **院内物販** | 商品をタッチ → 注文票を印刷 | https://cantoondentalclinic.github.io/dentalapp/shop-kiosk/web/ |
+| 🧾 **レシート一覧** | 保存したレシート・領収書をファイル名から一覧化・検索（電子帳簿保存法の検索用） | https://cantoondentalclinic.github.io/dentalapp/receipts/ |
 
 ## データについて
 
