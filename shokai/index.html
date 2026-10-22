@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>照会・返信文書</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="照会文書">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:15px;color:#1a1a1a;background:#f5f5f3;-webkit-text-size-adjust:100%}
+header{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+header h1{font-size:16px;font-weight:600;margin-right:auto}
+.main{padding:12px 16px calc(90px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px}
+.section-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title .sub{font-weight:400;color:#888;font-size:12px}
+.form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.form-group:last-child{margin-bottom:0}
+.form-group label{font-size:12px;color:#888}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0 10px}
+input,select,textarea{font-family:inherit;font-size:16px;padding:8px 10px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;width:100%;min-width:0}
+textarea{resize:vertical;min-height:70px;line-height:1.6}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
+.btn{font-family:inherit;font-size:14px;padding:8px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{background:#f0f0ee}
+.btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
+.btn.soft{background:#e8f0fe;color:#1a73e8;border-color:rgba(26,115,232,0.3)}
+.btn.success{background:#e6f4ea;color:#137333;border-color:rgba(19,115,51,0.3)}
+.btn.danger{background:#fce8e6;color:#d93025;border-color:rgba(217,48,37,0.3)}
+.btn.big{font-size:16px;padding:12px 16px;width:100%}
+.btn:disabled{opacity:.5}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .btn{flex:1}
+.seg{display:flex;background:#eeeeec;border-radius:9px;padding:2px;gap:2px}
+.seg button{flex:1;font-family:inherit;font-size:13px;border:none;background:transparent;padding:8px 4px;border-radius:7px;color:#444;cursor:pointer}
+.seg button.on{background:#fff;color:#1a1a1a;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,0.12)}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin:10px 0}
+.photo{position:relative;aspect-ratio:3/4;border-radius:8px;overflow:hidden;background:#eee;border:0.5px solid rgba(0,0,0,0.1)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.photo .x{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:13px;border:none;background:rgba(0,0,0,0.6);color:#fff;font-size:15px;line-height:26px}
+.photo .tag{position:absolute;left:4px;bottom:4px;font-size:10px;background:rgba(255,255,255,0.9);padding:1px 6px;border-radius:10px}
+.checklist label{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid rgba(0,0,0,0.06);font-size:14px;line-height:1.5}
+.checklist input{width:20px;height:20px;flex:none;margin-top:1px}
+.note{font-size:12px;color:#666;line-height:1.7}
+.note.warn{background:#fef7e0;color:#7a4b00;padding:10px 12px;border-radius:8px}
+.note.info{background:#e8f0fe;color:#174ea6;padding:10px 12px;border-radius:8px}
+.ai-msg{font-size:13px;line-height:1.7;white-space:pre-wrap}
+.list-item{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:0.5px solid rgba(0,0,0,0.07);cursor:pointer}
+.list-item:last-child{border-bottom:none}
+.list-item .main-col{flex:1;min-width:0}
+.list-item .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-item .t2{font-size:12px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;white-space:nowrap;background:#eee;color:#444}
+.badge.inquiry{background:#e8f0fe;color:#1a73e8}
+.badge.reply{background:#e6f4ea;color:#137333}
+.badge.referral{background:#f3e8fd;color:#8430ce}
+.badge.st-sent{background:#fef7e0;color:#b06000}
+.badge.st-done{background:#e6f4ea;color:#137333}
+.empty{color:#888;font-size:13px;text-align:center;padding:30px 10px;line-height:1.8}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,0.96);border-top:0.5px solid rgba(0,0,0,0.12);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:20;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+nav.tabs button{flex:1;border:none;background:none;font-family:inherit;font-size:11px;color:#888;padding:8px 0 6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button .ic{font-size:20px;line-height:1}
+nav.tabs button.on{color:#1a73e8}
+.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,30,30,0.92);color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;z-index:50;max-width:90vw;text-align:center}
+.overlay{position:fixed;inset:0;background:rgba(255,255,255,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:60;font-size:14px;color:#333;text-align:center;padding:20px}
+.spinner{width:36px;height:36px;border:3px solid #dbe6fb;border-top-color:#1a73e8;border-radius:50%;animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hidden{display:none!important}
+details summary{cursor:pointer;font-size:14px;font-weight:600}
+details[open] summary{margin-bottom:10px}
+
+/* ===== 印刷用プレビュー（A4） ===== */
+#previewWrap{background:#888;position:fixed;inset:0;z-index:40;overflow:auto;-webkit-overflow-scrolling:touch;padding:calc(60px + env(safe-area-inset-top)) 0 40px}
+#previewBar{position:fixed;top:0;left:0;right:0;z-index:41;background:#fff;display:flex;gap:8px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));border-bottom:0.5px solid rgba(0,0,0,0.15)}
+#previewBar .btn{flex:1}
+.sheet-scale{transform-origin:top left}
+.sheet{width:210mm;min-height:297mm;background:#fff;margin:0 auto 12px;padding:15mm 17mm 12mm;font-family:'Hiragino Mincho ProN','Yu Mincho','YuMincho','MS Mincho',serif;font-size:10.5pt;line-height:1.7;color:#000;box-shadow:0 2px 10px rgba(0,0,0,0.3)}
+.sheet .doc-date{text-align:right}
+.sheet .doc-to{margin-top:4mm;font-size:12pt}
+.sheet .doc-to .hosp{font-size:12.5pt}
+.sheet .doc-title{text-align:center;font-size:17pt;letter-spacing:0.4em;margin:4mm 0 3mm;font-weight:bold}
+.sheet .doc-from{margin-left:auto;width:85mm;font-size:10pt;line-height:1.6}
+.sheet .doc-from .clinic{font-size:11.5pt}
+.sheet .doc-from .dr{margin-top:1mm;font-size:11pt}
+.sheet table.pt{width:100%;border-collapse:collapse;margin:5mm 0 3mm}
+.sheet table.pt th,.sheet table.pt td{border:0.6pt solid #000;padding:1.5mm 2.5mm;font-weight:normal;text-align:left;vertical-align:top}
+.sheet table.pt th{width:24mm;background:#f2f2f2;white-space:nowrap}
+.sheet .greeting{margin:3mm 0;white-space:pre-wrap}
+.sheet .sec{margin-top:3mm;page-break-inside:avoid}
+.sheet .sec h3{font-size:10.5pt;font-weight:bold;border-bottom:0.6pt solid #000;margin-bottom:1.5mm}
+.sheet .sec .txt{white-space:pre-wrap;padding-left:2mm}
+.sheet ul.q{list-style:none;padding-left:2mm}
+.sheet ul.q li{padding-left:1.4em;text-indent:-1.4em}
+.sheet .answer{margin-top:4mm;border:0.8pt solid #000;padding:2.5mm 3mm;page-break-inside:avoid}
+.sheet .answer .ah{font-weight:bold;display:flex;justify-content:space-between}
+.sheet .answer .lines div{border-bottom:0.5pt dotted #555;height:7mm}
+.sheet .answer .sign{margin-top:3mm;text-align:right}
+.sheet .closing{text-align:right;margin-top:3mm}
+
+@media (max-width:420px){.grid3{grid-template-columns:1fr 1fr}.grid3 .form-group:first-child{grid-column:1/-1}}
+
+@page{size:A4;margin:0}
+@media print{
+  body{background:#fff}
+  body > *:not(#previewWrap){display:none!important}
+  #previewWrap{position:static;background:#fff;padding:0;overflow:visible}
+  #previewBar{display:none!important}
+  .sheet-scale{transform:none!important;height:auto!important}
+  .sheet{box-shadow:none;margin:0;min-height:0;page-break-after:always}
+  .sheet:last-child{page-break-after:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="hdrTitle">照会・返信文書</h1>
+  <button class="btn soft hidden" id="hdrNew" onclick="newDoc()">＋ 新規</button>
+</header>
+
+<!-- ===================== 作成画面 ===================== -->
+<div class="main" id="viewEdit">
+  <div class="card">
+    <div class="section-title">文書の種類</div>
+    <div class="seg" id="typeSeg"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">① 写真を撮る <span class="sub">紹介状・お薬手帳・検査結果・問診票など</span></div>
+    <div class="btns">
+      <button class="btn soft" onclick="pickPhoto(true)">📷 カメラで撮影</button>
+      <button class="btn" onclick="pickPhoto(false)">🖼 写真から選ぶ</button>
+    </div>
+    <input type="file" id="fileCam" accept="image/*" capture="environment" class="hidden" onchange="onPhotos(this)">
+    <input type="file" id="fileLib" accept="image/*" multiple class="hidden" onchange="onPhotos(this)">
+    <div class="photos" id="photoList"></div>
+    <button class="btn primary big" id="aiBtn" onclick="runAI()">✨ AIで読み取って下書きを作成</button>
+    <div class="note" style="margin-top:8px" id="aiNote"></div>
+    <div class="note info hidden" id="aiResult" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">② 宛先</div>
+    <div class="form-group"><label>医療機関名</label><input id="f_to_hospital" placeholder="〇〇病院"></div>
+    <div class="grid2">
+      <div class="form-group"><label>診療科</label><input id="f_to_dept" placeholder="内科"></div>
+      <div class="form-group"><label>医師名（先生）</label><input id="f_to_doctor" placeholder="〇〇"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">③ 患者</div>
+    <div class="grid2">
+      <div class="form-group"><label>氏名</label><input id="f_patient_name"></div>
+      <div class="form-group"><label>ふりがな</label><input id="f_patient_kana"></div>
+    </div>
+    <div class="grid3">
+      <div class="form-group"><label>生年月日</label><input id="f_patient_birth" placeholder="1950-04-01 / 昭和25年4月1日"></div>
+      <div class="form-group"><label>性別</label><select id="f_patient_sex"><option value=""></option><option>男</option><option>女</option></select></div>
+      <div class="form-group"><label>年齢</label><input id="f_patient_age" inputmode="numeric" placeholder="自動"></div>
+    </div>
+    <div class="grid2">
+      <div class="form-group"><label>カルテ番号（任意・印刷しない）</label><input id="f_chart_no"></div>
+      <div class="form-group"><label>作成日</label><input id="f_date" type="date"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">④ 本文</div>
+    <div class="form-group"><label>前文（あいさつ）</label><textarea id="f_greeting" rows="3"></textarea></div>
+    <div id="typeFields"></div>
+    <div id="checkWrap" class="hidden">
+      <div class="form-group"><label>照会事項（印刷する項目にチェック）</label></div>
+      <div class="checklist" id="checklist"></div>
+      <div class="form-group" style="margin-top:10px"><label>その他の照会事項</label><textarea id="f_other_q" rows="2"></textarea></div>
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px"><input type="checkbox" id="f_answer_box" style="width:20px;height:20px"> 下部に「ご回答欄」を付ける</label>
+    </div>
+    <div class="form-group" style="margin-top:10px"><label>同封物</label><input id="f_enclosure" placeholder="お薬手帳の写し、パノラマX線写真 など"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">⑤ 管理</div>
+    <div class="grid2">
+      <div class="form-group"><label>状態</label><select id="f_status"><option>下書き</option><option>送付済</option><option>回答受領</option><option>完了</option></select></div>
+      <div class="form-group"><label>メモ（印刷しない）</label><input id="f_memo"></div>
+    </div>
+  </div>
+
+  <div class="btns">
+    <button class="btn success big" onclick="saveDoc()">💾 保存</button>
+    <button class="btn primary big" onclick="openPreview()">🖨 印刷プレビュー</button>
+  </div>
+  <div class="btns" id="editExtra">
+    <button class="btn" onclick="duplicateDoc()">複製して新規</button>
+    <button class="btn danger" onclick="deleteDoc()">削除</button>
+  </div>
+</div>
+
+<!-- ===================== 保管一覧 ===================== -->
+<div class="main hidden" id="viewList">
+  <div class="card">
+    <div class="form-group"><input id="q" placeholder="🔍 患者名・医療機関・本文で検索" oninput="renderList()"></div>
+    <div class="grid2">
+      <div class="form-group"><select id="qType" onchange="renderList()"><option value="">すべての種類</option></select></div>
+      <div class="form-group"><select id="qStatus" onchange="renderList()"><option value="">すべての状態</option><option>下書き</option><option>送付済</option><option>回答受領</option><option>完了</option></select></div>
+    </div>
+  </div>
+  <div class="card" id="listCard"></div>
+  <div class="card">
+    <div class="section-title">書き出し・読み込み</div>
+    <div class="btns">
+      <button class="btn soft" onclick="exportJSON()">⬇ バックアップ（JSON）</button>
+      <button class="btn" onclick="exportCSV()">⬇ 一覧（CSV）</button>
+    </div>
+    <div class="btns" style="margin-top:8px">
+      <button class="btn" onclick="document.getElementById('importFile').click()">⬆ バックアップを読み込む</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json,.json" class="hidden" onchange="importJSON(this)">
+    <p class="note" style="margin-top:8px">JSON は写真も含む完全なバックアップです（別の端末に移すときもこれを使います）。CSV は Excel で開ける一覧表です（写真は含みません）。</p>
+  </div>
+</div>
+
+<!-- ===================== 設定 ===================== -->
+<div class="main hidden" id="viewSettings">
+  <div class="card">
+    <div class="section-title">医院情報（文書の差出人）</div>
+    <div class="form-group"><label>医院名</label><input id="s_clinic" placeholder="〇〇歯科医院"></div>
+    <div class="form-group"><label>住所</label><input id="s_address" placeholder="〒000-0000 〇〇県〇〇市…"></div>
+    <div class="grid2">
+      <div class="form-group"><label>電話</label><input id="s_tel" inputmode="tel"></div>
+      <div class="form-group"><label>FAX</label><input id="s_fax" inputmode="tel"></div>
+    </div>
+    <div class="form-group"><label>歯科医師名（既定）</label><input id="s_doctor"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">照会事項のひな形 <span class="sub">1行に1項目</span></div>
+    <textarea id="s_checklist" rows="10"></textarea>
+    <div class="btns" style="margin-top:8px"><button class="btn" onclick="resetChecklist()">初期値に戻す</button></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">AI読み取り（Claude API）</div>
+    <div class="note warn" style="margin-bottom:10px">
+      AI読み取りを使うと、撮影した写真（患者の氏名・病名・服薬など）が Anthropic 社のサーバーへ送信されます。
+      院内の個人情報の取扱い方針（利用目的の掲示など）と照らして、使ってよいか判断してから有効にしてください。
+      AIを使わなくても、手入力で文書の作成・印刷・保管はすべてできます。
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:10px"><input type="checkbox" id="s_ai_on" style="width:20px;height:20px"> AI読み取りを使う</label>
+    <div class="form-group"><label>API キー（この端末の中にだけ保存されます）</label><input id="s_api_key" type="password" autocomplete="off" placeholder="sk-ant-..."></div>
+    <div class="grid2">
+      <div class="form-group"><label>モデル</label><select id="s_model">
+        <option value="claude-opus-5-5">Claude Opus 5.5（高精度）</option>
+        <option value="claude-sonnet-5-5">Claude Sonnet 5.5（低コスト）</option>
+      </select></div>
+      <div class="form-group"><label>読み取りの丁寧さ</label><select id="s_effort">
+        <option value="low">速い</option><option value="medium">標準</option><option value="high">丁寧</option>
+      </select></div>
+    </div>
+    <p class="note">API キーは <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Console</a> で発行します。Console で月の利用上限（Spend limit）を設定しておくと安心です。</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">保管</div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="s_keep_photos" style="width:20px;height:20px"> 撮影した写真も文書と一緒に保存する</label>
+    <p class="note" style="margin-top:8px" id="storageInfo"></p>
+  </div>
+
+  <button class="btn success big" onclick="saveSettings()">設定を保存</button>
+
+  <div class="card">
+    <details>
+      <summary>使い方</summary>
+      <div class="note" style="font-size:13px">
+        <p>1. iPhone の Safari でこのページを開き、共有ボタン →「ホーム画面に追加」するとアプリのように使えます。<b>ホーム画面から開くと保存データが消えにくくなります。</b></p>
+        <p>2. 「新規」で文書の種類を選び、紹介状やお薬手帳を撮影 →「AIで読み取って下書きを作成」。</p>
+        <p>3. 内容を確認・修正して「保存」。「印刷プレビュー」→「印刷」で AirPrint 印刷、または共有メニューから PDF 保存できます。</p>
+        <p>4. データはこの端末の中だけに保存されます。定期的に「保管一覧」→「バックアップ（JSON）」で書き出してください。</p>
+        <p>※ AI の読み取り結果は必ず原本と照合してください。【要確認】と付いた箇所は読み取りに自信がない部分です。</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ===================== 印刷プレビュー ===================== -->
+<div id="previewWrap" class="hidden">
+  <div id="previewBar">
+    <button class="btn" onclick="closePreview()">← 戻る</button>
+    <button class="btn primary" onclick="doPrint()">🖨 印刷 / PDF</button>
+  </div>
+  <div class="sheet-scale" id="sheetScale"><div class="sheet" id="sheet"></div></div>
+</div>
+
+<nav class="tabs">
+  <button id="tabEdit" class="on" onclick="showView('edit')"><span class="ic">✏️</span>作成</button>
+  <button id="tabList" onclick="showView('list')"><span class="ic">🗂</span>保管一覧</button>
+  <button id="tabSettings" onclick="showView('settings')"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<div class="overlay hidden" id="overlay"><div class="spinner"></div><div id="overlayMsg">読み取り中…</div></div>
+
+<script>
+/* ============ 文書の種類 ============ */
+const TYPES = {
+  inquiry: {
+    label: '照会', title: '診療情報提供依頼書',
+    greeting: '平素より大変お世話になっております。\n下記の患者様につき、当院にて歯科治療を予定しております。つきましては、貴院での病状・治療内容について御教示いただきたく、ご照会申し上げます。\nご多忙のところ誠に恐縮ですが、何卒よろしくお願い申し上げます。',
+    fields: [
+      ['purpose', '照会理由・予定している歯科処置', '例）右下6 抜歯（局所麻酔下）を予定'],
+      ['diagnosis', '歯科傷病名', ''],
+      ['history', '当院で把握している既往歴・現病歴', ''],
+      ['medications', '服用中の薬剤（お薬手帳より）', '']
+    ],
+    checklist: true, answerBox: true
+  },
+  reply: {
+    label: '返信', title: '診療情報提供書（ご報告）',
+    greeting: 'このたびは、下記の患者様をご紹介いただき誠にありがとうございました。\n本日受診されましたので、下記のとおりご報告申し上げます。',
+    fields: [
+      ['purpose', 'ご紹介いただいた内容', ''],
+      ['diagnosis', '診断（歯科傷病名）', ''],
+      ['findings', '所見', ''],
+      ['treatment', '実施した処置', ''],
+      ['plan', '今後の治療方針', '']
+    ],
+    closing: '今後ともよろしくお願い申し上げます。'
+  },
+  referral: {
+    label: '紹介', title: '診療情報提供書',
+    greeting: '平素より大変お世話になっております。\n下記の患者様をご紹介申し上げます。ご高診のほど、よろしくお願い申し上げます。',
+    fields: [
+      ['purpose', '紹介目的', ''],
+      ['diagnosis', '傷病名', ''],
+      ['history', '既往歴・家族歴', ''],
+      ['findings', '症状経過・検査結果', ''],
+      ['treatment', '治療経過', ''],
+      ['medications', '現在の処方・服用薬', ''],
+      ['plan', '備考', '']
+    ],
+    closing: '以上、よろしくお願い申し上げます。'
+  }
+};
+const FIELD_KEYS = ['purpose','diagnosis','history','medications','findings','treatment','plan'];
+
+// 照会事項の初期値。
+// 根拠：抗血栓療法患者の抜歯に関するガイドライン2020年版（日本有病者歯科医療学会・日本口腔外科学会・日本老年歯科医学会）、
+// 薬剤関連顎骨壊死の病態と管理：顎骨壊死検討委員会ポジションペーパー2023、
+// 感染性心内膜炎の予防と治療に関するガイドライン（日本循環器学会 2017年改訂版）で歯科処置前に確認が求められる事項。
+const DEFAULT_CHECKLIST = [
+  '現在の病名・病状および治療内容',
+  '服用中の薬剤（処方内容）',
+  '抗血栓薬の歯科処置時の継続の可否、および直近のPT-INR値（ワルファリン服用の場合）',
+  '骨吸収抑制薬（ビスホスホネート製剤・デノスマブ等）の薬剤名・投与経路・投与期間',
+  '糖尿病のコントロール状況（直近のHbA1c値）',
+  '血圧のコントロール状況',
+  '心疾患の状況、および感染性心内膜炎予防のための抗菌薬投与の要否',
+  'アドレナリン含有局所麻酔薬（リドカイン等）使用の可否',
+  '抗菌薬・鎮痛薬（NSAIDs等）処方時の注意点（腎機能・肝機能・アレルギー等）',
+  'その他、歯科治療を行う上での注意事項'
+];
+
+/* ============ 保存（設定=localStorage / 文書=IndexedDB） ============ */
+const SETTINGS_KEY = 'shokai_settings';
+function loadSettings(){
+  let s = {};
+  try{ s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }catch(e){}
+  return Object.assign({
+    clinic:'', address:'', tel:'', fax:'', doctor:'',
+    checklist: DEFAULT_CHECKLIST.slice(),
+    aiOn:false, apiKey:'', model:'claude-opus-5-5', effort:'medium', keepPhotos:true
+  }, s);
+}
+let settings = loadSettings();
+function storeSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+
+let dbPromise = null;
+function db(){
+  if(!dbPromise) dbPromise = new Promise((resolve, reject) => {
+    const r = indexedDB.open('shokai-docs', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('docs', { keyPath:'id' }); };
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+  return dbPromise;
+}
+async function dbAll(){
+  const d = await db();
+  return new Promise((resolve, reject) => {
+    const req = d.transaction('docs').objectStore('docs').getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbPut(doc){
+  const d = await db();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction('docs', 'readwrite');
+    tx.objectStore('docs').put(doc);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function dbDelete(id){
+  const d = await db();
+  return new Promise((resolve, reject) => {
+    const tx = d.transaction('docs', 'readwrite');
+    tx.objectStore('docs').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ============ 共通 ============ */
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg, ms){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms || 2200);
+}
+function overlay(on, msg){ $('overlay').classList.toggle('hidden', !on); if(msg) $('overlayMsg').textContent = msg; }
+function today(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function wareki(iso){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  const d = new Date(iso + 'T00:00:00');
+  try{ return new Intl.DateTimeFormat('ja-JP-u-ca-japanese', { era:'long', year:'numeric', month:'long', day:'numeric' }).format(d); }
+  catch(e){ return iso; }
+}
+function calcAge(birth, ref){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(birth || '')) return '';
+  const b = new Date(birth + 'T00:00:00'), r = ref ? new Date(ref + 'T00:00:00') : new Date();
+  let a = r.getFullYear() - b.getFullYear();
+  if(r.getMonth() < b.getMonth() || (r.getMonth() === b.getMonth() && r.getDate() < b.getDate())) a--;
+  return a >= 0 && a < 130 ? String(a) : '';
+}
+
+/* ============ 画面切替 ============ */
+function showView(v){
+  ['edit','list','settings'].forEach(k => {
+    $('view' + k[0].toUpperCase() + k.slice(1)).classList.toggle('hidden', k !== v);
+    $('tab' + k[0].toUpperCase() + k.slice(1)).classList.toggle('on', k === v);
+  });
+  $('hdrNew').classList.toggle('hidden', v === 'settings');
+  $('hdrTitle').textContent = v === 'edit' ? (cur.id && cur.savedAt ? '文書を編集' : '新しい文書') : v === 'list' ? '保管一覧' : '設定';
+  if(v === 'list') renderList();
+  if(v === 'settings') fillSettings();
+  window.scrollTo(0, 0);
+}
+
+/* ============ 作成画面 ============ */
+let cur = null; // 編集中の文書
+
+function blankDoc(type){
+  return {
+    id: uid(), type: type || 'inquiry', date: today(), status: '下書き',
+    to_hospital:'', to_dept:'', to_doctor:'',
+    patient_name:'', patient_kana:'', patient_birth:'', patient_sex:'', patient_age:'', chart_no:'',
+    greeting: TYPES[type || 'inquiry'].greeting,
+    purpose:'', diagnosis:'', history:'', medications:'', findings:'', treatment:'', plan:'',
+    questions: [], other_q:'', answer_box: true, enclosure:'', memo:'',
+    photos: [], ai_summary:'', createdAt: new Date().toISOString(), updatedAt: null, savedAt: null
+  };
+}
+
+function newDoc(){
+  if(cur && isDirty() && !confirm('編集中の内容は保存されていません。破棄して新規作成しますか？')) return;
+  cur = blankDoc(cur ? cur.type : 'inquiry');
+  loadForm(); showView('edit');
+}
+
+function renderTypeSeg(){
+  $('typeSeg').innerHTML = Object.entries(TYPES).map(([k, t]) =>
+    `<button class="${cur.type === k ? 'on' : ''}" onclick="setType('${k}')">${esc(t.label)}<br><span style="font-size:10px;font-weight:400">${esc(t.title.replace('（ご報告）',''))}</span></button>`
+  ).join('');
+}
+
+function setType(k){
+  readForm();
+  const oldGreeting = TYPES[cur.type].greeting;
+  cur.type = k;
+  if(!cur.greeting || cur.greeting === oldGreeting) cur.greeting = TYPES[k].greeting;
+  loadForm();
+}
+
+function renderTypeFields(){
+  const t = TYPES[cur.type];
+  $('typeFields').innerHTML = t.fields.map(([key, label, ph]) =>
+    `<div class="form-group"><label>${esc(label)}</label><textarea id="f_${key}" rows="${key === 'medications' || key === 'findings' ? 4 : 3}" placeholder="${esc(ph)}"></textarea></div>`
+  ).join('');
+  t.fields.forEach(([key]) => { $('f_' + key).value = cur[key] || ''; });
+  $('checkWrap').classList.toggle('hidden', !t.checklist);
+  if(t.checklist){
+    // 保存済み文書に、現在のひな形にない照会事項があれば残す
+    const items = settings.checklist.slice();
+    (cur.questions || []).forEach(q => { if(!items.includes(q)) items.push(q); });
+    $('checklist').innerHTML = items.map((q, i) =>
+      `<label><input type="checkbox" data-q="${esc(q)}" ${cur.questions.includes(q) ? 'checked' : ''}><span>${esc(q)}</span></label>`
+    ).join('');
+  }
+}
+
+const SIMPLE_FIELDS = ['to_hospital','to_dept','to_doctor','patient_name','patient_kana','patient_birth','patient_sex','patient_age','chart_no','date','greeting','other_q','enclosure','status','memo'];
+
+function loadForm(){
+  renderTypeSeg();
+  SIMPLE_FIELDS.forEach(k => { $('f_' + k).value = cur[k] || ''; });
+  $('f_answer_box').checked = cur.answer_box !== false;
+  renderTypeFields();
+  renderPhotos();
+  $('aiResult').classList.toggle('hidden', !cur.ai_summary);
+  $('aiResult').innerHTML = cur.ai_summary ? '<div class="ai-msg">' + esc(cur.ai_summary) + '</div>' : '';
+  $('editExtra').classList.toggle('hidden', !cur.savedAt);
+  updateAINote();
+  readForm();
+  lastSaved = JSON.stringify(snapshot());
+}
+
+function readForm(){
+  SIMPLE_FIELDS.forEach(k => { cur[k] = $('f_' + k).value.trim(); });
+  cur.greeting = $('f_greeting').value;
+  cur.answer_box = $('f_answer_box').checked;
+  TYPES[cur.type].fields.forEach(([key]) => { cur[key] = $('f_' + key).value; });
+  if(TYPES[cur.type].checklist){
+    cur.questions = [...$('checklist').querySelectorAll('input:checked')].map(i => i.dataset.q);
+  }
+  if(!cur.patient_age) cur.patient_age = calcAge(cur.patient_birth, cur.date);
+}
+
+let lastSaved = '';
+function snapshot(){ const c = Object.assign({}, cur); delete c.updatedAt; return c; }
+function isDirty(){ if(!cur) return false; readForm(); return JSON.stringify(snapshot()) !== lastSaved; }
+
+async function saveDoc(silent){
+  readForm();
+  if(!cur.patient_name && !cur.to_hospital){ if(!silent) toast('患者名か宛先を入力してください'); return false; }
+  const doc = Object.assign({}, cur);
+  if(!settings.keepPhotos) doc.photos = [];
+  doc.updatedAt = new Date().toISOString();
+  doc.savedAt = doc.updatedAt;
+  try{
+    await dbPut(doc);
+    cur.savedAt = doc.savedAt; cur.updatedAt = doc.updatedAt;
+    lastSaved = JSON.stringify(snapshot());
+    $('editExtra').classList.remove('hidden');
+    $('hdrTitle').textContent = '文書を編集';
+    if(!silent) toast('保存しました');
+    return true;
+  }catch(e){
+    alert('保存できませんでした：' + e.message + '\n端末の空き容量が不足している可能性があります。');
+    return false;
+  }
+}
+
+async function deleteDoc(){
+  if(!cur.savedAt || !confirm('この文書を削除しますか？元に戻せません。')) return;
+  await dbDelete(cur.id);
+  toast('削除しました');
+  cur = blankDoc(cur.type); loadForm(); showView('list');
+}
+
+function duplicateDoc(){
+  readForm();
+  const c = JSON.parse(JSON.stringify(cur));
+  c.id = uid(); c.date = today(); c.status = '下書き'; c.createdAt = new Date().toISOString(); c.updatedAt = null; c.savedAt = null;
+  c.photos = []; c.ai_summary = '';
+  cur = c; loadForm(); showView('edit');
+  toast('複製しました（まだ保存されていません）');
+}
+
+/* ============ 写真 ============ */
+function pickPhoto(cam){ $(cam ? 'fileCam' : 'fileLib').click(); }
+
+// 長辺1568pxに縮小してJPEG化（Claudeの画像入力の推奨上限。HEICもSafariが描画時に変換する）
+function resizeImage(file, maxSide){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('画像を読み込めませんでした')); };
+    img.src = url;
+  });
+}
+
+async function onPhotos(input){
+  const files = [...input.files];
+  input.value = '';
+  if(!files.length) return;
+  overlay(true, '写真を取り込み中…');
+  try{
+    for(const f of files){
+      cur.photos.push({ id: uid(), dataUrl: await resizeImage(f, 1568), addedAt: new Date().toISOString() });
+    }
+  }catch(e){ alert(e.message); }
+  overlay(false);
+  renderPhotos();
+}
+
+function renderPhotos(){
+  $('photoList').innerHTML = cur.photos.map((p, i) =>
+    `<div class="photo"><img src="${p.dataUrl}" alt="" onclick="viewPhoto(${i})"><button class="x" onclick="removePhoto(${i})">×</button><span class="tag">${i + 1}</span></div>`
+  ).join('');
+  updateAINote();
+}
+function removePhoto(i){ if(confirm('この写真を外しますか？')){ cur.photos.splice(i, 1); renderPhotos(); } }
+function viewPhoto(i){ const w = window.open(); if(w){ w.document.write('<img src="' + cur.photos[i].dataUrl + '" style="width:100%">'); } }
+
+function updateAINote(){
+  const btn = $('aiBtn');
+  if(!settings.aiOn){
+    btn.disabled = true;
+    $('aiNote').innerHTML = 'AI読み取りは「設定」で有効にできます。写真は記録として保存され、本文は手入力で作成できます。';
+  }else if(!settings.apiKey){
+    btn.disabled = true;
+    $('aiNote').innerHTML = '「設定」で API キーを入力してください。';
+  }else{
+    btn.disabled = !cur.photos.length;
+    $('aiNote').textContent = cur.photos.length ? '写真 ' + cur.photos.length + ' 枚を読み取ります。結果は必ず原本と照合してください。' : 'まず写真を撮ってください。';
+  }
+}
+
+/* ============ AI読み取り（Claude API） ============ */
+const AI_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['to_hospital','to_dept','to_doctor','patient_name','patient_kana','patient_birth','patient_sex',
+             'purpose','diagnosis','history','medications','findings','treatment','plan','questions','source_summary','cautions'],
+  properties: {
+    to_hospital: { type:'string', description:'宛先の医療機関名' },
+    to_dept: { type:'string', description:'宛先の診療科' },
+    to_doctor: { type:'string', description:'宛先医師の氏名（「先生」「御侍史」は付けない）' },
+    patient_name: { type:'string' },
+    patient_kana: { type:'string', description:'ひらがな' },
+    patient_birth: { type:'string', description:'YYYY-MM-DD（西暦に換算）。不明なら空' },
+    patient_sex: { type:'string', enum:['男','女',''] },
+    purpose: { type:'string' },
+    diagnosis: { type:'string' },
+    history: { type:'string' },
+    medications: { type:'string', description:'1行に1薬剤。薬剤名 規格 用法用量' },
+    findings: { type:'string' },
+    treatment: { type:'string' },
+    plan: { type:'string' },
+    questions: { type:'array', items:{ type:'string' }, description:'照会事項リストから選んだ項目（原文のまま）' },
+    source_summary: { type:'string', description:'写真の種類と読み取った要点の要約（スタッフ確認用）' },
+    cautions: { type:'array', items:{ type:'string' }, description:'歯科医師が確認すべき点（読み取りの不確かな箇所、抗血栓薬・骨吸収抑制薬などの注意薬剤）' }
+  }
+};
+
+function buildPrompt(){
+  readForm();
+  const t = TYPES[cur.type];
+  const fieldList = t.fields.map(([k, label]) => `- ${k}: ${label}`).join('\n');
+  const known = SIMPLE_FIELDS.filter(k => cur[k] && !['greeting','status','memo','date','chart_no'].includes(k)).map(k => `${k}: ${cur[k]}`).join('\n');
+  return [
+    `作成する文書：「${t.title}」（${t.label}）`,
+    `差出人：${settings.clinic || '当院'}（歯科医院）`,
+    '',
+    '添付した写真（紹介状・お薬手帳・検査結果・問診票など）を読み取り、この文書の下書きに必要な項目を埋めてください。',
+    '',
+    'この文書で使う本文項目：',
+    fieldList,
+    '使わない本文項目は空文字にしてください。',
+    t.checklist ? '\n照会事項リスト（写真の内容から照会が必要なものを選び、文言を変えずに questions に入れる）：\n' + settings.checklist.map(q => '- ' + q).join('\n') : 'questions は空配列にしてください。',
+    '',
+    cur.type === 'reply'
+      ? '返信の場合：写真は通常、他院からの紹介状です。紹介元（差出人）の医療機関・医師を宛先（to_*）にしてください。'
+      : '照会・紹介の場合：写真にある主治医・かかりつけ医療機関を宛先（to_*）にしてください。',
+    known ? '\nすでに入力済みの情報（写真と矛盾する場合は cautions で指摘）：\n' + known : ''
+  ].join('\n');
+}
+
+const AI_SYSTEM = `あなたは日本の歯科医院で、医療機関あての文書（診療情報提供依頼書・診療情報提供書・返信）の下書きを手伝う事務アシスタントです。
+- 写真に書かれている事実だけを使い、推測で病名・薬剤・検査値を補わないでください。読めない・判別できない項目は空文字にしてください。
+- 読み取りに自信がない文字や数値は、その箇所の直後に【要確認】と付けてください。
+- 医療機関あての丁寧な文体（です・ます調）で、簡潔に書いてください。
+- 治療の可否や休薬などの医学的判断は書かず、必要なら照会事項として主治医に尋ねる形にしてください。
+- 歯科処置に関わる注意薬剤（抗血栓薬、骨吸収抑制薬、ステロイド、免疫抑制薬、糖尿病治療薬など）を見つけたら cautions に挙げてください。`;
+
+let sdkPromise = null;
+function loadSDK(){
+  // 同梱の公式SDK（@anthropic-ai/sdk）を読み込む。外部CDNは使わない
+  if(!sdkPromise) sdkPromise = import('./vendor/anthropic-sdk.min.js').then(m => m.default);
+  return sdkPromise;
+}
+
+async function runAI(){
+  if(!settings.aiOn || !settings.apiKey || !cur.photos.length) return;
+  overlay(true, 'AIが読み取り中…（20秒〜1分ほど）');
+  try{
+    const Anthropic = await loadSDK();
+    const client = new Anthropic({ apiKey: settings.apiKey, dangerouslyAllowBrowser: true });
+    const content = cur.photos.map(p => ({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: p.dataUrl.split(',')[1] }
+    }));
+    content.push({ type: 'text', text: buildPrompt() });
+    const res = await client.beta.messages.create({
+      model: settings.model,
+      max_tokens: 16000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      system: AI_SYSTEM,
+      output_config: { effort: settings.effort, format: { type: 'json_schema', schema: AI_SCHEMA } },
+      messages: [{ role: 'user', content }]
+    });
+    if(res.stop_reason === 'refusal') throw new Error('AIが処理を断りました。手入力で作成してください。');
+    if(res.stop_reason === 'max_tokens') throw new Error('読み取り結果が長すぎて途中で切れました。写真を減らしてもう一度お試しください。');
+    const texts = res.content.filter(b => b.type === 'text');
+    if(!texts.length) throw new Error('読み取り結果が空でした。');
+    applyAI(JSON.parse(texts[texts.length - 1].text));
+    toast('下書きを作成しました。内容を確認してください', 3000);
+  }catch(e){
+    let msg = e && e.message ? e.message : String(e);
+    if(e && e.status === 401) msg = 'API キーが正しくありません。設定を確認してください。';
+    else if(e && e.status === 429) msg = '利用上限に達したか、混み合っています。しばらくしてから再度お試しください。';
+    else if(e && e.status >= 500) msg = 'AIサーバーが混み合っています。しばらくしてから再度お試しください。';
+    else if(e instanceof TypeError || /fetch|network/i.test(msg)) msg = '通信できませんでした。電波状況を確認してください。（' + msg + '）';
+    alert('読み取りに失敗しました\n' + msg);
+  }finally{
+    overlay(false);
+  }
+}
+
+function applyAI(r){
+  // 空欄だけを埋める（すでに入力した内容は上書きしない）
+  const fill = (k, v) => { if(v && !String(cur[k] || '').trim()) cur[k] = v; };
+  ['to_hospital','to_dept','to_doctor','patient_name','patient_kana','patient_birth','patient_sex'].forEach(k => fill(k, r[k]));
+  TYPES[cur.type].fields.forEach(([k]) => fill(k, r[k]));
+  if(TYPES[cur.type].checklist && Array.isArray(r.questions)){
+    r.questions.forEach(q => { if(settings.checklist.includes(q) && !cur.questions.includes(q)) cur.questions.push(q); });
+  }
+  if(!cur.patient_age) cur.patient_age = calcAge(cur.patient_birth, cur.date);
+  const lines = [];
+  if(r.source_summary) lines.push('【読み取り内容】\n' + r.source_summary);
+  if(r.cautions && r.cautions.length) lines.push('【確認してください】\n' + r.cautions.map(c => '・' + c).join('\n'));
+  cur.ai_summary = lines.join('\n\n');
+  const keepSaved = lastSaved;
+  loadForm();
+  lastSaved = keepSaved; // AIで埋めた内容は未保存として扱う
+}
+
+/* ============ 印刷 ============ */
+function nl(s){ return esc(s).replace(/\n/g, '<br>'); }
+
+function renderSheet(d){
+  const t = TYPES[d.type];
+  const age = d.patient_age || calcAge(d.patient_birth, d.date);
+  const birth = /^\d{4}-\d{2}-\d{2}$/.test(d.patient_birth) ? wareki(d.patient_birth) + '（' + d.patient_birth.slice(0, 4) + '年）' : d.patient_birth;
+  const toLine = [d.to_dept, d.to_doctor ? d.to_doctor + '　先生　御侍史' : (d.to_dept ? '　御担当先生　御侍史' : '御担当先生　御侍史')].filter(Boolean).join('　');
+  let h = '';
+  h += `<div class="doc-date">${esc(wareki(d.date))}</div>`;
+  h += `<div class="doc-to"><div class="hosp">${esc(d.to_hospital || '')}</div><div>${esc(toLine)}</div></div>`;
+  h += `<div class="doc-title">${esc(t.title)}</div>`;
+  h += `<div class="doc-from">
+    <div class="clinic">${esc(settings.clinic)}</div>
+    ${settings.address ? `<div>${esc(settings.address)}</div>` : ''}
+    ${settings.tel || settings.fax ? `<div>${settings.tel ? 'TEL ' + esc(settings.tel) : ''}${settings.tel && settings.fax ? '　' : ''}${settings.fax ? 'FAX ' + esc(settings.fax) : ''}</div>` : ''}
+    <div class="dr">歯科医師　${esc(settings.doctor)}　　　印</div>
+  </div>`;
+  h += `<table class="pt">
+    <tr><th>患者氏名</th><td>${d.patient_kana ? `<span style="font-size:8.5pt">${esc(d.patient_kana)}</span><br>` : ''}${esc(d.patient_name)}　様</td><th style="width:14mm">性別</th><td style="width:16mm">${esc(d.patient_sex)}</td></tr>
+    <tr><th>生年月日</th><td colspan="3">${esc(birth)}${age ? '　' + esc(age) + '歳' : ''}</td></tr>
+  </table>`;
+  if(d.greeting) h += `<div class="greeting">${nl(d.greeting)}</div>`;
+  t.fields.forEach(([k, label]) => {
+    if(d[k] && d[k].trim()) h += `<div class="sec"><h3>${esc(label.replace(/（.*?）$/, ''))}</h3><div class="txt">${nl(d[k].trim())}</div></div>`;
+  });
+  if(t.checklist){
+    const qs = (d.questions || []).slice();
+    if(d.other_q && d.other_q.trim()) d.other_q.trim().split('\n').filter(Boolean).forEach(q => qs.push(q));
+    if(qs.length) h += `<div class="sec"><h3>ご照会事項</h3><ul class="q">${qs.map((q, i) => `<li>${i + 1}．${esc(q)}</li>`).join('')}</ul></div>`;
+  }
+  if(d.enclosure) h += `<div class="sec"><h3>同封物</h3><div class="txt">${nl(d.enclosure)}</div></div>`;
+  if(t.closing) h += `<div class="closing">${esc(t.closing)}</div>`;
+  if(t.answerBox && d.answer_box !== false){
+    h += `<div class="answer"><div class="ah"><span>ご回答欄</span><span style="font-weight:normal;font-size:9pt">ご記入のうえ、患者様にお渡しいただくか FAX にてご返送ください</span></div>
+      <div class="lines">${'<div></div>'.repeat(5)}</div>
+      <div class="sign">年　　月　　日　　医療機関名　　　　　　　　　　　　医師名　　　　　　　　　印</div></div>`;
+  }
+  return h;
+}
+
+function fitPreview(){
+  const sheet = $('sheet'), wrap = $('sheetScale');
+  const pageW = sheet.offsetWidth;
+  const scale = Math.min(1, (window.innerWidth - 16) / pageW);
+  wrap.style.transform = `scale(${scale})`;
+  wrap.style.marginLeft = Math.max(8, (window.innerWidth - pageW * scale) / 2) + 'px';
+  wrap.style.height = (sheet.offsetHeight * scale + 20) + 'px';
+  wrap.style.width = pageW + 'px';
+}
+
+function openPreview(){
+  readForm();
+  if(!settings.clinic) toast('「設定」で医院名を入力すると差出人に印刷されます', 3000);
+  $('sheet').innerHTML = renderSheet(cur);
+  $('previewWrap').classList.remove('hidden');
+  fitPreview();
+}
+function closePreview(){ $('previewWrap').classList.add('hidden'); }
+async function doPrint(){
+  // 印刷した文書は自動で保存しておく
+  if(cur.patient_name || cur.to_hospital) await saveDoc(true);
+  window.print();
+}
+window.addEventListener('resize', () => { if(!$('previewWrap').classList.contains('hidden')) fitPreview(); });
+
+/* ============ 保管一覧 ============ */
+let allDocs = [];
+async function renderList(){
+  allDocs = await dbAll();
+  allDocs.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  const q = $('q').value.trim().toLowerCase(), qt = $('qType').value, qs = $('qStatus').value;
+  const hits = allDocs.filter(d => {
+    if(qt && d.type !== qt) return false;
+    if(qs && d.status !== qs) return false;
+    if(!q) return true;
+    return [d.patient_name, d.patient_kana, d.to_hospital, d.to_dept, d.to_doctor, d.chart_no, d.memo, ...FIELD_KEYS.map(k => d[k])].join(' ').toLowerCase().includes(q);
+  });
+  const stCls = { '送付済':'st-sent', '回答受領':'st-done', '完了':'st-done' };
+  $('listCard').innerHTML = hits.length ? hits.map(d => `
+    <div class="list-item" onclick="openDoc('${d.id}')">
+      <div class="main-col">
+        <div class="t1">${esc(d.patient_name || '（患者名なし）')} <span class="badge ${d.type}">${esc(TYPES[d.type] ? TYPES[d.type].label : d.type)}</span> <span class="badge ${stCls[d.status] || ''}">${esc(d.status)}</span></div>
+        <div class="t2">${esc(d.date)}　${esc([d.to_hospital, d.to_dept].filter(Boolean).join(' '))}${d.photos && d.photos.length ? '　📷' + d.photos.length : ''}</div>
+      </div>
+      <span style="color:#bbb">›</span>
+    </div>`).join('')
+    : `<div class="empty">${allDocs.length ? '該当する文書がありません' : 'まだ保存された文書はありません。<br>「作成」から新しい文書を作れます。'}</div>`;
+}
+
+async function openDoc(id){
+  if(cur && isDirty() && !confirm('編集中の内容は保存されていません。破棄して開きますか？')) return;
+  const d = allDocs.find(x => x.id === id);
+  if(!d) return;
+  cur = Object.assign(blankDoc(d.type), JSON.parse(JSON.stringify(d)));
+  loadForm(); showView('edit');
+}
+
+/* ============ 書き出し・読み込み ============ */
+function stamp(){ const d = new Date(); return today().replace(/-/g, '') + '_' + String(d.getHours()).padStart(2,'0') + String(d.getMinutes()).padStart(2,'0'); }
+
+async function saveFile(blob, filename){
+  // iPhone は共有シート（「ファイル」に保存・AirDrop など）、PC は通常のダウンロード
+  const file = new File([blob], filename, { type: blob.type });
+  if(navigator.canShare && navigator.canShare({ files: [file] }) && /iPhone|iPad|iPod/.test(navigator.userAgent)){
+    try{ await navigator.share({ files: [file], title: filename }); return; }
+    catch(e){ if(e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+async function exportJSON(){
+  const docs = await dbAll();
+  if(!docs.length){ toast('書き出す文書がありません'); return; }
+  const data = { app: 'shokai', version: 1, exportedAt: new Date().toISOString(), docs };
+  await saveFile(new Blob([JSON.stringify(data)], { type: 'application/json' }), `照会文書_バックアップ_${stamp()}.json`);
+}
+
+async function exportCSV(){
+  const docs = await dbAll();
+  if(!docs.length){ toast('書き出す文書がありません'); return; }
+  const cols = [['date','作成日'],['type','種類'],['status','状態'],['patient_name','患者氏名'],['patient_kana','ふりがな'],['patient_birth','生年月日'],['patient_sex','性別'],['chart_no','カルテ番号'],
+    ['to_hospital','宛先医療機関'],['to_dept','診療科'],['to_doctor','医師名'],['purpose','照会理由・紹介目的'],['diagnosis','傷病名'],['history','既往歴'],['medications','服用薬'],
+    ['findings','所見・経過'],['treatment','処置'],['plan','方針・備考'],['questions','照会事項'],['other_q','その他照会'],['enclosure','同封物'],['memo','メモ'],['updatedAt','更新日時']];
+  const cell = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const rows = [cols.map(c => cell(c[1])).join(',')];
+  docs.sort((a, b) => (a.date || '').localeCompare(b.date || '')).forEach(d => {
+    rows.push(cols.map(([k]) => cell(k === 'type' ? (TYPES[d.type] || {}).label : k === 'questions' ? (d.questions || []).join(' / ') : d[k])).join(','));
+  });
+  // Excel で文字化けしないよう BOM 付き UTF-8
+  await saveFile(new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv' }), `照会文書_一覧_${stamp()}.csv`);
+}
+
+async function importJSON(input){
+  const f = input.files[0]; input.value = '';
+  if(!f) return;
+  try{
+    const data = JSON.parse(await f.text());
+    if(data.app !== 'shokai' || !Array.isArray(data.docs)) throw new Error('このアプリのバックアップファイルではありません');
+    const existing = new Map((await dbAll()).map(d => [d.id, d]));
+    let added = 0, updated = 0, skipped = 0;
+    for(const d of data.docs){
+      if(!d || !d.id) continue;
+      const e = existing.get(d.id);
+      if(!e){ await dbPut(d); added++; }
+      else if((d.updatedAt || '') > (e.updatedAt || '')){ await dbPut(d); updated++; }
+      else skipped++;
+    }
+    toast(`読み込みました（新規 ${added}・更新 ${updated}・変更なし ${skipped}）`, 3500);
+    renderList();
+  }catch(e){ alert('読み込めませんでした：' + e.message); }
+}
+
+/* ============ 設定 ============ */
+function fillSettings(){
+  $('s_clinic').value = settings.clinic; $('s_address').value = settings.address;
+  $('s_tel').value = settings.tel; $('s_fax').value = settings.fax; $('s_doctor').value = settings.doctor;
+  $('s_checklist').value = settings.checklist.join('\n');
+  $('s_ai_on').checked = settings.aiOn; $('s_api_key').value = settings.apiKey;
+  $('s_model').value = settings.model; $('s_effort').value = settings.effort;
+  $('s_keep_photos').checked = settings.keepPhotos;
+  showStorageInfo();
+}
+function saveSettings(){
+  settings.clinic = $('s_clinic').value.trim(); settings.address = $('s_address').value.trim();
+  settings.tel = $('s_tel').value.trim(); settings.fax = $('s_fax').value.trim(); settings.doctor = $('s_doctor').value.trim();
+  settings.checklist = $('s_checklist').value.split('\n').map(s => s.trim()).filter(Boolean);
+  settings.aiOn = $('s_ai_on').checked; settings.apiKey = $('s_api_key').value.trim();
+  settings.model = $('s_model').value; settings.effort = $('s_effort').value;
+  settings.keepPhotos = $('s_keep_photos').checked;
+  storeSettings();
+  if(cur){ readForm(); renderTypeFields(); updateAINote(); }
+  toast('設定を保存しました');
+}
+function resetChecklist(){ $('s_checklist').value = DEFAULT_CHECKLIST.join('\n'); }
+async function showStorageInfo(){
+  let txt = '';
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const e = await navigator.storage.estimate();
+      txt = '使用量 約 ' + (e.usage / 1024 / 1024).toFixed(1) + ' MB';
+    }
+    if(navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()) txt += '（消去されにくい保存が有効）';
+  }catch(e){}
+  $('storageInfo').textContent = txt;
+}
+
+/* ============ 起動 ============ */
+Object.entries(TYPES).forEach(([k, t]) => { $('qType').insertAdjacentHTML('beforeend', `<option value="${k}">${esc(t.label)}</option>`); });
+$('f_patient_birth').addEventListener('change', () => { const a = calcAge($('f_patient_birth').value.trim(), $('f_date').value); if(a) $('f_patient_age').value = a; });
+cur = blankDoc('inquiry');
+loadForm();
+showView(settings.clinic ? 'edit' : 'settings');
+if(!settings.clinic) toast('はじめに医院情報を入力してください', 3000);
+// ブラウザの判断で保存データが消されにくくする
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+window.addEventListener('beforeunload', e => { if(isDirty()){ e.preventDefault(); e.returnValue = ''; } });
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
