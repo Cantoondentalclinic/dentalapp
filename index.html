@@ -69,30 +69,6 @@ tr:hover td{background:#f9f9f9}
 .notes-chip:hover{opacity:0.8}
 .est-title-input{font-size:15px;font-weight:500;padding:6px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;background:#f9f9f7;width:100%}
 .est-title-input:focus{outline:none;border-color:#1a73e8;background:#fff}
-/* 発注書UI */
-.po-dropzone{border:2px dashed rgba(0,0,0,0.18);border-radius:10px;padding:28px 20px;text-align:center;color:#888;cursor:pointer;transition:all 0.2s;background:#fafafa}
-.po-dropzone.drag-over{border-color:#1a73e8;background:#e8f0fe;color:#1a73e8}
-.po-dropzone:hover{border-color:#1a73e8;background:#f8fbff}
-.po-product-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:20px;font-size:12px;cursor:pointer;background:#fff;margin:3px;transition:all 0.15s}
-.po-product-chip:hover{background:#e8f0fe;border-color:rgba(26,115,232,0.4);color:#1a73e8}
-.po-product-chip.used{background:#e6f4ea;border-color:rgba(19,115,51,0.4);color:#137333}
-.po-form-table{width:100%;border-collapse:collapse;font-size:13px}
-.po-form-table th{padding:7px 8px;font-size:11px;font-weight:500;color:#555;background:#f7f7f7;border:1px solid #ccc;text-align:center}
-.po-form-table td{padding:3px 5px;border:1px solid #d0d0d0;vertical-align:middle}
-.po-form-table td input,.po-form-table td textarea{border:none;padding:3px 5px;font-size:12px;width:100%;background:transparent;font-family:inherit}
-.po-form-table td input:focus,.po-form-table td textarea:focus{outline:none;background:#f0f8ff}
-.po-header-box{border:1px solid #ccc;padding:8px 12px;font-size:12px;min-height:86px;line-height:1.9}
-.po-extracted-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:0.5px solid rgba(0,0,0,0.15);border-radius:16px;font-size:12px;cursor:pointer;background:#fff;margin:3px;transition:all 0.15s}
-.po-extracted-chip:hover{background:#e8f0fe;border-color:rgba(26,115,232,0.4);color:#1a73e8}
-.po-extracted-chip.added{background:#e6f4ea;border-color:rgba(19,115,51,0.4);color:#137333;cursor:default}
-.sync-status{margin:6px 16px 0;font-size:11px;color:#888;line-height:1.5}
-.sync-status.ok{color:#137333}
-.sync-status.warn{color:#b06000}
-.sync-status.err{color:#d93025}
-.sync-dialog{border:0.5px solid rgba(0,0,0,0.15);border-radius:12px;padding:20px;width:360px;max-width:calc(100vw - 32px)}
-.sync-dialog::backdrop{background:rgba(0,0,0,0.3)}
-.sync-help{font-size:12px;color:#666;line-height:1.8}
-.sync-help li{margin-left:18px}
 @media print{
   .app{display:none}
   .print-area{display:block;padding:32px 40px;font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN',sans-serif;font-size:12px;color:#000}
@@ -117,26 +93,8 @@ tr:hover td{background:#f9f9f9}
   .print-notes{border:1px solid #ccc;padding:10px 14px;font-size:11px;line-height:1.9;margin-bottom:16px}
   .print-notes-title{font-size:11px;font-weight:bold;margin-bottom:6px}
   .print-footer{font-size:10px;color:#888;text-align:center;margin-top:20px}
-  /* 発注書印刷スタイル */
-  .po-print-wrap{font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:12px;color:#000}
-  .po-print-title{font-size:22px;font-weight:bold;text-align:center;margin-bottom:14px;letter-spacing:0.1em}
-  .po-print-header{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:10px;align-items:start}
-  .po-print-clinic-box{border:1px solid #000;padding:8px 12px;min-height:90px;font-size:12px;line-height:1.9}
-  .po-print-company{font-size:12px;line-height:2;text-align:right}
-  .po-print-company strong{font-size:17px;font-weight:bold}
-  .po-print-date{text-align:right;margin-bottom:8px;font-size:12px}
-  .po-print-table{width:100%;border-collapse:collapse;font-size:12px}
-  .po-print-table th{border:1px solid #000;padding:5px 8px;background:#f0f0f0;text-align:center;font-weight:500}
-  .po-print-table td{border:1px solid #000;padding:5px 8px;vertical-align:middle}
-  .po-print-table td.center{text-align:center}
-  .po-print-memo-row{display:flex;border:1px solid #000;border-top:none;min-height:64px}
-  .po-print-memo-label{padding:6px 5px;font-size:11px;border-right:1px solid #000;background:#f9f9f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:22px}
-  .po-print-memo-body{flex:1;padding:6px 8px;font-size:12px;white-space:pre-wrap;line-height:1.7}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>if(typeof pdfjsLib!=='undefined')pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 </head>
 <body>
 <div class="app" id="app">
@@ -150,8 +108,6 @@ tr:hover td{background:#f9f9f9}
     <div class="nav-item" onclick="showPage('master')">項目マスタ</div>
     <div class="nav-item" onclick="showPage('templates')">テンプレート</div>
     <div class="nav-item" onclick="showPage('notes-settings')">留意事項設定</div>
-    <hr class="sidebar-sep">
-    <div class="nav-item" onclick="showPage('purchase-order')">発注書</div>
     <hr class="sidebar-sep">
     <div class="nav-item" onclick="showPage('data-sync')">データ保存・同期</div>
     <div class="sync-status" id="sync-status">同期：未接続（この端末のみ）</div>
@@ -412,121 +368,6 @@ tr:hover td{background:#f9f9f9}
       </div>
     </div>
 
-    <!-- 発注書 -->
-    <div class="page" id="page-purchase-order">
-      <div class="action-row">
-        <span class="section-title" style="margin:0">FAX発注書（ササキ株式会社）</span>
-        <div style="display:flex;gap:8px">
-          <button class="btn" onclick="poResetForm()">リセット</button>
-          <button class="btn primary" onclick="poExportPDF()">PDF出力</button>
-        </div>
-      </div>
-
-      <!-- OCRドロップゾーン -->
-      <div class="card">
-        <div class="section-title">納品書から商品を読み取る <span style="font-size:11px;font-weight:400;color:#aaa">（画像・PDF をドロップするとOCR抽出します）</span></div>
-        <div class="po-dropzone" id="po-dropzone"
-          ondragover="event.preventDefault();this.classList.add('drag-over')"
-          ondragleave="this.classList.remove('drag-over')"
-          ondrop="poDrop(event)">
-          <div style="font-size:30px;margin-bottom:6px">📄</div>
-          <div style="font-weight:500;margin-bottom:4px;font-size:13px">納品書をここにドラッグ＆ドロップ</div>
-          <div style="font-size:12px;color:#aaa;margin-bottom:12px">JPEG・PNG・PDF 対応</div>
-          <label class="btn" style="cursor:pointer;display:inline-block">
-            ファイルを選択
-            <input type="file" accept="image/*,.pdf" style="display:none" onchange="poHandleFileInput(this)">
-          </label>
-        </div>
-        <div id="po-ocr-status" style="margin-top:8px;font-size:12px;color:#888;min-height:18px"></div>
-        <div id="po-extracted-panel" style="display:none;margin-top:10px">
-          <div style="font-size:12px;font-weight:500;color:#555;margin-bottom:6px">抽出されたテキスト <span style="font-weight:400;color:#aaa">クリックで発注表に追加します</span></div>
-          <div id="po-extracted-chips"></div>
-        </div>
-      </div>
-
-      <!-- 商品マスタ -->
-      <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="section-title" style="margin:0">商品マスタ <span style="font-size:11px;font-weight:400;color:#aaa">クリックで発注表に追加</span></div>
-          <button class="btn" onclick="poToggleAddProduct()">＋ 商品を登録</button>
-        </div>
-        <div id="po-product-chips"></div>
-        <div id="po-add-product-form" style="display:none;margin-top:12px;padding-top:12px;border-top:0.5px solid rgba(0,0,0,0.08)">
-          <div style="display:grid;grid-template-columns:1fr 120px 90px auto;gap:8px;align-items:end">
-            <div class="form-group">
-              <label>品名・規格</label>
-              <input id="po-new-name" placeholder="例：アルジネート印象材 ハーモニー">
-            </div>
-            <div class="form-group">
-              <label>メーカー（任意）</label>
-              <input id="po-new-maker" placeholder="例：GC">
-            </div>
-            <div class="form-group">
-              <label>発注数（任意）</label>
-              <input id="po-new-qty" type="number" min="1" placeholder="1">
-            </div>
-            <button class="btn primary" onclick="poAddProduct()" style="height:34px;align-self:end">登録</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 発注書フォーム -->
-      <div class="card">
-        <div style="text-align:center;font-size:20px;font-weight:bold;margin-bottom:14px;letter-spacing:0.08em">FAX注文書</div>
-
-        <!-- ヘッダー -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:10px;align-items:start">
-          <div>
-            <div class="po-header-box">
-              <div style="text-align:right;font-size:11px;color:#aaa;margin-bottom:4px">様</div>
-              <div style="font-weight:bold;font-size:13px">かんとう歯科クリニック</div>
-              <div style="font-size:11px;color:#555">〒981-4241 宮城県加美郡加美町南町111-3</div>
-              <div style="font-size:11px;color:#555">TEL：0229-63-3322</div>
-            </div>
-          </div>
-          <div style="text-align:right;font-size:12px;line-height:2.1">
-            <div style="font-size:17px;font-weight:bold;margin-bottom:2px">ササキ株式会社</div>
-            <div>仙台支店　FAX 0120-425233</div>
-            <div>山　形　店　FAX 0120-178218</div>
-            <div>郡　山　店　FAX 024-962-4022</div>
-          </div>
-        </div>
-
-        <!-- 発注日 -->
-        <div style="text-align:right;font-size:12px;margin-bottom:8px;display:flex;justify-content:flex-end;align-items:center;gap:8px">
-          <span>発注日</span>
-          <input id="po-order-date" type="date" style="width:150px;font-size:12px">
-        </div>
-
-        <!-- 発注テーブル -->
-        <table class="po-form-table">
-          <thead>
-            <tr>
-              <th style="width:36px">No.</th>
-              <th style="width:100px">メーカー</th>
-              <th>品名　・　規格</th>
-              <th style="width:68px">発注数</th>
-              <th style="width:110px">納入日</th>
-              <th style="width:140px">備　考</th>
-              <th style="width:32px"></th>
-            </tr>
-          </thead>
-          <tbody id="po-table-body"></tbody>
-        </table>
-
-        <!-- 通信欄 -->
-        <div style="display:flex;border:1px solid #ccc;border-top:none">
-          <div style="padding:8px 6px;font-size:11px;border-right:1px solid #ccc;background:#f9f9f9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:0.2em;color:#555">通信欄</div>
-          <textarea id="po-memo" rows="3" style="flex:1;border:none;padding:8px;font-size:12px;resize:vertical;font-family:inherit" placeholder="メモや特記事項があればここに記入してください"></textarea>
-        </div>
-
-        <!-- 行追加ボタン -->
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button class="btn" onclick="poAddEmptyRow()" style="font-size:12px">＋ 行を追加</button>
-        </div>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -578,9 +419,9 @@ function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  const map={patients:'患者',estimate:'見積作成',payments:'支払',dashboard:'集計',master:'項目マスタ',templates:'テンプレート','notes-settings':'留意事項設定','purchase-order':'発注書','data-sync':'データ保存・同期'};
+  const map={patients:'患者',estimate:'見積作成',payments:'支払',dashboard:'集計',master:'項目マスタ',templates:'テンプレート','notes-settings':'留意事項設定','data-sync':'データ保存・同期'};
   document.querySelectorAll('.nav-item').forEach(n=>{if(n.textContent.trim()===map[name])n.classList.add('active');});
-  const fns={patients:renderPatients,payments:renderPayments,dashboard:renderDashboard,master:renderMaster,templates:renderTemplates,'notes-settings':renderNotesMaster,'purchase-order':initPurchaseOrderPage,'data-sync':renderSyncPage};
+  const fns={patients:renderPatients,payments:renderPayments,dashboard:renderDashboard,master:renderMaster,templates:renderTemplates,'notes-settings':renderNotesMaster,'data-sync':renderSyncPage};
   if(fns[name])fns[name]();
 }
 
@@ -1080,295 +921,6 @@ function printEstimate(){
   window.print();
 }
 
-// ── 発注書 (Purchase Order) ───────────────────────
-const PO_DEFAULT_ROWS = 7;
-let poRows = [];
-let poProducts = JSON.parse(localStorage.getItem('po_products') || '[]');
-
-function savePoProducts(){ localStorage.setItem('po_products', JSON.stringify(poProducts)); syncMarkDirty(); }
-
-function initPurchaseOrderPage(){
-  if(!document.getElementById('po-order-date').value){
-    document.getElementById('po-order-date').value = new Date().toISOString().split('T')[0];
-  }
-  while(poRows.length < PO_DEFAULT_ROWS) poRows.push({maker:'',name:'',qty:'',deliveryDate:'',note:''});
-  renderPoProductChips();
-  renderPoTableBody();
-}
-
-function renderPoProductChips(){
-  const el = document.getElementById('po-product-chips');
-  if(!el) return;
-  if(poProducts.length === 0){
-    el.innerHTML = '<span style="font-size:12px;color:#aaa">まだ商品が登録されていません。上の「＋ 商品を登録」から追加できます。</span>';
-    return;
-  }
-  el.innerHTML = poProducts.map((p, i) => `
-    <span class="po-product-chip" onclick="poAddToTable(${i})" title="クリックで発注表に追加">
-      ${p.maker ? '<span style="font-size:10px;color:#999;margin-right:3px">['+p.maker+']</span>' : ''}${p.name}
-      <span onclick="event.stopPropagation();poDeleteProduct(${i})" style="color:#d93025;font-size:10px;margin-left:4px;opacity:0.7" title="削除">×</span>
-    </span>
-  `).join('');
-}
-
-function poToggleAddProduct(){
-  const f = document.getElementById('po-add-product-form');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
-  if(f.style.display === 'block') document.getElementById('po-new-name').focus();
-}
-
-function poAddProduct(){
-  const name = document.getElementById('po-new-name').value.trim();
-  const maker = document.getElementById('po-new-maker').value.trim();
-  const qty = document.getElementById('po-new-qty').value.trim();
-  if(!name){ alert('品名・規格を入力してください'); return; }
-  poProducts.push({name, maker, qty});
-  savePoProducts();
-  renderPoProductChips();
-  document.getElementById('po-new-name').value = '';
-  document.getElementById('po-new-maker').value = '';
-  document.getElementById('po-new-qty').value = '';
-  document.getElementById('po-add-product-form').style.display = 'none';
-}
-
-function poDeleteProduct(idx){
-  if(!confirm('"'+poProducts[idx].name+'" を削除しますか？')) return;
-  poProducts.splice(idx, 1);
-  savePoProducts();
-  renderPoProductChips();
-}
-
-function poAddToTable(productIdx){
-  const p = poProducts[productIdx];
-  poInsertRow(p.name, p.maker, p.qty || '');
-}
-
-function poInsertRow(name, maker, qty){
-  // Fill first empty row, or append
-  let idx = poRows.findIndex(r => !r.name && !r.maker);
-  if(idx === -1){
-    poRows.push({maker: maker||'', name: name||'', qty: qty||'', deliveryDate:'', note:''});
-  } else {
-    poRows[idx] = {maker: maker||'', name: name||'', qty: qty||'', deliveryDate:'', note:''};
-  }
-  renderPoTableBody();
-}
-
-function poAddEmptyRow(){
-  poRows.push({maker:'',name:'',qty:'',deliveryDate:'',note:''});
-  renderPoTableBody();
-}
-
-function renderPoTableBody(){
-  const tbody = document.getElementById('po-table-body');
-  if(!tbody) return;
-  tbody.innerHTML = poRows.map((r, i) => `
-    <tr>
-      <td style="text-align:center;font-size:12px;color:#888">${i+1}</td>
-      <td><input value="${escHtml(r.maker)}" onchange="poRows[${i}].maker=this.value" placeholder=""></td>
-      <td><input value="${escHtml(r.name)}" onchange="poRows[${i}].name=this.value" placeholder="品名を入力または上から選択"></td>
-      <td><input value="${escHtml(r.qty)}" onchange="poRows[${i}].qty=this.value" placeholder="" style="text-align:center"></td>
-      <td>
-        <input type="date" value="${escHtml(r.deliveryDate)}" onchange="poRows[${i}].deliveryDate=this.value" style="font-size:11px">
-      </td>
-      <td><input value="${escHtml(r.note)}" onchange="poRows[${i}].note=this.value" placeholder=""></td>
-      <td style="text-align:center">
-        <button onclick="poClearRow(${i})" style="font-size:11px;padding:2px 5px;border:0.5px solid rgba(217,48,37,0.3);border-radius:6px;background:#fce8e6;color:#d93025;cursor:pointer">✕</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function poClearRow(idx){
-  poRows[idx] = {maker:'',name:'',qty:'',deliveryDate:'',note:''};
-  renderPoTableBody();
-}
-
-function poResetForm(){
-  if(!confirm('発注書の内容をすべてリセットしますか？')) return;
-  poRows = Array(PO_DEFAULT_ROWS).fill(null).map(() => ({maker:'',name:'',qty:'',deliveryDate:'',note:''}));
-  document.getElementById('po-memo').value = '';
-  document.getElementById('po-order-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('po-extracted-panel').style.display = 'none';
-  document.getElementById('po-ocr-status').textContent = '';
-  renderPoTableBody();
-}
-
-// ── OCR ─────────────────────────────────────────────
-async function poDrop(e){
-  e.preventDefault();
-  document.getElementById('po-dropzone').classList.remove('drag-over');
-  const file = e.dataTransfer.files[0];
-  if(file) await poProcessFile(file);
-}
-
-function poHandleFileInput(input){
-  const file = input.files[0];
-  if(file) poProcessFile(file);
-  input.value = '';
-}
-
-async function poProcessFile(file){
-  const status = document.getElementById('po-ocr-status');
-  const panel = document.getElementById('po-extracted-panel');
-  panel.style.display = 'none';
-  status.innerHTML = '<span style="color:#1a73e8">⏳ OCR処理中...</span>';
-
-  try {
-    let src;
-    if(file.type === 'application/pdf'){
-      status.innerHTML = '<span style="color:#1a73e8">⏳ PDF変換中...</span>';
-      src = await poPDFPageToDataURL(file);
-    } else {
-      src = URL.createObjectURL(file);
-    }
-    status.innerHTML = '<span style="color:#1a73e8">⏳ テキスト抽出中...</span>';
-    const text = await poRunTesseract(src);
-    if(file.type !== 'application/pdf') URL.revokeObjectURL(src);
-    const lines = poExtractLines(text);
-    poShowExtractedChips(lines);
-    status.innerHTML = `<span style="color:#137333">✓ 完了：${lines.length}件の行を抽出しました。クリックして発注表に追加してください。</span>`;
-  } catch(err){
-    status.innerHTML = '<span style="color:#d93025">エラーが発生しました：' + err.message + '</span>';
-    console.error(err);
-  }
-}
-
-async function poPDFPageToDataURL(file){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        if(typeof pdfjsLib === 'undefined') throw new Error('PDF.js が読み込まれていません');
-        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(e.target.result)}).promise;
-        const page = await pdf.getPage(1);
-        const vp = page.getViewport({scale: 2});
-        const canvas = document.createElement('canvas');
-        canvas.width = vp.width; canvas.height = vp.height;
-        await page.render({canvasContext: canvas.getContext('2d'), viewport: vp}).promise;
-        resolve(canvas.toDataURL('image/png'));
-      } catch(err){ reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-async function poRunTesseract(src){
-  if(typeof Tesseract === 'undefined') throw new Error('Tesseract.js が読み込まれていません');
-  const worker = await Tesseract.createWorker('jpn+eng');
-  try {
-    const { data: { text } } = await worker.recognize(src);
-    return text;
-  } finally {
-    await worker.terminate();
-  }
-}
-
-function poExtractLines(text){
-  return text.split('\n')
-    .map(l => l.trim())
-    .filter(l => {
-      if(l.length < 2) return false;
-      if(/^\d+$/.test(l)) return false;
-      if(/^[^　-鿿a-zA-Z0-9]+$/.test(l)) return false;
-      return true;
-    });
-}
-
-function poShowExtractedChips(lines){
-  const panel = document.getElementById('po-extracted-panel');
-  const chipsEl = document.getElementById('po-extracted-chips');
-  panel.style.display = 'block';
-  if(lines.length === 0){
-    chipsEl.innerHTML = '<span style="font-size:12px;color:#aaa">テキストが抽出できませんでした</span>';
-    return;
-  }
-  chipsEl.innerHTML = lines.map((l, i) => `
-    <span class="po-extracted-chip" id="po-chip-${i}" onclick="poAddExtracted(this,'${l.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">${l}</span>
-  `).join('');
-}
-
-function poAddExtracted(el, text){
-  if(el.classList.contains('added')) return;
-  el.classList.add('added');
-  el.title = '追加済み';
-  poInsertRow(text, '', '');
-}
-
-// ── PDF出力 ─────────────────────────────────────────
-function poExportPDF(){
-  const orderDate = document.getElementById('po-order-date').value;
-  const memo = document.getElementById('po-memo').value;
-
-  let dateStr = '　　　年　　月　　日';
-  if(orderDate){
-    const d = new Date(orderDate);
-    dateStr = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`;
-  }
-
-  const rowsHTML = poRows.map((r, i) => {
-    let delivStr = '　／';
-    if(r.deliveryDate){
-      const d = new Date(r.deliveryDate);
-      delivStr = `${d.getMonth()+1}／${d.getDate()}`;
-    }
-    return `<tr>
-      <td class="center" style="font-size:12px">${i+1}</td>
-      <td>${escHtml(r.maker)}</td>
-      <td>${escHtml(r.name)}</td>
-      <td class="center">${escHtml(r.qty)}</td>
-      <td class="center">${delivStr}</td>
-      <td>${escHtml(r.note)}</td>
-    </tr>`;
-  }).join('');
-
-  const memoRows = memo.split('\n').map(l => `<div>${escHtml(l)||'&nbsp;'}</div>`).join('');
-
-  document.getElementById('print-area').innerHTML = `
-    <div class="po-print-wrap">
-      <div class="po-print-title">FAX注文書</div>
-      <div class="po-print-header">
-        <div>
-          <div class="po-print-clinic-box">
-            <div style="text-align:right;font-size:11px;color:#aaa;margin-bottom:4px">様</div>
-            <div style="font-weight:bold;font-size:13px">かんとう歯科クリニック</div>
-            <div style="font-size:11px;color:#555;margin-top:3px">〒981-4241 宮城県加美郡加美町南町111-3</div>
-            <div style="font-size:11px;color:#555">TEL：0229-63-3322</div>
-          </div>
-        </div>
-        <div class="po-print-company">
-          <strong>ササキ株式会社</strong><br>
-          仙台支店　FAX 0120-425233<br>
-          山　形　店　FAX 0120-178218<br>
-          郡　山　店　FAX 024-962-4022
-        </div>
-      </div>
-      <div class="po-print-date">発注日　${dateStr}</div>
-      <table class="po-print-table">
-        <thead>
-          <tr>
-            <th style="width:38px">No.</th>
-            <th style="width:100px">メーカー</th>
-            <th>品名　・　規格</th>
-            <th style="width:66px">発注数</th>
-            <th style="width:80px">納入日</th>
-            <th style="width:140px">備　　考</th>
-          </tr>
-        </thead>
-        <tbody>${rowsHTML}</tbody>
-      </table>
-      <div class="po-print-memo-row">
-        <div class="po-print-memo-label"><span>通</span><span>信</span><span>欄</span></div>
-        <div class="po-print-memo-body">${memoRows}</div>
-      </div>
-    </div>
-  `;
-  window.print();
-}
-
 // ── データ保存・同期 ─────────────────────────────
 // 同期ファイル（クラウドフォルダ内の JSON）とバックアップファイルの読み書き
 const SYNC_APP = 'dental-jihi';
@@ -1386,22 +938,21 @@ function syncSupported(){ return 'showSaveFilePicker' in window && 'showOpenFile
 function syncMeta(){ return JSON.parse(localStorage.getItem('dental_sync_meta') || '{}'); }
 function syncSetMeta(m){ localStorage.setItem('dental_sync_meta', JSON.stringify(Object.assign(syncMeta(), m))); }
 function syncLocalHasData(){
-  return estimates.length > 0 || templates.length > 0 || poProducts.length > 0
+  return estimates.length > 0 || templates.length > 0
     || localStorage.getItem('dental_items') !== null || localStorage.getItem('dental_notes_master') !== null;
 }
 
 function syncCollect(){
   return { dental_items:itemsMaster, dental_estimates:estimates, dental_templates:templates,
-           dental_notes_master:notesMaster, po_products:poProducts };
+           dental_notes_master:notesMaster };
 }
 function syncApply(data){
   itemsMaster = data.dental_items || DEFAULT_ITEMS;
   estimates   = data.dental_estimates || [];
   templates   = data.dental_templates || [];
   notesMaster = data.dental_notes_master || JSON.parse(JSON.stringify(DEFAULT_NOTES_MASTER));
-  poProducts  = data.po_products || [];
   syncSuppressDirty = true;
-  save(); saveEst(); saveTpl(); saveNotesMasterStore(); savePoProducts();
+  save(); saveEst(); saveTpl(); saveNotesMasterStore();
   syncSuppressDirty = false;
   rebuildSelect(); rebuildNotesChips(); renderTplChips();
   const active = document.querySelector('.page.active');
