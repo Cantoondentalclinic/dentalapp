@@ -668,7 +668,7 @@ function renderPatients(){
       <td>¥${e.total.toLocaleString()}</td>
       <td><span class="badge ${status}">${lbl[status]}</span></td>
       <td style="display:flex;gap:4px;flex-wrap:wrap">
-        ${!e.archived?`<button class="btn" style="font-size:12px;padding:3px 8px" onclick="editEst('${e.id}')">編集</button>`:''}
+        ${!e.archived?`<button class="btn" style="font-size:12px;padding:3px 8px" onclick="editEst('${e.id}')">開く</button>`:''}
         ${archiveBtn}
         <button class="btn danger" style="font-size:12px;padding:3px 8px" onclick="deleteEst('${e.id}')">削除</button>
       </td>`;
