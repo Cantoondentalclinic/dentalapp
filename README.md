@@ -8,6 +8,7 @@
 | 📋 **老健訪問歯科健診表** | 訪問歯科健診の入力（オフライン対応） | https://cantoondentalclinic.github.io/dentalapp/kenshin/roken_checkup.html |
 | 🛒 **院内物販** | 商品をタッチ → 注文票を印刷 | https://cantoondentalclinic.github.io/dentalapp/shop-kiosk/web/ |
 | 🧾 **レシート一覧** | 保存したレシート・領収書をファイル名から一覧化・検索（電子帳簿保存法の検索用） | https://cantoondentalclinic.github.io/dentalapp/receipts/ |
+| 📮 **住所録・はがき印刷** | 宛名を用途別フォルダで管理、Excel / CSV をドラッグで読込、宛名面（はがきの種類ごとに位置調整）・裏面を印刷 | https://cantoondentalclinic.github.io/dentalapp/atena/ |
 
 ## データについて
 

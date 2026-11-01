@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>住所録・はがき印刷</title>
+<style id="pageStyle">@page{size:100mm 148mm;margin:0}</style>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+header{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:16px;font-weight:600;margin-right:auto}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tab{font-family:inherit;font-size:13px;padding:7px 16px;border:none;border-radius:8px;background:transparent;cursor:pointer;color:#555}
+.sync-badge{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:20px;border:none;background:#f1f1ef;color:#666;cursor:pointer}
+.sync-badge.ok{background:#e6f4ea;color:#137333}
+.sync-badge.warn{background:#fef7e0;color:#b06000}
+.sync-badge.err{background:#fce8e6;color:#d93025}
+dialog.pw{border:none;border-radius:14px;padding:18px 20px;width:min(420px,92vw)}
+dialog.pw::backdrop{background:rgba(0,0,0,.35)}
+.tab.active{background:#e8f0fe;color:#1a73e8;font-weight:600}
+.main{padding:14px 20px;max-width:1600px;margin:0 auto}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px}
+.section-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.muted{color:#888;font-size:12px}
+.help{font-size:12px;color:#666;line-height:1.7}
+input,select,textarea{font-family:inherit;font-size:13px;padding:6px 8px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;width:100%;min-width:0}
+textarea{resize:vertical}
+input[type=checkbox]{width:auto}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
+.btn{font-family:inherit;font-size:13px;padding:6px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f5f5f3}
+.btn.primary{background:#1a73e8;color:#fff;border-color:#1a73e8}
+.btn.primary:hover{background:#1765cc}
+.btn.soft{background:#e8f0fe;color:#1a73e8;border-color:rgba(26,115,232,0.3)}
+.btn.danger{color:#d93025}
+.btn.sm{font-size:12px;padding:3px 9px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hidden{display:none!important}
+/* 住所録 */
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px;align-items:start}
+.folders{display:flex;flex-direction:column;gap:2px}
+.folder{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px}
+.folder:hover{background:#f5f5f3}
+.folder.active{background:#e8f0fe;color:#1a73e8;font-weight:600}
+.folder .cnt{margin-left:auto;font-size:11px;color:#888}
+.folder.drop{outline:2px dashed #1a73e8}
+.dropzone{border:1.5px dashed rgba(0,0,0,0.25);border-radius:10px;padding:14px;text-align:center;color:#666;font-size:12px;line-height:1.7;margin-top:12px;cursor:pointer}
+.dropzone:hover{background:#f9f9f9}
+.table-wrap{overflow:auto;max-height:calc(100vh - 230px);min-height:300px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 8px;font-size:12px;font-weight:500;color:#888;border-bottom:0.5px solid rgba(0,0,0,0.1);position:sticky;top:0;background:#fff;white-space:nowrap;z-index:1}
+td{padding:6px 8px;border-bottom:0.5px solid rgba(0,0,0,0.07);vertical-align:top}
+tbody tr:hover td{background:#f9f9f9}
+td.addr{font-size:12px;color:#444}
+.empty{color:#888;font-size:13px;text-align:center;padding:40px 10px;line-height:1.9}
+#dragOverlay{position:fixed;inset:0;background:rgba(26,115,232,0.12);border:4px dashed #1a73e8;z-index:50;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#1a73e8;pointer-events:none}
+/* ダイアログ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto}
+.modal{background:#fff;border-radius:14px;padding:18px 20px;width:100%;max-width:640px}
+.modal.wide{max-width:1000px}
+.modal h2{font-size:16px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:12px;color:#888}
+.fg.full{grid-column:1/-1}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.map-table td,.map-table th{font-size:12px}
+.map-table select{font-size:12px;padding:4px}
+/* 宛名面・裏面 */
+.print-layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;align-items:start}
+.stage{display:flex;flex-direction:column;align-items:center;gap:10px}
+.stage-box{background:#e9e9e6;border-radius:10px;padding:18px;display:flex;justify-content:center;width:100%;overflow:auto}
+.scaler{position:relative}
+.scaler>.sheet{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 2px 12px rgba(0,0,0,0.18)}
+.adjust{max-height:calc(100vh - 150px);overflow:auto}
+.adj-group{border-top:0.5px solid rgba(0,0,0,0.08);padding:10px 0}
+.adj-group h4{font-size:13px;margin-bottom:6px}
+.adj-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.adj-grid .fg label{font-size:11px}
+.adj-grid input{padding:4px 6px;font-size:12px}
+.nudge{display:grid;grid-template-columns:repeat(3,36px);gap:4px;justify-content:center}
+.nudge .btn{padding:4px 0}
+.txt-block{border:0.5px solid rgba(0,0,0,0.12);border-radius:10px;padding:10px;margin-bottom:8px}
+/* はがき本体（印刷と共通） */
+.sheet{position:relative;background:#fff;overflow:hidden;color:#000;font-family:'Yu Mincho','YuMincho','Hiragino Mincho ProN','Hiragino Mincho Pro','MS PMincho','MS Mincho','Noto Serif JP','IPAMincho','IPAexMincho',serif}
+.sheet.gothic{font-family:'Yu Gothic','YuGothic','Hiragino Kaku Gothic ProN','Meiryo','Noto Sans JP','IPAGothic','IPAexGothic',sans-serif}
+.sheet .v{position:absolute;writing-mode:vertical-rl;text-orientation:upright;line-height:1;white-space:nowrap}
+.sheet .zipd{position:absolute;display:flex;align-items:center;justify-content:center;line-height:1}
+.sheet .zipbox{position:absolute;border:0.3mm solid #e0301e}
+.sheet .guide{position:absolute;border:0.2mm dashed rgba(0,120,255,0.55)}
+.sheet .guide.zip{border:0.25mm solid rgba(224,48,30,0.6);border-style:solid}
+.sheet .bt{position:absolute;white-space:pre-wrap;line-height:1.5;overflow:hidden}
+.sheet .bt.vert{writing-mode:vertical-rl;text-orientation:mixed}
+.sheet .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  #app,#dragOverlay,.modal-bg{display:none!important}
+  #printArea{display:block}
+  #printArea .sheet{page-break-after:always;break-after:page;box-shadow:none}
+  #printArea .sheet:last-child{page-break-after:auto;break-after:auto}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media (max-width:900px){
+  .layout,.print-layout{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>📮 住所録・はがき印刷</h1>
+  <nav class="tabs">
+    <button class="tab active" data-tab="book">住所録</button>
+    <button class="tab" data-tab="front">宛名面</button>
+    <button class="tab" data-tab="back">裏面</button>
+    <button class="tab" data-tab="settings">差出人・設定</button>
+  </nav>
+  <button class="sync-badge" id="syncStatus" onclick="showTab('settings')" title="同期の設定">同期：未接続（この端末のみ）</button>
+</header>
+
+<!-- 住所録 -->
+<section class="main" id="tab-book">
+  <div class="layout">
+    <div class="card">
+      <div class="section-title">フォルダ <button class="btn sm" style="margin-left:auto" onclick="addFolder()">＋追加</button></div>
+      <div class="folders" id="folderList"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="renameFolder()">名前変更</button>
+        <button class="btn sm danger" onclick="deleteFolder()">削除</button>
+      </div>
+      <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+        Excel / CSV ファイルを<br><b>ここ（画面のどこでも）へドラッグ</b><br>またはクリックして選択
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.txt,.tsv,.json" class="hidden">
+      <p class="help" style="margin-top:10px">連絡先の行を左のフォルダへドラッグすると移動できます（Ctrlを押しながらでコピー）。</p>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <div class="section-title" style="margin:0" id="folderTitle"></div>
+        <input id="search" placeholder="検索（氏名・住所・会社）" style="max-width:240px;margin-left:auto">
+        <button class="btn primary" onclick="editContact()">＋新規</button>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <span class="muted" id="selInfo"></span>
+        <button class="btn sm" onclick="checkAll(true)">全て印刷対象</button>
+        <button class="btn sm" onclick="checkAll(false)">全て解除</button>
+        <select id="bulkTarget" style="width:auto;font-size:12px;padding:3px 6px"></select>
+        <button class="btn sm" onclick="bulkMove(false)">印刷対象を移動</button>
+        <button class="btn sm" onclick="bulkMove(true)">印刷対象をコピー</button>
+        <button class="btn sm danger" onclick="bulkDelete()">印刷対象を削除</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th title="印刷対象">印刷</th><th>氏名</th><th>〒</th><th>住所</th><th>会社・部署</th><th></th></tr></thead>
+          <tbody id="contactRows"></tbody>
+        </table>
+        <div class="empty hidden" id="emptyMsg">このフォルダには宛名がありません。<br>「＋新規」で追加するか、Excel / CSV ファイルをドラッグしてください。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 宛名面 -->
+<section class="main hidden" id="tab-front">
+  <div class="print-layout">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <label class="muted">はがき</label>
+        <select id="typeSelect" style="width:auto"></select>
+        <label class="muted">フォルダ</label>
+        <select id="frontFolder" style="width:auto"></select>
+        <label class="row muted" style="gap:4px"><input type="checkbox" id="showGuides" checked>枠線を表示</label>
+      </div>
+      <div class="stage">
+        <div class="row">
+          <button class="btn sm" onclick="movePreview(-1)">◀</button>
+          <span id="previewInfo" class="muted"></span>
+          <button class="btn sm" onclick="movePreview(1)">▶</button>
+        </div>
+        <div class="stage-box"><div class="scaler" id="frontStage"></div></div>
+        <div class="row">
+          <button class="btn" onclick="printFront(true)">テスト印刷（1枚・枠線つき）</button>
+          <button class="btn primary" id="printFrontBtn" onclick="printFront(false)">宛名面を印刷</button>
+        </div>
+        <p class="help" style="max-width:560px">印刷のときはプリンターの用紙サイズを「はがき」にし、倍率は「100%（実際のサイズ）」、余白「なし」を選んでください。まず普通紙にテスト印刷し、はがきと重ねて位置を確認すると失敗がありません。</p>
+      </div>
+    </div>
+    <div class="card adjust" id="adjustPanel"></div>
+  </div>
+</section>
+
+<!-- 裏面 -->
+<section class="main hidden" id="tab-back">
+  <div class="print-layout">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <label class="muted">デザイン</label>
+        <select id="designSelect" style="width:auto"></select>
+        <button class="btn sm" onclick="newDesign()">＋新規</button>
+        <button class="btn sm" onclick="dupDesign()">複製</button>
+        <button class="btn sm danger" onclick="deleteDesign()">削除</button>
+      </div>
+      <div class="stage">
+        <div class="stage-box"><div class="scaler" id="backStage"></div></div>
+        <div class="row">
+          <label class="muted">枚数</label>
+          <input type="number" id="backCopies" value="1" min="1" style="width:80px">
+          <button class="btn" onclick="printBack('copies')">この枚数を印刷</button>
+          <button class="btn primary" onclick="printBack('contacts')">印刷対象の宛先ごとに印刷</button>
+        </div>
+        <p class="help" style="max-width:560px">文章に <b>{氏名}</b> <b>{敬称}</b> <b>{会社}</b> と書くと、宛先ごとに名前を差し込んで印刷できます（「印刷対象の宛先ごとに印刷」）。宛名面と同じ順番で出るので、両面印刷にも使えます。</p>
+      </div>
+    </div>
+    <div class="card adjust" id="designPanel"></div>
+  </div>
+</section>
+
+<!-- 設定 -->
+<section class="main hidden" id="tab-settings">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start">
+    <div class="card">
+      <div class="section-title">差出人</div>
+      <div class="grid2">
+        <div class="fg"><label>郵便番号</label><input data-s="zip"></div>
+        <div class="fg"><label>電話（裏面の差込用 {電話}）</label><input data-s="tel"></div>
+        <div class="fg full"><label>住所1</label><input data-s="addr1"></div>
+        <div class="fg full"><label>住所2（建物など）</label><input data-s="addr2"></div>
+        <div class="fg full"><label>会社・医院名</label><input data-s="company"></div>
+        <div class="fg full"><label>氏名</label><input data-s="name"></div>
+      </div>
+      <label class="row muted" style="margin-top:10px;gap:6px"><input type="checkbox" data-s="onFront">宛名面に差出人を印刷する</label>
+      <p class="help" style="margin-top:6px">裏面の文章では {差出人} {差出人住所} {差出人郵便番号} {電話} が使えます。</p>
+    </div>
+    <div class="card">
+      <div class="section-title">文字・表記</div>
+      <div class="fg"><label>書体</label>
+        <select data-o="font"><option value="mincho">明朝体</option><option value="gothic">ゴシック体</option></select></div>
+      <label class="row muted" style="margin-top:10px;gap:6px"><input type="checkbox" data-o="kanji">宛名面の住所の数字を漢数字にする（1-2-3 → 一ー二ー三）</label>
+      <div class="fg" style="margin-top:10px"><label>敬称が空欄のときの既定</label><input data-o="honorific"></div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="section-title">① Google ドライブで同期（パソコンの Chrome / Edge）</div>
+      <div class="help">
+        パソコンに入れた「Google ドライブ（パソコン版）」のフォルダに同期ファイルを置き、変更のたびに自動で保存します。
+        ほかのパソコンでも同じファイルを選ぶと、同じ住所録・フォルダ・印刷位置・裏面デザインを使えます（他の端末の変更は、画面に戻ったときと1分ごとに取り込みます）。
+        <ol style="margin:6px 0 0 20px">
+          <li>最初の1台：「新しい同期ファイルを作る」→ Google ドライブのフォルダ（例：マイドライブ）を選んで保存</li>
+          <li>2台目以降：「既存の同期ファイルを開く」→ 同じファイルを選ぶ</li>
+          <li>次回からは、アプリを開いたときに必要なら「再接続」を押すだけです</li>
+        </ol>
+        2台で同時に変更すると、どちらを使うか確認が出ます（使わなかった方は退避ファイルとしてダウンロードされます）。
+        はがきの印刷位置はプリンターによって違うため、パソコンごとに「はがきの種類」を複製して名前を付けておくと便利です。
+      </div>
+      <div id="syncUnsupported" class="help hidden" style="color:#b06000;margin-top:10px">
+        このブラウザ（iPad / iPhone の Safari、Firefox など）は自動同期に対応していません。下の②のバックアップファイルを使ってください。
+      </div>
+      <div class="row" id="syncButtons" style="margin-top:12px">
+        <button class="btn primary" onclick="syncCreateFile()">新しい同期ファイルを作る</button>
+        <button class="btn" onclick="syncOpenFile()">既存の同期ファイルを開く</button>
+        <button class="btn soft hidden" id="syncReconnectBtn" onclick="syncReconnect()">再接続</button>
+        <button class="btn hidden" id="syncNowBtn" onclick="syncNow(true)">今すぐ同期</button>
+        <button class="btn danger hidden" id="syncDisconnectBtn" onclick="syncDisconnect()">接続を解除</button>
+      </div>
+      <div id="syncDetail" class="help" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">② バックアップファイル（すべてのブラウザ）</div>
+      <p class="help">全データを1つのファイルに書き出し、別の端末で読み込みます（画面へのドラッグでも読み込めます）。読み込むと、この端末のデータはファイルの内容に<b>置き換わります</b>。</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="exportJSON()">バックアップを書き出す</button>
+        <button class="btn" onclick="document.getElementById('restoreInput').click()">バックアップを読み込む</button>
+        <input type="file" id="restoreInput" accept=".json" class="hidden">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="exportCSV()">表示中フォルダをCSVで書き出し</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">パスワード（暗号化）</div>
+      <p class="help">住所・氏名などの個人情報を含むため、同期ファイルとバックアップはパスワードで暗号化することをおすすめします（AES-256）。
+        作成のときにパスワードを入力すると暗号化され、ほかの端末で開くときに同じパスワードが必要です。
+        パスワードはどこにも保存されません。<b>忘れるとデータを復元できません</b>。</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="dragOverlay" class="hidden">ここにドロップして宛名を読み込み</div>
+<div id="modalRoot"></div>
+<dialog class="pw" id="pwDialog">
+  <form method="dialog">
+    <div id="pwMsg" style="font-size:13px;margin-bottom:10px;line-height:1.7;white-space:pre-line"></div>
+    <input type="password" id="pwInput" autocomplete="off" style="margin-bottom:8px">
+    <input type="password" id="pwConfirm" autocomplete="off" placeholder="確認のためもう一度" style="margin-bottom:8px">
+    <div id="pwErr" style="color:#d93025;font-size:12px;min-height:16px"></div>
+    <div class="modal-foot" style="margin-top:8px">
+      <button class="btn" value="cancel" formnovalidate>キャンセル</button>
+      <button class="btn primary" value="ok" id="pwOk">OK</button>
+    </div>
+  </form>
+</dialog>
+<div id="printArea"></div>
+
+<script>
+'use strict';
+// ===== 定数・ユーティリティ =====
+const PT = 0.3528; // 1pt = mm
+const MM = 96 / 25.4; // 1mm = px
+const KEY = 'atena_v1';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const toHalf = s => String(s ?? '').replace(/[０-９Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+const normZip = s => toHalf(s).replace(/\D/g, '').slice(0, 7);
+const fmtZip = z => z && z.length === 7 ? z.slice(0, 3) + '-' + z.slice(3) : (z || '');
+const chars = s => [...String(s ?? '')];
+
+const FIELDS = [
+  ['name', '氏名'], ['last', '姓'], ['first', '名'], ['kana', 'フリガナ'], ['honorific', '敬称'],
+  ['zip', '郵便番号'], ['addr1', '住所1'], ['addr2', '住所2（建物）'], ['company', '会社・医院名'],
+  ['dept', '部署'], ['title', '役職'], ['renmei', '連名'], ['tel', '電話'], ['memo', 'メモ']
+];
+const SYN = {
+  name: ['氏名', '名前', 'お名前', '宛名', '姓名', 'フルネーム', '患者名', '患者氏名', '顧客名', 'name', 'fullname'],
+  last: ['姓', '苗字', '名字', 'lastname', 'familyname'],
+  first: ['名', 'firstname', 'givenname'],
+  kana: ['フリガナ', 'ふりがな', 'カナ', 'かな', 'よみ', 'ヨミ', '読み', 'カナ氏名', 'kana'],
+  honorific: ['敬称'],
+  zip: ['郵便番号', '〒', '郵便', 'zip', 'zipcode', 'postalcode', '自宅郵便番号'],
+  addr1: ['住所', '住所1', '住所１', '自宅住所', '自宅住所1', '都道府県', '市区町村', '番地', '町域', 'address', 'address1'],
+  addr2: ['住所2', '住所２', '建物', '建物名', 'マンション名', '方書', '自宅住所2', 'address2'],
+  company: ['会社', '会社名', '勤務先', '法人名', '医院名', '団体名', '施設名', 'company'],
+  dept: ['部署', '部署名', '所属'],
+  title: ['役職', '肩書'],
+  renmei: ['連名', '連名1', '家族'],
+  tel: ['電話', '電話番号', 'tel', '携帯', '携帯電話'],
+  memo: ['備考', 'メモ', 'memo', 'note']
+};
+
+// ===== はがきの種類（初期値・mm／文字はpt） =====
+function baseType(id, name, dx = 0, extra = {}) {
+  return Object.assign({
+    id, name, w: 100, h: 148, ox: 0, oy: 0, drawZipBox: false,
+    zip: { x1: 44 + dx, p1: 7, x2: 65.6 + dx, p2: 6.8, y: 12, w: 5.7, h: 8, fs: 14 },
+    addr: { x: 89 + dx, y: 25, h: 100, fs: 16 },
+    nm: { x: 50 + dx, y: 30, h: 96, fs: 30 },
+    sender: { x: 6 + dx, y: 60, w: 30, h: 62, fs: 10 },
+    szip: { x1: 5.7 + dx, p1: 4, x2: 18.3 + dx, p2: 4, y: 127, w: 4, h: 6.5, fs: 10 }
+  }, extra);
+}
+const DEFAULT_TYPES = () => [
+  baseType('postcard', '通常はがき（郵便はがき）'),
+  baseType('nenga', '年賀はがき'),
+  baseType('inkjet', 'インクジェット紙はがき'),
+  baseType('private', '私製はがき（郵便番号枠を印刷）', 0, { drawZipBox: true }),
+  baseType('ofuku', '往復はがき（往信・広げた状態）', 100, { w: 200 }),
+];
+
+const DEFAULT_DESIGNS = () => [
+  { id: uid(), name: '年賀状（縦書き）', bg: '', texts: [
+    { text: '謹賀新年', x: 62, y: 12, w: 26, h: 90, fs: 40, vert: true, align: 'start', color: '#b00020', bold: true },
+    { text: '旧年中は大変お世話になりました\n本年もどうぞよろしくお願い申し上げます', x: 30, y: 20, w: 26, h: 90, fs: 11, vert: true, align: 'start', color: '#000', bold: false },
+    { text: '令和九年　元旦\n{差出人住所}\n{差出人}', x: 6, y: 60, w: 22, h: 80, fs: 9, vert: true, align: 'end', color: '#000', bold: false }
+  ]},
+  { id: uid(), name: '定期健診のお知らせ（横書き）', bg: '', texts: [
+    { text: '定期健診のお知らせ', x: 8, y: 12, w: 84, h: 14, fs: 18, vert: false, align: 'center', color: '#1a5fa8', bold: true },
+    { text: '{氏名} {敬称}\n\n前回のご来院から時間が経ちました。\nむし歯や歯周病の早期発見のため、\n定期健診をおすすめしております。\nお電話でのご予約をお待ちしております。', x: 10, y: 34, w: 80, h: 70, fs: 10.5, vert: false, align: 'start', color: '#000', bold: false },
+    { text: '{医院名}\n{差出人}\n〒{差出人郵便番号} {差出人住所}\nTEL {電話}', x: 10, y: 112, w: 80, h: 30, fs: 8.5, vert: false, align: 'end', color: '#333', bold: false }
+  ]},
+  { id: uid(), name: '白紙', bg: '', texts: [
+    { text: 'ここに文章を入力', x: 10, y: 10, w: 80, h: 128, fs: 12, vert: false, align: 'start', color: '#000', bold: false }
+  ]}
+];
+
+// ===== データ =====
+let D = load();
+function load() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  return normalize(d);
+}
+function normalize(d) {
+  if (!d) {
+    const f1 = uid();
+    d = {
+      folders: [{ id: f1, name: '年賀状' }, { id: uid(), name: '患者さん（リコール）' }, { id: uid(), name: '取引先' }],
+      contacts: [], types: DEFAULT_TYPES(), typeId: 'postcard', designs: DEFAULT_DESIGNS(),
+      sender: { zip: '', addr1: '', addr2: '', company: '', name: '', tel: '', onFront: true },
+      opt: { font: 'mincho', kanji: true, honorific: '様' }, folderId: f1, designId: null, frontFolderId: f1
+    };
+  }
+  // 足りない種類を補う
+  const ids = new Set(d.types.map(t => t.id));
+  DEFAULT_TYPES().forEach(t => { if (!ids.has(t.id)) d.types.push(t); });
+  if (!d.designs || !d.designs.length) d.designs = DEFAULT_DESIGNS();
+  if (!d.designId || !d.designs.find(x => x.id === d.designId)) d.designId = d.designs[0].id;
+  if (!d.folders.length) d.folders.push({ id: uid(), name: '未分類' });
+  if (!d.folders.find(f => f.id === d.folderId)) d.folderId = d.folders[0].id;
+  if (!d.frontFolderId || !d.folders.find(f => f.id === d.frontFolderId)) d.frontFolderId = d.folderId;
+  if (!d.types.find(t => t.id === d.typeId)) d.typeId = d.types[0].id;
+  return d;
+}
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(D)); }
+    catch (e) { alert('保存できませんでした（容量不足の可能性）。裏面の画像を小さくするか削除してください。'); }
+    syncCheckChanged();
+  }, 200);
+}
+const curType = () => D.types.find(t => t.id === D.typeId) || D.types[0];
+const curDesign = () => D.designs.find(x => x.id === D.designId) || D.designs[0];
+const folderName = id => (D.folders.find(f => f.id === id) || {}).name || '';
+
+// ===== タブ =====
+document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  ['book', 'front', 'back', 'settings'].forEach(x => $('#tab-' + x).classList.toggle('hidden', x !== t));
+  if (t === 'front') renderFront();
+  if (t === 'back') renderBack();
+  if (t === 'settings') { renderSettings(); renderSyncPanel(); }
+  if (t === 'book') renderBook();
+}
+
+// ===== 住所録 =====
+let dragIds = null;
+function renderBook() {
+  const fl = $('#folderList');
+  fl.innerHTML = D.folders.map(f => {
+    const n = D.contacts.filter(c => c.folder === f.id).length;
+    return `<div class="folder ${f.id === D.folderId ? 'active' : ''}" data-id="${f.id}">📁 ${esc(f.name)}<span class="cnt">${n}</span></div>`;
+  }).join('');
+  fl.querySelectorAll('.folder').forEach(el => {
+    el.onclick = () => { D.folderId = el.dataset.id; D.frontFolderId = el.dataset.id; save(); renderBook(); };
+    el.ondragover = e => { if (dragIds) { e.preventDefault(); el.classList.add('drop'); } };
+    el.ondragleave = () => el.classList.remove('drop');
+    el.ondrop = e => {
+      el.classList.remove('drop');
+      if (!dragIds) return;
+      e.preventDefault(); e.stopPropagation();
+      moveContacts(dragIds, el.dataset.id, e.ctrlKey || e.metaKey || e.altKey);
+      dragIds = null;
+    };
+  });
+  $('#folderTitle').textContent = '📁 ' + folderName(D.folderId);
+  $('#bulkTarget').innerHTML = D.folders.map(f => `<option value="${f.id}">→ ${esc(f.name)}</option>`).join('');
+  const q = $('#search').value.trim();
+  const list = D.contacts.filter(c => c.folder === D.folderId)
+    .filter(c => !q || [c.name, c.kana, c.addr1, c.addr2, c.company, c.zip, c.memo].join(' ').includes(q));
+  const all = D.contacts.filter(c => c.folder === D.folderId);
+  $('#selInfo').textContent = `${all.length}件中 印刷対象 ${all.filter(c => c.print).length}件`;
+  $('#emptyMsg').classList.toggle('hidden', list.length > 0);
+  $('#contactRows').innerHTML = list.map(c => `
+    <tr draggable="true" data-id="${c.id}">
+      <td><input type="checkbox" ${c.print ? 'checked' : ''} data-chk="${c.id}"></td>
+      <td><b>${esc(c.name)}</b> <span class="muted">${esc(c.honorific || '')}</span>${c.renmei ? `<div class="muted">連名：${esc(c.renmei)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
+      <td style="white-space:nowrap">${esc(fmtZip(c.zip))}</td>
+      <td class="addr">${esc(c.addr1)}<br>${esc(c.addr2)}</td>
+      <td class="addr">${esc(c.company)} ${esc(c.dept)} ${esc(c.title)}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-edit="${c.id}">編集</button></td>
+    </tr>`).join('');
+  $('#contactRows').querySelectorAll('[data-chk]').forEach(el => el.onchange = () => {
+    const c = D.contacts.find(x => x.id === el.dataset.chk); c.print = el.checked; save(); renderBook();
+  });
+  $('#contactRows').querySelectorAll('[data-edit]').forEach(el => el.onclick = () => editContact(el.dataset.edit));
+  $('#contactRows').querySelectorAll('tr').forEach(tr => tr.ondragstart = e => {
+    const id = tr.dataset.id; const c = D.contacts.find(x => x.id === id);
+    dragIds = c.print ? D.contacts.filter(x => x.folder === D.folderId && x.print).map(x => x.id) : [id];
+    e.dataTransfer.setData('text/plain', 'contacts');
+    e.dataTransfer.effectAllowed = 'copyMove';
+  });
+}
+$('#search').oninput = renderBook;
+
+function addFolder() {
+  const n = prompt('新しいフォルダの名前（例：年賀状2027、暑中見舞い、リコール、取引先）');
+  if (!n) return;
+  const f = { id: uid(), name: n.trim() }; D.folders.push(f); D.folderId = f.id; save(); renderBook();
+}
+function renameFolder() {
+  const f = D.folders.find(x => x.id === D.folderId);
+  const n = prompt('フォルダ名', f.name); if (!n) return; f.name = n.trim(); save(); renderBook();
+}
+function deleteFolder() {
+  if (D.folders.length <= 1) return alert('フォルダは最低1つ必要です。');
+  const n = D.contacts.filter(c => c.folder === D.folderId).length;
+  if (!confirm(`フォルダ「${folderName(D.folderId)}」${n ? `と中の宛名 ${n} 件` : ''}を削除しますか？`)) return;
+  D.contacts = D.contacts.filter(c => c.folder !== D.folderId);
+  D.folders = D.folders.filter(f => f.id !== D.folderId);
+  D.folderId = D.folders[0].id; save(); renderBook();
+}
+function checkAll(v) { D.contacts.forEach(c => { if (c.folder === D.folderId) c.print = v; }); save(); renderBook(); }
+function moveContacts(ids, to, copy) {
+  if (copy) ids.forEach(id => { const c = D.contacts.find(x => x.id === id); D.contacts.push(Object.assign(clone(c), { id: uid(), folder: to })); });
+  else ids.forEach(id => { D.contacts.find(x => x.id === id).folder = to; });
+  save(); renderBook();
+}
+function targets() { return D.contacts.filter(c => c.folder === D.folderId && c.print).map(c => c.id); }
+function bulkMove(copy) {
+  const ids = targets(); if (!ids.length) return alert('印刷対象にチェックした宛名がありません。');
+  moveContacts(ids, $('#bulkTarget').value, copy);
+}
+function bulkDelete() {
+  const ids = targets(); if (!ids.length) return alert('印刷対象にチェックした宛名がありません。');
+  if (!confirm(`${ids.length}件を削除しますか？`)) return;
+  D.contacts = D.contacts.filter(c => !ids.includes(c.id)); save(); renderBook();
+}
+
+function modal(html, wide) {
+  $('#modalRoot').innerHTML = `<div class="modal-bg"><div class="modal ${wide ? 'wide' : ''}">${html}</div></div>`;
+  return $('#modalRoot .modal');
+}
+const closeModal = () => { $('#modalRoot').innerHTML = ''; };
+
+function editContact(id) {
+  const c = id ? D.contacts.find(x => x.id === id) : { honorific: '', print: true };
+  const f = (k, l, full) => `<div class="fg ${full ? 'full' : ''}"><label>${l}</label><input data-k="${k}" value="${esc(c[k] || '')}"></div>`;
+  const m = modal(`<h2>${id ? '宛名の編集' : '宛名の追加'}</h2>
+    <div class="grid2">
+      ${f('name', '氏名（姓と名の間に空白）')}${f('kana', 'フリガナ')}
+      ${f('honorific', '敬称（空欄なら「' + esc(D.opt.honorific) + '」）')}${f('renmei', '連名（名のみ・「、」区切り）')}
+      ${f('zip', '郵便番号')}${f('tel', '電話')}
+      ${f('addr1', '住所1', true)}${f('addr2', '住所2（建物・部屋番号）', true)}
+      ${f('company', '会社・医院名')}${f('dept', '部署')}
+      ${f('title', '役職')}${f('memo', 'メモ')}
+    </div>
+    <div class="modal-foot">
+      ${id ? '<button class="btn danger" id="mDel" style="margin-right:auto">削除</button>' : ''}
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn primary" id="mSave">保存</button>
+    </div>`);
+  m.querySelector('#mSave').onclick = () => {
+    m.querySelectorAll('[data-k]').forEach(i => c[i.dataset.k] = i.value.trim());
+    c.zip = normZip(c.zip);
+    if (!c.name && !c.company) return alert('氏名か会社名を入力してください。');
+    if (!id) { c.id = uid(); c.folder = D.folderId; D.contacts.push(c); }
+    save(); closeModal(); renderBook();
+  };
+  if (id) m.querySelector('#mDel').onclick = () => {
+    if (!confirm('削除しますか？')) return;
+    D.contacts = D.contacts.filter(x => x.id !== id); save(); closeModal(); renderBook();
+  };
+}
+
+// ===== ファイル読込（ドラッグ＆ドロップ） =====
+let dragDepth = 0;
+const isFileDrag = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+window.addEventListener('dragenter', e => { if (isFileDrag(e)) { dragDepth++; $('#dragOverlay').classList.remove('hidden'); } });
+window.addEventListener('dragleave', e => { if (isFileDrag(e) && --dragDepth <= 0) { dragDepth = 0; $('#dragOverlay').classList.add('hidden'); } });
+window.addEventListener('dragover', e => { if (isFileDrag(e)) e.preventDefault(); });
+window.addEventListener('drop', e => {
+  if (!isFileDrag(e)) return;
+  e.preventDefault(); dragDepth = 0; $('#dragOverlay').classList.add('hidden');
+  const f = e.dataTransfer.files[0]; if (f) readFile(f);
+});
+$('#fileInput').onchange = e => { const f = e.target.files[0]; if (f) readFile(f); e.target.value = ''; };
+
+function loadScript(src) {
+  return new Promise((ok, ng) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ng; document.head.appendChild(s); });
+}
+function decodeText(buf) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf).replace(/^﻿/, ''); }
+  catch (e) { return new TextDecoder('shift_jis').decode(buf); }
+}
+function parseCSV(text, sep) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += ch;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+async function readFile(file) {
+  const name = file.name; const ext = name.split('.').pop().toLowerCase();
+  const buf = await file.arrayBuffer();
+  let rows;
+  try {
+    if (ext === 'json') {
+      const j = JSON.parse(decodeText(buf));
+      if (j && j.app === SYNC_APP) return importEnvelope(j);
+      if (j && j.contacts && j.folders) return restoreData(j);
+      const arr = Array.isArray(j) ? j : [];
+      const keys = [...new Set(arr.flatMap(o => Object.keys(o)))];
+      rows = [keys, ...arr.map(o => keys.map(k => o[k] ?? ''))];
+    } else if (['xlsx', 'xls', 'xlsm', 'xlsb', 'ods'].includes(ext)) {
+      if (!window.XLSX) {
+        try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); }
+        catch (e) { return alert('Excelを読み込む部品を取得できませんでした（インターネット接続が必要です）。\nExcelで「CSV（コンマ区切り）」として保存したファイルなら、接続なしで読み込めます。'); }
+      }
+      const wb = XLSX.read(buf, { type: 'array' });
+      let sheetName = wb.SheetNames[0];
+      if (wb.SheetNames.length > 1) {
+        const pick = prompt('読み込むシートの番号を入力してください\n' + wb.SheetNames.map((s, i) => `${i + 1}: ${s}`).join('\n'), '1');
+        if (pick === null) return;
+        sheetName = wb.SheetNames[(parseInt(pick, 10) || 1) - 1] || sheetName;
+      }
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
+    } else {
+      const text = decodeText(buf);
+      const first = text.split(/\r?\n/)[0] || '';
+      const sep = ext === 'tsv' || (first.split('\t').length > first.split(',').length) ? '\t' : ',';
+      rows = parseCSV(text, sep);
+    }
+  } catch (e) { console.error(e); return alert('ファイルを読み込めませんでした：' + e.message); }
+  rows = rows.map(r => r.map(v => String(v ?? '').trim())).filter(r => r.some(v => v));
+  if (!rows.length) return alert('データが見つかりませんでした。');
+  mappingDialog(rows, name);
+}
+
+function guessField(h) {
+  const k = toHalf(h).replace(/[\s　・_()（）]/g, '').toLowerCase();
+  if (!k) return '';
+  for (const [f, list] of Object.entries(SYN)) if (list.some(s => s.toLowerCase() === k)) return f;
+  for (const [f, list] of Object.entries(SYN)) if (list.filter(s => s.length >= 2).some(s => k.includes(s.toLowerCase()))) return f;
+  return '';
+}
+function guessFromValues(vals) {
+  const v = vals.filter(Boolean);
+  if (!v.length) return '';
+  if (v.every(x => /^〒?\s*\d{3}[-ー－]?\d{4}$/.test(toHalf(x)))) return 'zip';
+  if (v.filter(x => /(都|道|府|県|市|区|町|村)/.test(x) && /\d|[一二三四五六七八九十]/.test(toHalf(x))).length >= v.length * 0.6) return 'addr1';
+  return '';
+}
+function mappingDialog(rows, fname) {
+  const ncol = Math.max(...rows.map(r => r.length));
+  const guesses = [...Array(ncol)].map((_, i) => guessField(rows[0][i] || ''));
+  let hasHeader = guesses.some(Boolean);
+  const auto = (header) => [...Array(ncol)].map((_, i) => header ? guessField(rows[0][i] || '') : guessFromValues(rows.slice(0, 20).map(r => r[i] || '')));
+  let map = auto(hasHeader);
+  const opts = sel => `<option value="">（読み込まない）</option>` + FIELDS.map(([k, l]) => `<option value="${k}" ${sel === k ? 'selected' : ''}>${l}</option>`).join('');
+  const base = fname.replace(/\.[^.]+$/, '');
+  const m = modal(`<h2>宛名の読み込み：${esc(fname)}</h2>
+    <p class="help">各列を何として読み込むかを確認してください。同じ項目を複数の列に選ぶと、つなげて1つにします（例：都道府県＋市区町村＋番地 → 住所1）。</p>
+    <div class="row" style="margin:10px 0">
+      <label class="row muted" style="gap:4px"><input type="checkbox" id="hdr" ${hasHeader ? 'checked' : ''}>1行目は見出し</label>
+      <label class="muted" style="margin-left:12px">読み込み先</label>
+      <select id="dest" style="width:auto">
+        <option value="__new">新しいフォルダ「${esc(base)}」</option>
+        ${D.folders.map(f => `<option value="${f.id}" ${f.id === D.folderId ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div style="overflow:auto;max-height:55vh"><table class="map-table" id="mapTable"></table></div>
+    <div class="modal-foot">
+      <span class="muted" id="mapInfo" style="margin-right:auto"></span>
+      <button class="btn" onclick="closeModal()">キャンセル</button>
+      <button class="btn primary" id="doImport">読み込む</button>
+    </div>`, true);
+  const draw = () => {
+    const body = hasHeader ? rows.slice(1) : rows;
+    let h = '<tr>' + [...Array(ncol)].map((_, i) => `<th><select data-col="${i}">${opts(map[i])}</select>${hasHeader ? `<div class="muted" style="margin-top:3px">${esc(rows[0][i] || '')}</div>` : ''}</th>`).join('') + '</tr>';
+    h += body.slice(0, 8).map(r => '<tr>' + [...Array(ncol)].map((_, i) => `<td>${esc(r[i] || '')}</td>`).join('') + '</tr>').join('');
+    m.querySelector('#mapTable').innerHTML = h;
+    m.querySelector('#mapInfo').textContent = `${body.length}件`;
+    m.querySelectorAll('[data-col]').forEach(s => s.onchange = () => { map[+s.dataset.col] = s.value; });
+  };
+  draw();
+  m.querySelector('#hdr').onchange = e => { hasHeader = e.target.checked; map = auto(hasHeader); draw(); };
+  m.querySelector('#doImport').onclick = () => {
+    const sep = { addr1: '', addr2: ' ', memo: ' ', renmei: '、' };
+    let dest = m.querySelector('#dest').value;
+    if (!map.some(Boolean)) return alert('読み込む列を1つ以上選んでください。');
+    if (dest === '__new') { const f = { id: uid(), name: base }; D.folders.push(f); dest = f.id; }
+    const body = hasHeader ? rows.slice(1) : rows;
+    let added = 0, skipped = 0;
+    const exists = new Set(D.contacts.filter(c => c.folder === dest).map(c => [c.name, c.zip, c.addr1].join('|')));
+    body.forEach(r => {
+      const c = {};
+      map.forEach((f, i) => {
+        if (!f || !r[i]) return;
+        c[f] = c[f] ? c[f] + (sep[f] ?? ' ') + r[i] : r[i];
+      });
+      if (!c.name && (c.last || c.first)) c.name = [c.last, c.first].filter(Boolean).join('　');
+      delete c.last; delete c.first;
+      if (!c.name && !c.company) { skipped++; return; }
+      c.zip = normZip(c.zip);
+      const k = [c.name, c.zip, c.addr1].join('|');
+      if (exists.has(k)) { skipped++; return; }
+      exists.add(k);
+      Object.assign(c, { id: uid(), folder: dest, print: true });
+      D.contacts.push(c); added++;
+    });
+    D.folderId = dest; D.frontFolderId = dest; save(); closeModal(); showTab('book');
+    alert(`${added}件を「${folderName(dest)}」に読み込みました。${skipped ? `\n（重複・氏名なしの ${skipped} 件は読み込みませんでした）` : ''}`);
+  };
+}
+
+// ===== はがき描画 =====
+function kanjiNum(s) {
+  const k = '〇一二三四五六七八九';
+  return toHalf(s)
+    .replace(/(\d)\s*[-‐−－ー―]\s*(?=\d)/g, '$1ー')
+    .replace(/\d+/g, n => {
+      if (n.length === 2 && n[0] !== '0') return (n[0] === '1' ? '' : k[+n[0]]) + '十' + (n[1] === '0' ? '' : k[+n[1]]);
+      return n.replace(/\d/g, d => k[+d]);
+    });
+}
+function fullWidth(s) {
+  return String(s ?? '').replace(/[!-~]/g, c => String.fromCharCode(c.charCodeAt(0) + 0xFEE0)).replace(/ /g, '　');
+}
+function vText(s, kanji) {
+  let t = String(s ?? '');
+  if (kanji) t = kanjiNum(t);
+  else t = toHalf(t).replace(/(\d)\s*[-‐−－―]\s*(?=\d)/g, '$1ー');
+  return fullWidth(t);
+}
+function splitAddr(s) {
+  const a = chars(s); if (a.length < 16) return [s];
+  const mid = a.length / 2; let best = -1, bd = 1e9;
+  const str = a.join('');
+  const re = /(都|道|府|県|市|区|郡|町|村|丁目|番地|番|号|ー)/g; let m;
+  while ((m = re.exec(str))) {
+    const pos = chars(str.slice(0, m.index + m[0].length)).length;
+    const d = Math.abs(pos - mid);
+    if (d < bd && pos > 4 && pos < a.length - 3) { bd = d; best = pos; }
+  }
+  if (best < 0) best = Math.round(mid);
+  return [a.slice(0, best).join(''), a.slice(best).join('')];
+}
+// 縦書き1列（右端xRight, 上端y）
+function vcol(text, xRight, y, fs, ls = 0, extraStyle = '') {
+  return `<div class="v" style="left:${(xRight - fs).toFixed(2)}mm;top:${y.toFixed(2)}mm;font-size:${fs.toFixed(2)}mm;width:${fs.toFixed(2)}mm;letter-spacing:${ls.toFixed(2)}mm;${extraStyle}">${esc(text)}</div>`;
+}
+function fitFs(maxPt, h, n) { return Math.max(1.5, Math.min(maxPt * PT, n ? h / n : maxPt * PT)); }
+function zipDigits(zip, z, ox, oy, boxes, guides) {
+  let h = '';
+  const xs = [0, 1, 2].map(i => z.x1 + z.p1 * i).concat([0, 1, 2, 3].map(i => z.x2 + z.p2 * i));
+  const ds = (zip || '').split('');
+  xs.forEach((x, i) => {
+    if (boxes) h += `<div class="zipbox" style="left:${x + ox}mm;top:${z.y + oy}mm;width:${z.w}mm;height:${z.h}mm"></div>`;
+    else if (guides) h += `<div class="guide zip" style="left:${x + ox}mm;top:${z.y + oy}mm;width:${z.w}mm;height:${z.h}mm"></div>`;
+    if (ds[i]) h += `<div class="zipd" style="left:${x + ox}mm;top:${z.y + oy}mm;width:${z.w}mm;height:${z.h}mm;font-size:${(z.fs * PT).toFixed(2)}mm;font-family:'Arial','Helvetica',sans-serif">${esc(ds[i])}</div>`;
+  });
+  return h;
+}
+function frontHTML(c, T, guides) {
+  const ox = +T.ox || 0, oy = +T.oy || 0, K = D.opt.kanji;
+  let h = '';
+  // 郵便番号
+  h += zipDigits(c ? c.zip : '', T.zip, ox, oy, T.drawZipBox, guides);
+  if (guides) {
+    h += `<div class="guide" style="left:${T.addr.x + ox - 30}mm;top:${T.addr.y + oy}mm;width:30mm;height:${T.addr.h}mm"></div>`;
+    h += `<div class="guide" style="left:${T.nm.x + ox - 7}mm;top:${T.nm.y + oy}mm;width:14mm;height:${T.nm.h}mm"></div>`;
+    if (D.sender.onFront) h += `<div class="guide" style="left:${T.sender.x + ox}mm;top:${T.sender.y + oy}mm;width:${T.sender.w}mm;height:${T.sender.h}mm"></div>`;
+  }
+  if (c) {
+    // 住所
+    const a1 = vText(c.addr1, K), a2 = vText(c.addr2, K);
+    let cols = [a1];
+    const singleFs = fitFs(T.addr.fs, T.addr.h, chars(a1).length);
+    if (singleFs < 4.2 && chars(a1).length >= 16) cols = splitAddr(a1);
+    const lines = cols.map(t => ({ t, ind: 0 }));
+    if (a2) lines.push({ t: a2, ind: 2 });
+    const comp = [vText(c.company, false), vText(c.dept, false)].filter(Boolean);
+    let fs = Math.min(...lines.map(l => fitFs(T.addr.fs, T.addr.h, chars(l.t).length + l.ind)));
+    let x = T.addr.x + ox;
+    lines.forEach((l, i) => { h += vcol(l.t, x, T.addr.y + oy + (i > 0 && l.ind ? fs * l.ind : (i > 0 ? fs : 0)), fs); x -= fs * 1.45; });
+    if (comp.length) {
+      const cfs = Math.min(fs, ...comp.map(t => fitFs(T.addr.fs, T.addr.h - fs * 2, chars(t).length)));
+      x -= fs * 0.2;
+      comp.forEach(t => { h += vcol(t, x, T.addr.y + oy + fs * 2, cfs); x -= cfs * 1.4; });
+    }
+    // 氏名
+    const hon = c.honorific || D.opt.honorific || '';
+    const nm = fullWidth(String(c.name || '').replace(/\s+/g, ' ').trim());
+    const parts = nm.split('　');
+    const nameText = nm + (hon ? '　' + hon : '');
+    const n = chars(nameText).length;
+    const nfs = fitFs(T.nm.fs, T.nm.h, n);
+    let ls = 0;
+    const used = n * nfs;
+    if (used < T.nm.h * 0.75 && n > 1) ls = Math.min(nfs * 0.5, (T.nm.h * 0.75 - used) / (n - 1));
+    const nx = T.nm.x + ox + nfs / 2;
+    h += vcol(nameText, nx, T.nm.y + oy, nfs, ls);
+    if (c.title) {
+      const tfs = Math.min(nfs * 0.45, 4.5);
+      h += vcol(fullWidth(c.title), nx + tfs + 1, T.nm.y + oy, tfs);
+    }
+    if (c.renmei) {
+      const rs = String(c.renmei).split(/[、,，・\/]/).map(s => s.trim()).filter(Boolean);
+      const sur = parts.length > 1 ? chars(parts[0]).length + 1 : 0;
+      let rx = nx - nfs * 1.25;
+      rs.forEach(r => {
+        const t = fullWidth(r) + (hon ? '　' + hon : '');
+        // 様の位置をそろえる：連名の名＋敬称を主の名の開始位置から
+        const start = T.nm.y + oy + sur * (nfs + ls);
+        h += vcol(t, rx, start, nfs, ls);
+        rx -= nfs * 1.25;
+      });
+    }
+  }
+  // 差出人
+  const S = D.sender;
+  if (S.onFront && (S.name || S.addr1 || S.company)) {
+    const R = T.sender;
+    const sls = [vText(S.addr1, K), vText(S.addr2, K)].filter(Boolean);
+    const comp = fullWidth(S.company || ''), nm = fullWidth(S.name || '');
+    const all = [...sls, comp, nm].filter(Boolean);
+    let fs = Math.min(...all.map(t => fitFs(R.fs, R.h, chars(t).length)));
+    let nfs = Math.min(fs * 1.3, fitFs(R.fs * 1.3, R.h, chars(nm).length));
+    const totalW = (sls.length + (comp ? 1 : 0)) * fs * 1.4 + (nm ? nfs * 1.3 : 0);
+    let x = R.x + ox + Math.min(R.w, totalW + (R.w - totalW) / 2);
+    sls.forEach((t, i) => { h += vcol(t, x, R.y + oy + (i ? fs : 0), fs); x -= fs * 1.4; });
+    if (comp) { h += vcol(comp, x, R.y + oy + fs * 2, fs); x -= fs * 1.4; }
+    if (nm) { const ny = R.y + oy + Math.max(fs * 2, R.h - chars(nm).length * nfs); h += vcol(nm, x - (nfs - fs) * 0.3, ny, nfs); }
+    h += zipDigits(normZip(S.zip), T.szip, ox, oy, T.drawZipBox, guides);
+  } else if (guides || T.drawZipBox) {
+    h += zipDigits('', T.szip, ox, oy, T.drawZipBox, guides);
+  }
+  return `<div class="sheet ${D.opt.font === 'gothic' ? 'gothic' : ''}" style="width:${T.w}mm;height:${T.h}mm">${h}</div>`;
+}
+function fillVars(s, c) {
+  const S = D.sender;
+  const map = {
+    '氏名': c ? c.name : '', '敬称': c ? (c.honorific || D.opt.honorific) : '', '会社': c ? c.company : '',
+    '差出人': S.name, '差出人住所': [S.addr1, S.addr2].filter(Boolean).join(' '), '差出人郵便番号': fmtZip(normZip(S.zip)),
+    '電話': S.tel, '医院名': S.company
+  };
+  return String(s).replace(/\{(.+?)\}/g, (m, k) => k in map ? (map[k] || '') : m);
+}
+function backHTML(ds, T, c, guides) {
+  let h = ds.bg ? `<img class="bg" src="${ds.bg}" style="object-fit:${ds.bgFit || 'cover'}">` : '';
+  ds.texts.forEach((t, i) => {
+    let txt = fillVars(t.text, c);
+    if (t.vert) txt = toHalf(txt).replace(/(\d)\s*[-‐−－―]\s*(?=\d)/g, '$1ー');
+    h += `<div class="bt ${t.vert ? 'vert' : ''}" style="left:${t.x}mm;top:${t.y}mm;width:${t.w}mm;height:${t.h}mm;font-size:${t.fs}pt;color:${t.color};font-weight:${t.bold ? 700 : 400};text-align:${t.align || 'start'};${guides ? 'outline:0.2mm dashed rgba(0,120,255,.5);' : ''}">${esc(txt)}</div>`;
+  });
+  return `<div class="sheet ${D.opt.font === 'gothic' ? 'gothic' : ''}" style="width:${T.w}mm;height:${T.h}mm">${h}</div>`;
+}
+function stage(el, html, T, maxW = 560, maxH = 640) {
+  const wpx = T.w * MM, hpx = T.h * MM;
+  const s = Math.min(maxW / wpx, maxH / hpx);
+  el.style.width = wpx * s + 'px'; el.style.height = hpx * s + 'px';
+  el.innerHTML = html;
+  el.firstElementChild.style.transform = `scale(${s})`;
+}
+
+// ===== 宛名面タブ =====
+let pIdx = 0;
+function frontList() { return D.contacts.filter(c => c.folder === D.frontFolderId && c.print); }
+function renderFront() {
+  if (!D.folders.find(f => f.id === D.frontFolderId)) D.frontFolderId = D.folderId;
+  $('#typeSelect').innerHTML = D.types.map(t => `<option value="${t.id}" ${t.id === D.typeId ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+  $('#frontFolder').innerHTML = D.folders.map(f => `<option value="${f.id}" ${f.id === D.frontFolderId ? 'selected' : ''}>${esc(f.name)}（${D.contacts.filter(c => c.folder === f.id && c.print).length}）</option>`).join('');
+  drawFrontPreview();
+  renderAdjust();
+}
+function drawFrontPreview() {
+  const list = frontList();
+  if (pIdx >= list.length) pIdx = Math.max(0, list.length - 1);
+  const c = list[pIdx] || null;
+  $('#previewInfo').textContent = list.length ? `${pIdx + 1} / ${list.length}　${c.name}` : '印刷対象の宛名がありません（住所録でチェック）';
+  $('#printFrontBtn').textContent = `宛名面を印刷（${list.length}枚）`;
+  $('#printFrontBtn').disabled = !list.length;
+  stage($('#frontStage'), frontHTML(c, curType(), $('#showGuides').checked), curType());
+}
+function movePreview(d) { const n = frontList().length; if (!n) return; pIdx = (pIdx + d + n) % n; drawFrontPreview(); }
+$('#typeSelect').onchange = e => { D.typeId = e.target.value; save(); renderFront(); };
+$('#frontFolder').onchange = e => { D.frontFolderId = e.target.value; pIdx = 0; save(); drawFrontPreview(); };
+$('#showGuides').onchange = drawFrontPreview;
+
+function renderAdjust() {
+  const T = curType();
+  const num = (path, label, step = 0.5) => {
+    const v = path.split('.').reduce((o, k) => o[k], T);
+    return `<div class="fg"><label>${label}</label><input type="number" step="${step}" data-p="${path}" value="${v}"></div>`;
+  };
+  const grp = (title, inner, help = '') => `<div class="adj-group"><h4>${title}</h4>${help ? `<p class="help" style="margin-bottom:6px">${help}</p>` : ''}<div class="adj-grid">${inner}</div></div>`;
+  $('#adjustPanel').innerHTML = `
+    <div class="section-title">印刷位置の調整 <span class="muted">（${esc(T.name)}）</span></div>
+    <p class="help">はがきの種類ごとに保存されます。単位は mm（文字の大きさは pt）。</p>
+    <div class="adj-group"><h4>全体をずらす</h4>
+      <p class="help" style="margin-bottom:6px">テスト印刷がずれていたら、まずここで調整します。右・下がプラス。</p>
+      <div class="row" style="align-items:center;gap:14px">
+        <div class="nudge">
+          <span></span><button class="btn" data-n="0,-0.5">▲</button><span></span>
+          <button class="btn" data-n="-0.5,0">◀</button><button class="btn sm" data-n="reset" title="0に戻す">0</button><button class="btn" data-n="0.5,0">▶</button>
+          <span></span><button class="btn" data-n="0,0.5">▼</button><span></span>
+        </div>
+        <div class="adj-grid" style="grid-template-columns:1fr 1fr;flex:1">${num('ox', '横（右へ＋）', 0.1)}${num('oy', '縦（下へ＋）', 0.1)}</div>
+      </div>
+    </div>
+    ${grp('郵便番号（宛先）', num('zip.x1', '1桁目の左') + num('zip.p1', '1〜3桁の間隔', 0.1) + num('zip.x2', '4桁目の左') + num('zip.p2', '4〜7桁の間隔', 0.1) + num('zip.y', '上から') + num('zip.w', '枠の幅', 0.1) + num('zip.h', '枠の高さ', 0.1) + num('zip.fs', '文字 pt'))}
+    ${grp('住所', num('addr.x', '右端の位置') + num('addr.y', '上から') + num('addr.h', '長さ') + num('addr.fs', '最大 pt'), '長い住所は自動で文字を小さく・2行に分けます。')}
+    ${grp('氏名', num('nm.x', '中心の位置') + num('nm.y', '上から') + num('nm.h', '長さ') + num('nm.fs', '最大 pt'))}
+    ${grp('差出人', num('sender.x', '左') + num('sender.y', '上から') + num('sender.w', '幅') + num('sender.h', '高さ') + num('sender.fs', '最大 pt'), '差出人の内容は「差出人・設定」タブで入力します。')}
+    ${grp('郵便番号（差出人）', num('szip.x1', '1桁目の左') + num('szip.p1', '1〜3桁の間隔', 0.1) + num('szip.x2', '4桁目の左') + num('szip.p2', '4〜7桁の間隔', 0.1) + num('szip.y', '上から') + num('szip.w', '枠の幅', 0.1) + num('szip.h', '枠の高さ', 0.1) + num('szip.fs', '文字 pt'))}
+    ${grp('用紙', num('w', '幅 mm', 1) + num('h', '高さ mm', 1) + `<div class="fg" style="grid-column:span 2;justify-content:flex-end"><label class="row" style="gap:4px;color:#1a1a1a"><input type="checkbox" id="drawZipBox" ${T.drawZipBox ? 'checked' : ''}>郵便番号枠も印刷する（私製はがき用）</label></div>`)}
+    <div class="adj-group row">
+      <button class="btn sm" onclick="dupType()">この設定を複製して新しい種類に</button>
+      <button class="btn sm" onclick="renameType()">名前変更</button>
+      <button class="btn sm" onclick="resetType()">初期値に戻す</button>
+      <button class="btn sm danger" onclick="deleteType()">削除</button>
+    </div>`;
+  $('#adjustPanel').querySelectorAll('[data-p]').forEach(i => i.oninput = () => {
+    const ks = i.dataset.p.split('.'); const last = ks.pop();
+    const o = ks.reduce((o, k) => o[k], T);
+    const v = parseFloat(i.value); if (isNaN(v)) return;
+    o[last] = v; save(); drawFrontPreview();
+  });
+  $('#drawZipBox').onchange = e => { T.drawZipBox = e.target.checked; save(); drawFrontPreview(); };
+  $('#adjustPanel').querySelectorAll('[data-n]').forEach(b => b.onclick = () => {
+    if (b.dataset.n === 'reset') { T.ox = 0; T.oy = 0; }
+    else { const [dx, dy] = b.dataset.n.split(',').map(Number); T.ox = +((+T.ox || 0) + dx).toFixed(2); T.oy = +((+T.oy || 0) + dy).toFixed(2); }
+    save(); renderAdjust(); drawFrontPreview();
+  });
+}
+function dupType() {
+  const T = curType(); const n = prompt('新しい種類の名前（例：〇〇プリンター用 通常はがき）', T.name + ' のコピー'); if (!n) return;
+  const t = Object.assign(clone(T), { id: uid(), name: n }); D.types.push(t); D.typeId = t.id; save(); renderFront();
+}
+function renameType() { const T = curType(); const n = prompt('名前', T.name); if (!n) return; T.name = n; save(); renderFront(); }
+function resetType() {
+  const T = curType(); const def = DEFAULT_TYPES().find(t => t.id === T.id) || DEFAULT_TYPES()[0];
+  if (!confirm('位置を初期値に戻しますか？')) return;
+  Object.assign(T, clone(def), { id: T.id, name: T.name }); save(); renderFront();
+}
+function deleteType() {
+  if (D.types.length <= 1) return;
+  if (!confirm(`「${curType().name}」を削除しますか？`)) return;
+  D.types = D.types.filter(t => t.id !== D.typeId); D.typeId = D.types[0].id; save(); renderFront();
+}
+
+// ===== 印刷 =====
+function doPrint(pages, T) {
+  $('#pageStyle').textContent = `@page{size:${T.w}mm ${T.h}mm;margin:0}`;
+  $('#printArea').innerHTML = pages.join('');
+  const imgs = [...$('#printArea').querySelectorAll('img')];
+  Promise.all(imgs.map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))).then(() => {
+    setTimeout(() => { window.print(); }, 50);
+  });
+}
+window.addEventListener('afterprint', () => { $('#printArea').innerHTML = ''; });
+function printFront(test) {
+  const T = curType(); const list = frontList();
+  if (test) doPrint([frontHTML(list[pIdx] || null, T, true)], T);
+  else { if (!list.length) return; doPrint(list.map(c => frontHTML(c, T, false)), T); }
+}
+function printBack(mode) {
+  const T = curType(); const ds = curDesign();
+  if (mode === 'contacts') {
+    const list = frontList();
+    if (!list.length) return alert('印刷対象の宛名がありません。宛名面タブのフォルダと、住所録のチェックを確認してください。');
+    doPrint(list.map(c => backHTML(ds, T, c, false)), T);
+  } else {
+    const n = Math.max(1, Math.min(500, parseInt($('#backCopies').value, 10) || 1));
+    doPrint([...Array(n)].map(() => backHTML(ds, T, null, false)), T);
+  }
+}
+
+// ===== 裏面タブ =====
+function renderBack() {
+  $('#designSelect').innerHTML = D.designs.map(d => `<option value="${d.id}" ${d.id === D.designId ? 'selected' : ''}>${esc(d.name)}</option>`).join('');
+  drawBackPreview(); renderDesignPanel();
+}
+function drawBackPreview() {
+  const c = frontList()[0] || null;
+  stage($('#backStage'), backHTML(curDesign(), curType(), c, true), curType());
+}
+$('#designSelect').onchange = e => { D.designId = e.target.value; save(); renderBack(); };
+function renderDesignPanel() {
+  const ds = curDesign();
+  const tb = (t, i) => `<div class="txt-block" data-i="${i}">
+    <div class="row" style="margin-bottom:6px"><b style="font-size:13px">文字 ${i + 1}</b>
+      <button class="btn sm danger" style="margin-left:auto" data-del="${i}">削除</button></div>
+    <textarea rows="3" data-f="text">${esc(t.text)}</textarea>
+    <div class="adj-grid" style="margin-top:6px">
+      <div class="fg"><label>左 mm</label><input type="number" step="1" data-f="x" value="${t.x}"></div>
+      <div class="fg"><label>上 mm</label><input type="number" step="1" data-f="y" value="${t.y}"></div>
+      <div class="fg"><label>幅 mm</label><input type="number" step="1" data-f="w" value="${t.w}"></div>
+      <div class="fg"><label>高さ mm</label><input type="number" step="1" data-f="h" value="${t.h}"></div>
+      <div class="fg"><label>文字 pt</label><input type="number" step="0.5" data-f="fs" value="${t.fs}"></div>
+      <div class="fg"><label>色</label><input type="color" data-f="color" value="${t.color}" style="padding:1px;height:30px"></div>
+      <div class="fg"><label>向き</label><select data-f="vert"><option value="0" ${!t.vert ? 'selected' : ''}>横書き</option><option value="1" ${t.vert ? 'selected' : ''}>縦書き</option></select></div>
+      <div class="fg"><label>揃え</label><select data-f="align"><option value="start" ${t.align === 'start' ? 'selected' : ''}>${t.vert ? '上' : '左'}</option><option value="center" ${t.align === 'center' ? 'selected' : ''}>中央</option><option value="end" ${t.align === 'end' ? 'selected' : ''}>${t.vert ? '下' : '右'}</option></select></div>
+    </div>
+    <label class="row muted" style="gap:4px;margin-top:6px"><input type="checkbox" data-f="bold" ${t.bold ? 'checked' : ''}>太字</label>
+  </div>`;
+  $('#designPanel').innerHTML = `
+    <div class="section-title">裏面のデザイン</div>
+    <div class="fg"><label>デザイン名</label><input id="dsName" value="${esc(ds.name)}"></div>
+    <div class="adj-group">
+      <h4>背景の画像・写真</h4>
+      <div class="row">
+        <button class="btn sm" onclick="document.getElementById('bgInput').click()">画像を選ぶ</button>
+        ${ds.bg ? `<select id="bgFit" style="width:auto;font-size:12px;padding:3px 6px"><option value="cover" ${ds.bgFit !== 'contain' ? 'selected' : ''}>全面に広げる</option><option value="contain" ${ds.bgFit === 'contain' ? 'selected' : ''}>全体を収める</option></select>
+        <button class="btn sm danger" onclick="curDesign().bg='';save();renderBack()">画像を外す</button>` : '<span class="muted">画像ファイルをここへドラッグしても設定できます</span>'}
+      </div>
+      <input type="file" id="bgInput" accept="image/*" class="hidden">
+    </div>
+    <div class="adj-group">
+      <h4>文字</h4>
+      ${ds.texts.map(tb).join('')}
+      <button class="btn sm" onclick="addText()">＋文字を追加</button>
+    </div>
+    <p class="help">使える差込：{氏名} {敬称} {会社} {差出人} {差出人住所} {差出人郵便番号} {電話} {医院名}</p>`;
+  $('#dsName').oninput = e => { ds.name = e.target.value; save(); $('#designSelect').selectedOptions[0].textContent = ds.name; };
+  if ($('#bgFit')) $('#bgFit').onchange = e => { ds.bgFit = e.target.value; save(); drawBackPreview(); };
+  $('#bgInput').onchange = e => { const f = e.target.files[0]; if (f) setBg(f); e.target.value = ''; };
+  const pan = $('#designPanel');
+  pan.ondragover = e => { if (isFileDrag(e)) { e.preventDefault(); e.stopPropagation(); } };
+  pan.ondrop = e => {
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) { e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('#dragOverlay').classList.add('hidden'); setBg(f); }
+  };
+  pan.querySelectorAll('.txt-block').forEach(b => {
+    const t = ds.texts[+b.dataset.i];
+    b.querySelectorAll('[data-f]').forEach(inp => {
+      const ev = inp.type === 'checkbox' || inp.tagName === 'SELECT' ? 'onchange' : 'oninput';
+      inp[ev] = () => {
+        const f = inp.dataset.f;
+        if (f === 'bold') t.bold = inp.checked;
+        else if (f === 'vert') { t.vert = inp.value === '1'; save(); drawBackPreview(); renderDesignPanel(); return; }
+        else if (['x', 'y', 'w', 'h', 'fs'].includes(f)) { const v = parseFloat(inp.value); if (isNaN(v)) return; t[f] = v; }
+        else t[f] = inp.value;
+        save(); drawBackPreview();
+      };
+    });
+    b.querySelector('[data-del]').onclick = () => { ds.texts.splice(+b.dataset.i, 1); save(); renderBack(); };
+  });
+}
+// 背景画像は保存容量のため長辺1600pxに縮小
+function setBg(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas'); cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+      const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+      curDesign().bg = cv.toDataURL('image/jpeg', 0.85); save(); renderBack();
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function addText() {
+  curDesign().texts.push({ text: '文章', x: 10, y: 10, w: 80, h: 20, fs: 12, vert: false, align: 'start', color: '#000000', bold: false });
+  save(); renderBack();
+}
+function newDesign() {
+  const n = prompt('デザイン名', '新しいデザイン'); if (!n) return;
+  const d = { id: uid(), name: n, bg: '', texts: [] }; D.designs.push(d); D.designId = d.id; save(); renderBack(); addText();
+}
+function dupDesign() { const d = Object.assign(clone(curDesign()), { id: uid() }); d.name += ' のコピー'; D.designs.push(d); D.designId = d.id; save(); renderBack(); }
+function deleteDesign() {
+  if (D.designs.length <= 1) return alert('デザインは最低1つ必要です。');
+  if (!confirm(`「${curDesign().name}」を削除しますか？`)) return;
+  D.designs = D.designs.filter(d => d.id !== D.designId); D.designId = D.designs[0].id; save(); renderBack();
+}
+
+// ===== 設定 =====
+function renderSettings() {
+  document.querySelectorAll('[data-s]').forEach(i => {
+    const k = i.dataset.s;
+    if (i.type === 'checkbox') { i.checked = !!D.sender[k]; i.onchange = () => { D.sender[k] = i.checked; save(); }; }
+    else { i.value = D.sender[k] || ''; i.oninput = () => { D.sender[k] = i.value; save(); }; }
+  });
+  document.querySelectorAll('[data-o]').forEach(i => {
+    const k = i.dataset.o;
+    if (i.type === 'checkbox') { i.checked = !!D.opt[k]; i.onchange = () => { D.opt[k] = i.checked; save(); }; }
+    else { i.value = D.opt[k] ?? ''; i[i.tagName === 'SELECT' ? 'onchange' : 'oninput'] = () => { D.opt[k] = i.value; save(); }; }
+  });
+}
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function exportJSON() {
+  const pw = await syncAskPassword('バックアップファイルのパスワードを決めてください。\n読み込むときに必要です（空欄にすると暗号化しません。非推奨）。', true);
+  if (pw === null) return;
+  syncDownload(await syncPack(syncCollect(), pw || null), `住所録バックアップ_${syncStamp()}.json`);
+}
+function exportCSV() {
+  const cols = ['name', 'kana', 'honorific', 'zip', 'addr1', 'addr2', 'company', 'dept', 'title', 'renmei', 'tel', 'memo'];
+  const head = cols.map(k => FIELDS.find(f => f[0] === k)[1]);
+  const q = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const rows = D.contacts.filter(c => c.folder === D.folderId).map(c => cols.map(k => q(k === 'zip' ? fmtZip(c.zip) : String(c[k] || ''))).join(','));
+  download(`${folderName(D.folderId)}.csv`, '﻿' + [head.join(','), ...rows].join('\r\n'), 'text/csv');
+}
+function restoreData(j, savedAt) {
+  const n = (j.contacts || []).length;
+  if (!confirm(`バックアップ（${savedAt ? '保存日時：' + syncFmtTime(savedAt) + '、' : ''}宛名 ${n} 件）を読み込みます。\nこの端末のデータはバックアップの内容に置き換わります。よろしいですか？`)) return;
+  syncApply(j); alert('読み込みました。');
+}
+async function importEnvelope(env) {
+  try {
+    const res = await syncUnpack(env, null, 'バックアップファイル');
+    if (res) restoreData(res.data, env.savedAt);
+  } catch (err) { alert('読み込めませんでした：' + err.message); }
+}
+$('#restoreInput').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const j = JSON.parse(decodeText(await f.arrayBuffer()));
+    if (j.app === SYNC_APP) return importEnvelope(j);
+    if (!j.contacts || !j.folders) throw new Error('住所録のバックアップファイルではありません');
+    restoreData(j);
+  } catch (err) { alert('読み込めませんでした：' + err.message); }
+};
+
+// ===== Google ドライブ等のクラウドフォルダで同期 =====
+// 歯科自費管理と同じ方式：パソコンと同期されるフォルダ内の JSON ファイルを File System Access API で読み書きする
+const SYNC_APP = 'atena';
+const SYNC_PBKDF2_ITER = 600000;
+const SYNC_META_KEY = 'atena_sync_meta';
+const LOCAL_KEYS = ['folderId', 'frontFolderId', 'typeId', 'designId']; // 端末ごとの選択状態（同期しない）
+let syncHandle = null, syncPassword = null, syncKeyCache = null, syncTimer = null;
+let syncBusy = false, syncPaused = false, syncChangeSeq = 0;
+let syncLastJSON = null; // 最後に同期（または読み込み）した時点のデータ
+
+function syncSupported() { return 'showSaveFilePicker' in window && 'showOpenFilePicker' in window; }
+function syncMeta() { try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}'); } catch (e) { return {}; } }
+function syncSetMeta(m) { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(syncMeta(), m))); }
+function syncCollect() { const o = Object.assign({}, D); LOCAL_KEYS.forEach(k => delete o[k]); return o; }
+function syncLocalHasData() { return D.contacts.length > 0 || !!(D.sender.name || D.sender.addr1); }
+function syncApply(data) {
+  const keep = {}; LOCAL_KEYS.forEach(k => keep[k] = D[k]);
+  D = normalize(Object.assign(clone(data), keep));
+  syncLastJSON = JSON.stringify(syncCollect());
+  try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { alert('この端末に保存できませんでした（容量不足の可能性）。'); }
+  const active = document.querySelector('.tab.active');
+  showTab(active ? active.dataset.tab : 'book');
+}
+// 保存のたびに呼ばれ、同期するデータが変わっていたら同期ファイルへの書き込みを予約する
+function syncCheckChanged() {
+  const j = JSON.stringify(syncCollect());
+  if (syncLastJSON === null) { syncLastJSON = j; return; }
+  if (j === syncLastJSON) return;
+  syncLastJSON = j;
+  syncChangeSeq++;
+  syncSetMeta({ dirty: true });
+  if (syncHandle && !syncPaused) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1500);
+    syncShowStatus('同期：保存待ち…', 'warn');
+  }
+}
+
+// 暗号化（AES-GCM 256bit / PBKDF2-SHA256）
+function syncB64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+function syncUnB64(str) { return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+async function syncDeriveKey(password, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function syncPack(data, password) {
+  const env = { app: SYNC_APP, version: 1, savedAt: new Date().toISOString() };
+  if (!password) { env.data = data; return env; }
+  if (!syncKeyCache || syncKeyCache.password !== password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    syncKeyCache = { password, salt, key: await syncDeriveKey(password, salt, SYNC_PBKDF2_ITER) };
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, syncKeyCache.key, new TextEncoder().encode(JSON.stringify(data)));
+  env.encrypted = { alg: 'AES-GCM', kdf: 'PBKDF2-SHA256', iter: SYNC_PBKDF2_ITER, salt: syncB64(syncKeyCache.salt), iv: syncB64(iv), data: syncB64(new Uint8Array(ct)) };
+  return env;
+}
+// 戻り値 {data, password}。パスワード入力をキャンセルしたら null
+async function syncUnpack(env, password, label) {
+  if (!env || env.app !== SYNC_APP) throw new Error('住所録のデータファイルではありません');
+  if (!env.encrypted) return { data: env.data, password: null };
+  const e = env.encrypted;
+  let msg = label + 'のパスワードを入力してください。';
+  for (;;) {
+    if (password === null) { password = await syncAskPassword(msg, false); if (password === null) return null; }
+    try {
+      const key = await syncDeriveKey(password, syncUnB64(e.salt), e.iter);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: syncUnB64(e.iv) }, key, syncUnB64(e.data));
+      syncKeyCache = { password, salt: syncUnB64(e.salt), key };
+      return { data: JSON.parse(new TextDecoder().decode(pt)), password };
+    } catch (err) { password = null; msg = 'パスワードが違います。もう一度入力してください。'; }
+  }
+}
+function syncAskPassword(msg, isNew) {
+  return new Promise(resolve => {
+    const dlg = $('#pwDialog'), inp = $('#pwInput'), conf = $('#pwConfirm'), err = $('#pwErr'), ok = $('#pwOk');
+    $('#pwMsg').textContent = msg;
+    inp.value = ''; conf.value = ''; err.textContent = '';
+    inp.placeholder = isNew ? 'パスワード（空欄＝暗号化しない）' : 'パスワード';
+    conf.classList.toggle('hidden', !isNew);
+    const onOk = e => { if (isNew && inp.value !== conf.value) { e.preventDefault(); err.textContent = '2回の入力が一致しません'; } };
+    ok.addEventListener('click', onOk);
+    dlg.addEventListener('close', () => { ok.removeEventListener('click', onOk); resolve(dlg.returnValue === 'ok' ? inp.value : null); }, { once: true });
+    dlg.returnValue = '';
+    dlg.showModal(); inp.focus();
+  });
+}
+function syncDownload(env, filename) { download(filename, JSON.stringify(env), 'application/json'); }
+function syncStamp() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function syncFmtTime(iso) { return iso ? new Date(iso).toLocaleString('ja-JP') : '—'; }
+
+// 同期ファイルの保存先（IndexedDB に記憶）
+function syncIdb() {
+  return new Promise((ok, ng) => { const r = indexedDB.open('atena_sync', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); });
+}
+async function syncIdbPut(key, value) {
+  const db = await syncIdb();
+  return new Promise((ok, ng) => { const tx = db.transaction('kv', 'readwrite'); if (value === null) tx.objectStore('kv').delete(key); else tx.objectStore('kv').put(value, key); tx.oncomplete = () => ok(); tx.onerror = () => ng(tx.error); });
+}
+async function syncIdbGet(key) {
+  const db = await syncIdb();
+  return new Promise((ok, ng) => { const r = db.transaction('kv').objectStore('kv').get(key); r.onsuccess = () => ok(r.result || null); r.onerror = () => ng(r.error); });
+}
+const SYNC_TYPES = [{ description: '住所録データ', accept: { 'application/json': ['.json'] } }];
+async function syncCreateFile() {
+  if (!syncSupported()) return alert('このブラウザは自動同期に対応していません。バックアップファイルを使ってください。');
+  try {
+    const handle = await window.showSaveFilePicker({ suggestedName: 'atena_sync.json', types: SYNC_TYPES });
+    const pw = await syncAskPassword('同期ファイルのパスワードを決めてください。\nほかの端末で開くときにも必要です（空欄にすると暗号化しません。非推奨）。', true);
+    if (pw === null) return;
+    syncPassword = pw || null; syncHandle = handle;
+    await syncIdbPut('fileHandle', handle);
+    await syncWrite();
+    syncShowStatus('同期：✓ ' + syncClock() + ' 保存済み', 'ok');
+    renderSyncPanel();
+    alert('同期ファイルを作成しました。ほかのパソコンでは「既存の同期ファイルを開く」でこのファイルを選んでください。');
+  } catch (err) { if (err.name !== 'AbortError') alert('同期ファイルを作成できませんでした：' + err.message); }
+}
+async function syncOpenFile() {
+  if (!syncSupported()) return alert('このブラウザは自動同期に対応していません。バックアップファイルを使ってください。');
+  try {
+    const [handle] = await window.showOpenFilePicker({ types: SYNC_TYPES });
+    if (await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return alert('ファイルへの書き込みが許可されませんでした。');
+    syncHandle = handle; syncPassword = null;
+    // 初めてつなぐファイルなので、この端末にデータがあれば「変更あり」として扱い、上書き前に確認する
+    syncSetMeta({ syncedAt: null, dirty: syncLocalHasData() });
+    await syncIdbPut('fileHandle', handle);
+    await syncNow(true);
+    renderSyncPanel();
+  } catch (err) { if (err.name !== 'AbortError') alert('同期ファイルを開けませんでした：' + err.message); }
+}
+async function syncReconnect() {
+  const handle = syncHandle || await syncIdbGet('fileHandle');
+  if (!handle) return;
+  try {
+    if (await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return;
+    syncHandle = handle;
+    await syncNow(true);
+  } catch (err) { syncShowStatus('同期：エラー', 'err'); alert('再接続できませんでした：' + err.message); }
+  renderSyncPanel();
+}
+async function syncDisconnect() {
+  if (!confirm('同期ファイルとの接続を解除します（ファイルとこの端末のデータは消えません）。よろしいですか？')) return;
+  clearTimeout(syncTimer);
+  syncHandle = null; syncPassword = null; syncKeyCache = null;
+  await syncIdbPut('fileHandle', null);
+  syncSetMeta({ syncedAt: null });
+  syncShowStatus('同期：未接続（この端末のみ）', '');
+  renderSyncPanel();
+}
+async function syncWrite() {
+  const seq = syncChangeSeq;
+  const env = await syncPack(syncCollect(), syncPassword);
+  const w = await syncHandle.createWritable();
+  await w.write(JSON.stringify(env)); await w.close();
+  syncSetMeta({ syncedAt: env.savedAt, dirty: seq !== syncChangeSeq, fileName: syncHandle.name, encrypted: !!syncPassword });
+}
+const syncClock = () => new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+// 同期ファイルとこの端末のデータを突き合わせ、新しい方に揃える
+async function syncNow(manual) {
+  if (!syncHandle || syncBusy) return;
+  if (manual === true) syncPaused = false;
+  if (syncPaused) return;
+  syncBusy = true; clearTimeout(syncTimer);
+  let failed = false;
+  try {
+    if (await syncHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') { syncShowStatus('同期：再接続が必要です', 'warn'); failed = true; return; }
+    const text = await (await syncHandle.getFile()).text();
+    const env = text.trim() ? JSON.parse(text) : null;
+    const meta = syncMeta();
+    if (!env) await syncWrite();
+    else if (env.savedAt !== meta.syncedAt) {
+      const res = await syncUnpack(env, syncPassword, '同期ファイル');
+      if (!res) { syncPaused = true; syncShowStatus('同期：停止中（パスワード未入力）', 'warn'); failed = true; return; }
+      syncPassword = res.password;
+      let useRemote = true;
+      if (meta.dirty) {
+        useRemote = confirm((meta.syncedAt ? 'この端末と同期ファイル（他の端末）の両方でデータが変更されています。' : 'この端末にもデータがあります。')
+          + `\n\n同期ファイルの保存日時：${syncFmtTime(env.savedAt)}`
+          + '\n\nOK：同期ファイルのデータを使う\nキャンセル：この端末のデータを使う'
+          + '\n\n使わなかった方のデータは、念のためバックアップファイルとしてダウンロードします。');
+        if (useRemote) syncDownload(await syncPack(syncCollect(), syncPassword), `住所録_退避_この端末_${syncStamp()}.json`);
+        else syncDownload(env, `住所録_退避_同期ファイル_${syncStamp()}.json`);
+      }
+      if (useRemote) { syncApply(res.data); syncSetMeta({ syncedAt: env.savedAt, dirty: false, fileName: syncHandle.name, encrypted: !!env.encrypted }); }
+      else await syncWrite();
+    } else if (meta.dirty) await syncWrite();
+    syncShowStatus('同期：✓ ' + syncClock() + ' 確認済み', 'ok');
+  } catch (err) {
+    failed = true; console.error(err);
+    syncShowStatus('同期：エラー（' + err.message + '）', 'err');
+  } finally {
+    syncBusy = false;
+    if (!failed && syncMeta().dirty) syncTimer = setTimeout(syncNow, 1500);
+    if (!$('#tab-settings').classList.contains('hidden')) renderSyncPanel();
+  }
+}
+function syncShowStatus(text, cls) { const el = $('#syncStatus'); el.textContent = text; el.className = 'sync-badge' + (cls ? ' ' + cls : ''); }
+async function renderSyncPanel() {
+  const supported = syncSupported();
+  $('#syncUnsupported').classList.toggle('hidden', supported);
+  $('#syncButtons').classList.toggle('hidden', !supported);
+  const saved = supported ? (syncHandle || await syncIdbGet('fileHandle').catch(() => null)) : null;
+  const connected = !!syncHandle && await syncHandle.queryPermission({ mode: 'readwrite' }) === 'granted';
+  $('#syncReconnectBtn').classList.toggle('hidden', !(saved && !connected));
+  $('#syncNowBtn').classList.toggle('hidden', !connected);
+  $('#syncDisconnectBtn').classList.toggle('hidden', !saved);
+  const meta = syncMeta();
+  $('#syncDetail').innerHTML = saved
+    ? `同期ファイル：<b>${esc(saved.name)}</b>（${connected ? '接続中' : '再接続が必要'}）<br>最後に同期したデータの保存日時：${syncFmtTime(meta.syncedAt)}　暗号化：${meta.encrypted ? 'あり' : 'なし'}`
+    : '同期ファイルは未設定です。データはこの端末のブラウザにだけ保存されています。';
+}
+async function syncInit() {
+  syncLastJSON = JSON.stringify(syncCollect());
+  if (!syncSupported() || !('indexedDB' in window)) return;
+  try {
+    const handle = await syncIdbGet('fileHandle');
+    if (!handle) return;
+    if (await handle.queryPermission({ mode: 'readwrite' }) === 'granted') { syncHandle = handle; syncNow(); }
+    else syncShowStatus('同期：再接続が必要です（ここを押して「再接続」）', 'warn');
+  } catch (err) { console.error(err); }
+}
+// 他の端末で保存された内容を取り込むため、画面に戻ったときと1分ごとに確認する
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(); });
+setInterval(() => { if (!document.hidden) syncNow(); }, 60000);
+window.addEventListener('beforeunload', e => {
+  if (syncHandle && (syncBusy || syncMeta().dirty)) { syncNow(); e.preventDefault(); e.returnValue = ''; }
+});
+
+renderBook();
+syncInit();
+</script>
+</body>
+</html>
