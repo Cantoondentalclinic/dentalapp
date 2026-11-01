@@ -785,33 +785,51 @@ function frontHTML(c, T, guides) {
       x -= fs * 0.2;
       comp.forEach(t => { h += vcol(t, x, T.addr.y + oy + fs * 2, cfs); x -= cfs * 1.4; });
     }
-    // 氏名
+    // 氏名（連名は列をそろえて並べる：姓は主の列だけ、名の書き出しと敬称の位置を全員でそろえる）
     const hon = toCompany ? (c.honorific && c.honorific !== '様' ? c.honorific : '御中') : (c.honorific || D.opt.honorific || '');
     const nm = fullWidth(String((toCompany ? c.company : c.name) || '').replace(/\s+/g, ' ').trim());
     const parts = nm.split('　');
-    const nameText = nm + (hon ? '　' + hon : '');
-    const n = chars(nameText).length;
-    const nfs = fitFs(T.nm.fs, T.nm.h, n);
-    let ls = 0;
-    const used = n * nfs;
-    if (used < T.nm.h * 0.75 && n > 1) ls = Math.min(nfs * 0.5, (T.nm.h * 0.75 - used) / (n - 1));
-    const nx = T.nm.x + ox + nfs / 2;
-    h += vcol(nameText, nx, T.nm.y + oy, nfs, ls);
-    if (c.title) {
-      const tfs = Math.min(nfs * 0.45, 4.5);
-      h += vcol(fullWidth(c.title), nx + tfs + 1, T.nm.y + oy, tfs);
-    }
-    if (c.renmei) {
-      const rs = String(c.renmei).split(/[、,，・\/]/).map(s => s.trim()).filter(Boolean);
-      const sur = parts.length > 1 ? chars(parts[0]).length + 1 : 0;
-      let rx = nx - nfs * 1.25;
-      rs.forEach(r => {
-        const t = fullWidth(r) + (hon ? '　' + hon : '');
-        // 様の位置をそろえる：連名の名＋敬称を主の名の開始位置から
-        const start = T.nm.y + oy + sur * (nfs + ls);
-        h += vcol(t, rx, start, nfs, ls);
-        rx -= nfs * 1.25;
+    const sur = parts.length > 1 ? parts[0] : '';
+    const people = [parts.length > 1 ? parts.slice(1).join('') : nm];
+    if (c.renmei && !toCompany) {
+      String(c.renmei).split(/[、,，・\/\n]/).map(r => fullWidth(r.trim().replace(/\s+/g, ' '))).filter(Boolean).forEach(r => {
+        const rp = r.split('　');
+        // 連名に姓まで入っている場合、主と同じ姓なら名だけにする
+        people.push(rp.length > 1 && rp[0] === sur ? rp.slice(1).join('') : rp.join(''));
       });
+    }
+    const k = people.length;
+    const surLen = chars(sur).length, maxGiven = Math.max(...people.map(g => chars(g).length));
+    const honLen = chars(hon).length;
+    const rows = (surLen ? surLen + 1 : 0) + maxGiven + (honLen ? 1 + honLen : 0);
+    // 使える幅：住所の列と差出人の欄の間
+    const S0 = D.sender;
+    const senderOn = S0.onFront && (S0.name || S0.addr1 || S0.company);
+    const leftLimit = (senderOn ? T.sender.x + T.sender.w : 4) + ox + 1;
+    const rightLimit = x + fs * 0.45 - 3; // 住所のいちばん左の列から3mmあける
+    const center = T.nm.x + ox;
+    const availW = Math.max(8, rightLimit - leftLimit);
+    const GAP = 0.3;
+    const nfs = Math.max(1.5, Math.min(T.nm.fs * PT, T.nm.h / rows, availW / (k + (k - 1) * GAP)));
+    const cell = Math.min(T.nm.h / rows, nfs * 1.5);
+    const ls = cell - nfs;
+    const tw = k * nfs + (k - 1) * GAP * nfs;
+    // 主の名前を中心線に置き、連名は左へ並べる。はみ出すときだけ右へずらす
+    let xr0 = center + nfs / 2;
+    if (xr0 - tw < leftLimit) xr0 = leftLimit + tw;
+    if (xr0 > rightLimit) xr0 = Math.max(leftLimit + tw, rightLimit);
+    const y0 = T.nm.y + oy;
+    const yGiven = y0 + (surLen ? (surLen + 1) * cell : 0);
+    const yHon = yGiven + (maxGiven + 1) * cell;
+    people.forEach((g, i) => {
+      const xr = xr0 - i * nfs * (1 + GAP);
+      if (i === 0 && sur) h += vcol(sur, xr, y0, nfs, ls);
+      h += vcol(g, xr, yGiven, nfs, ls);
+      if (honLen) h += vcol(hon, xr, yHon, nfs, ls);
+    });
+    if (c.title && !toCompany) {
+      const tfs = Math.min(nfs * 0.45, 4.5);
+      h += vcol(fullWidth(c.title), xr0 + tfs + 0.8, y0, tfs);
     }
   }
   // 差出人
