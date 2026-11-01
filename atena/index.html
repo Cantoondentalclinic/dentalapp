@@ -326,7 +326,7 @@ const FIELDS = [
   ['dept', '部署'], ['title', '役職'], ['renmei', '連名'], ['tel', '電話'], ['memo', 'メモ']
 ];
 const SYN = {
-  name: ['氏名', '名前', 'お名前', '宛名', '姓名', 'フルネーム', '患者名', '患者氏名', '顧客名', 'name', 'fullname'],
+  name: ['氏名', '名前', 'お名前', '宛名', '姓名', 'フルネーム', '患者名', '患者氏名', '顧客名', '院長名', '院長', '代表者', '代表者名', '担当者', '担当者名', 'name', 'fullname'],
   last: ['姓', '苗字', '名字', 'lastname', 'familyname'],
   first: ['名', 'firstname', 'givenname'],
   kana: ['フリガナ', 'ふりがな', 'カナ', 'かな', 'よみ', 'ヨミ', '読み', 'カナ氏名', 'kana'],
@@ -334,7 +334,7 @@ const SYN = {
   zip: ['郵便番号', '〒', '郵便', 'zip', 'zipcode', 'postalcode', '自宅郵便番号'],
   addr1: ['住所', '住所1', '住所１', '自宅住所', '自宅住所1', '都道府県', '市区町村', '番地', '町域', 'address', 'address1'],
   addr2: ['住所2', '住所２', '建物', '建物名', 'マンション名', '方書', '自宅住所2', 'address2'],
-  company: ['会社', '会社名', '勤務先', '法人名', '医院名', '団体名', '施設名', 'company'],
+  company: ['会社', '会社名', '勤務先', '法人名', '医院名', '団体名', '施設名', '名称', '事業所名', '病院名', '医療機関名', '宛先名', 'company'],
   dept: ['部署', '部署名', '所属'],
   title: ['役職', '肩書'],
   renmei: ['連名', '連名1', '家族'],
@@ -460,7 +460,7 @@ function renderBook() {
   $('#contactRows').innerHTML = list.map(c => `
     <tr draggable="true" data-id="${c.id}">
       <td><input type="checkbox" ${c.print ? 'checked' : ''} data-chk="${c.id}"></td>
-      <td><b>${esc(c.name)}</b> <span class="muted">${esc(c.honorific || '')}</span>${c.renmei ? `<div class="muted">連名：${esc(c.renmei)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
+      <td><b>${esc(c.name || c.company)}</b> <span class="muted">${esc(c.honorific || '')}</span>${c.renmei ? `<div class="muted">連名：${esc(c.renmei)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
       <td style="white-space:nowrap">${esc(fmtZip(c.zip))}</td>
       <td class="addr">${esc(c.addr1)}<br>${esc(c.addr2)}</td>
       <td class="addr">${esc(c.company)} ${esc(c.dept)} ${esc(c.title)}</td>
@@ -675,7 +675,10 @@ function mappingDialog(rows, fname) {
     const sep = { addr1: '', addr2: ' ', memo: ' ', renmei: '、' };
     let dest = m.querySelector('#dest').value;
     if (!map.some(Boolean)) return alert('読み込む列を1つ以上選んでください。');
-    if (dest === '__new') { const f = { id: uid(), name: base }; D.folders.push(f); dest = f.id; }
+    if (!map.some(f => ['name', 'last', 'first', 'company'].includes(f)))
+      return alert('「氏名」または「会社・医院名」にする列を選んでください。\n（列の上の選択欄で、名前が入っている列を「氏名」、医院名・会社名の列を「会社・医院名」にします）');
+    let newFolder = null;
+    if (dest === '__new') { newFolder = { id: uid(), name: base }; D.folders.push(newFolder); dest = newFolder.id; }
     const body = hasHeader ? rows.slice(1) : rows;
     let added = 0, skipped = 0;
     const exists = new Set(D.contacts.filter(c => c.folder === dest).map(c => [c.name, c.zip, c.addr1].join('|')));
@@ -687,6 +690,8 @@ function mappingDialog(rows, fname) {
       });
       if (!c.name && (c.last || c.first)) c.name = [c.last, c.first].filter(Boolean).join('　');
       delete c.last; delete c.first;
+      // 「（内田 〇〇）」のような仮の名前は空欄として扱う（会社・医院名あての宛名になる）
+      if (c.name && /[〇○◯]{2}/.test(c.name)) c.name = '';
       if (!c.name && !c.company) { skipped++; return; }
       c.zip = normZip(c.zip);
       const k = [c.name, c.zip, c.addr1].join('|');
@@ -695,6 +700,10 @@ function mappingDialog(rows, fname) {
       Object.assign(c, { id: uid(), folder: dest, print: true });
       D.contacts.push(c); added++;
     });
+    if (!added) {
+      if (newFolder) D.folders = D.folders.filter(f => f.id !== newFolder.id);
+      return alert(skipped ? `読み込める宛名がありませんでした（${skipped}件すべて、氏名と会社・医院名が空欄か、すでに同じフォルダにある宛名でした）。\n列の割り当てを確認してください。` : '読み込める行がありませんでした。');
+    }
     D.folderId = dest; D.frontFolderId = dest; save(); closeModal(); showTab('book');
     alert(`${added}件を「${folderName(dest)}」に読み込みました。${skipped ? `\n（重複・氏名なしの ${skipped} 件は読み込みませんでした）` : ''}`);
   };
@@ -766,7 +775,8 @@ function frontHTML(c, T, guides) {
     if (singleFs < 4.2 && chars(a1).length >= 16) cols = splitAddr(a1);
     const lines = cols.map(t => ({ t, ind: 0 }));
     if (a2) lines.push({ t: a2, ind: 2 });
-    const comp = [vText(c.company, false), vText(c.dept, false)].filter(Boolean);
+    const toCompany = !String(c.name || '').trim(); // 氏名がなければ会社・医院あて（御中）
+    const comp = [toCompany ? '' : vText(c.company, false), vText(c.dept, false)].filter(Boolean);
     let fs = Math.min(...lines.map(l => fitFs(T.addr.fs, T.addr.h, chars(l.t).length + l.ind)));
     let x = T.addr.x + ox;
     lines.forEach((l, i) => { h += vcol(l.t, x, T.addr.y + oy + (i > 0 && l.ind ? fs * l.ind : (i > 0 ? fs : 0)), fs); x -= fs * 1.45; });
@@ -776,8 +786,8 @@ function frontHTML(c, T, guides) {
       comp.forEach(t => { h += vcol(t, x, T.addr.y + oy + fs * 2, cfs); x -= cfs * 1.4; });
     }
     // 氏名
-    const hon = c.honorific || D.opt.honorific || '';
-    const nm = fullWidth(String(c.name || '').replace(/\s+/g, ' ').trim());
+    const hon = toCompany ? (c.honorific && c.honorific !== '様' ? c.honorific : '御中') : (c.honorific || D.opt.honorific || '');
+    const nm = fullWidth(String((toCompany ? c.company : c.name) || '').replace(/\s+/g, ' ').trim());
     const parts = nm.split('　');
     const nameText = nm + (hon ? '　' + hon : '');
     const n = chars(nameText).length;
@@ -827,7 +837,7 @@ function frontHTML(c, T, guides) {
 function fillVars(s, c) {
   const S = D.sender;
   const map = {
-    '氏名': c ? c.name : '', '敬称': c ? (c.honorific || D.opt.honorific) : '', '会社': c ? c.company : '',
+    '氏名': c ? (c.name || c.company) : '', '敬称': c ? (c.name ? (c.honorific || D.opt.honorific) : (c.honorific && c.honorific !== '様' ? c.honorific : '御中')) : '', '会社': c ? c.company : '',
     '差出人': S.name, '差出人住所': [S.addr1, S.addr2].filter(Boolean).join(' '), '差出人郵便番号': fmtZip(normZip(S.zip)),
     '電話': S.tel, '医院名': S.company
   };
