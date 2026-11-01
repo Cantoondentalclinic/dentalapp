@@ -833,8 +833,8 @@ function frontHTML(c, T, guides) {
     const cell = Math.min(T.nm.h / rows, nfs * 1.5);
     const ls = cell - nfs;
     const tw = k * nfs + (k - 1) * GAP * nfs;
-    // 主の名前を中心線に置き、連名は左へ並べる。はみ出すときだけ右へずらす
-    let xr0 = center + nfs / 2;
+    // 全員のまとまりをはがきの中心線にそろえる（人数が変わっても左右のバランスを保つ）。はみ出すときだけずらす
+    let xr0 = center + tw / 2;
     if (xr0 - tw < leftLimit) xr0 = leftLimit + tw;
     if (xr0 > rightLimit) xr0 = Math.max(leftLimit + tw, rightLimit);
     const y0 = T.nm.y + oy;
