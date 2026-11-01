@@ -46,6 +46,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
 .folder.active{background:#e8f0fe;color:#1a73e8;font-weight:600}
 .folder .cnt{margin-left:auto;font-size:11px;color:#888}
 .folder.drop{outline:2px dashed #1a73e8}
+.rm-chk{display:inline-flex;align-items:center;gap:3px;margin-right:10px;cursor:pointer;color:#1a1a1a}
+.rm-chk input{margin:0}
 .dropzone{border:1.5px dashed rgba(0,0,0,0.25);border-radius:10px;padding:14px;text-align:center;color:#666;font-size:12px;line-height:1.7;margin-top:12px;cursor:pointer}
 .dropzone:hover{background:#f9f9f9}
 .table-wrap{overflow:auto;max-height:calc(100vh - 230px);min-height:300px}
@@ -181,6 +183,7 @@ td.addr{font-size:12px;color:#444}
           <span id="previewInfo" class="muted"></span>
           <button class="btn sm" onclick="movePreview(1)">▶</button>
         </div>
+        <div class="row hidden" id="renmeiPick" style="font-size:13px"></div>
         <div class="stage-box"><div class="scaler" id="frontStage"></div></div>
         <div class="row">
           <button class="btn" onclick="printFront(true)">テスト印刷（1枚・枠線つき）</button>
@@ -460,7 +463,7 @@ function renderBook() {
   $('#contactRows').innerHTML = list.map(c => `
     <tr draggable="true" data-id="${c.id}">
       <td><input type="checkbox" ${c.print ? 'checked' : ''} data-chk="${c.id}"></td>
-      <td><b>${esc(c.name || c.company)}</b> <span class="muted">${esc(c.honorific || '')}</span>${c.renmei ? `<div class="muted">連名：${esc(c.renmei)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
+      <td><b>${esc(c.name || c.company)}</b> <span class="muted">${esc(c.honorific || '')}</span>${renmeiList(c).length ? `<div class="muted" style="margin-top:2px">連名：${renmeiChecks(c)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
       <td style="white-space:nowrap">${esc(fmtZip(c.zip))}</td>
       <td class="addr">${esc(c.addr1)}<br>${esc(c.addr2)}</td>
       <td class="addr">${esc(c.company)} ${esc(c.dept)} ${esc(c.title)}</td>
@@ -469,6 +472,7 @@ function renderBook() {
   $('#contactRows').querySelectorAll('[data-chk]').forEach(el => el.onchange = () => {
     const c = D.contacts.find(x => x.id === el.dataset.chk); c.print = el.checked; save(); renderBook();
   });
+  bindRenmeiChecks($('#contactRows'), () => {});
   $('#contactRows').querySelectorAll('[data-edit]').forEach(el => el.onclick = () => editContact(el.dataset.edit));
   $('#contactRows').querySelectorAll('tr').forEach(tr => tr.ondragstart = e => {
     const id = tr.dataset.id; const c = D.contacts.find(x => x.id === id);
@@ -710,6 +714,21 @@ function mappingDialog(rows, fname) {
 }
 
 // ===== はがき描画 =====
+// 連名：「、」などで区切った名前の一覧。renmeiOff にある名前は印刷しない
+function renmeiList(c) { return String(c.renmei || '').split(/[、,，・\/\n]/).map(r => r.trim()).filter(Boolean); }
+const renmeiOn = (c, r) => !(c.renmeiOff || []).includes(r);
+function renmeiChecks(c) {
+  return renmeiList(c).map(r => `<label class="rm-chk"><input type="checkbox" data-rm="${esc(c.id)}" data-name="${esc(r)}" ${renmeiOn(c, r) ? 'checked' : ''}>${esc(r)}</label>`).join('');
+}
+function bindRenmeiChecks(root, after) {
+  root.querySelectorAll('[data-rm]').forEach(el => el.onchange = () => {
+    const c = D.contacts.find(x => x.id === el.dataset.rm); if (!c) return;
+    const off = new Set(c.renmeiOff || []);
+    if (el.checked) off.delete(el.dataset.name); else off.add(el.dataset.name);
+    c.renmeiOff = [...off];
+    save(); after();
+  });
+}
 function kanjiNum(s) {
   const k = '〇一二三四五六七八九';
   return toHalf(s)
@@ -792,7 +811,7 @@ function frontHTML(c, T, guides) {
     const sur = parts.length > 1 ? parts[0] : '';
     const people = [parts.length > 1 ? parts.slice(1).join('') : nm];
     if (c.renmei && !toCompany) {
-      String(c.renmei).split(/[、,，・\/\n]/).map(r => fullWidth(r.trim().replace(/\s+/g, ' '))).filter(Boolean).forEach(r => {
+      renmeiList(c).filter(r => renmeiOn(c, r)).map(r => fullWidth(r.replace(/\s+/g, ' '))).forEach(r => {
         const rp = r.split('　');
         // 連名に姓まで入っている場合、主と同じ姓なら名だけにする
         people.push(rp.length > 1 && rp[0] === sur ? rp.slice(1).join('') : rp.join(''));
@@ -896,6 +915,20 @@ function drawFrontPreview() {
   $('#printFrontBtn').textContent = `宛名面を印刷（${list.length}枚）`;
   $('#printFrontBtn').disabled = !list.length;
   stage($('#frontStage'), frontHTML(c, curType(), $('#showGuides').checked), curType());
+  const rp = $('#renmeiPick');
+  const has = c && String(c.name || '').trim() && renmeiList(c).length;
+  rp.classList.toggle('hidden', !has);
+  if (has) {
+    rp.innerHTML = `<span class="muted">連名を印刷：</span>${renmeiChecks(c)}
+      <span class="muted" style="margin-left:10px">このフォルダの連名を</span>
+      <button class="btn sm" onclick="setAllRenmei(true)">すべて入れる</button>
+      <button class="btn sm" onclick="setAllRenmei(false)">すべて外す</button>`;
+    bindRenmeiChecks(rp, drawFrontPreview);
+  }
+}
+function setAllRenmei(on) {
+  frontList().forEach(c => { c.renmeiOff = on ? [] : renmeiList(c); });
+  save(); drawFrontPreview();
 }
 function movePreview(d) { const n = frontList().length; if (!n) return; pIdx = (pIdx + d + n) % n; drawFrontPreview(); }
 $('#typeSelect').onchange = e => { D.typeId = e.target.value; save(); renderFront(); };
