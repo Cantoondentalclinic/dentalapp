@@ -12,6 +12,12 @@ header{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 20
 header h1{font-size:16px;font-weight:600;margin-right:auto}
 .tabs{display:flex;gap:4px;flex-wrap:wrap}
 .tab{font-family:inherit;font-size:13px;padding:7px 16px;border:none;border-radius:8px;background:transparent;cursor:pointer;color:#555}
+.sync-badge{font-family:inherit;font-size:12px;padding:5px 10px;border-radius:20px;border:none;background:#f1f1ef;color:#666;cursor:pointer}
+.sync-badge.ok{background:#e6f4ea;color:#137333}
+.sync-badge.warn{background:#fef7e0;color:#b06000}
+.sync-badge.err{background:#fce8e6;color:#d93025}
+dialog.pw{border:none;border-radius:14px;padding:18px 20px;width:min(420px,92vw)}
+dialog.pw::backdrop{background:rgba(0,0,0,.35)}
 .tab.active{background:#e8f0fe;color:#1a73e8;font-weight:600}
 .main{padding:14px 20px;max-width:1600px;margin:0 auto}
 .card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px}
@@ -113,6 +119,7 @@ td.addr{font-size:12px;color:#444}
     <button class="tab" data-tab="back">裏面</button>
     <button class="tab" data-tab="settings">差出人・設定</button>
   </nav>
+  <button class="sync-badge" id="syncStatus" onclick="showTab('settings')" title="同期の設定">同期：未接続（この端末のみ）</button>
 </header>
 
 <!-- 住所録 -->
@@ -235,17 +242,48 @@ td.addr{font-size:12px;color:#444}
       <label class="row muted" style="margin-top:10px;gap:6px"><input type="checkbox" data-o="kanji">宛名面の住所の数字を漢数字にする（1-2-3 → 一ー二ー三）</label>
       <div class="fg" style="margin-top:10px"><label>敬称が空欄のときの既定</label><input data-o="honorific"></div>
     </div>
+    <div class="card" style="grid-column:1/-1">
+      <div class="section-title">① Google ドライブで同期（パソコンの Chrome / Edge）</div>
+      <div class="help">
+        パソコンに入れた「Google ドライブ（パソコン版）」のフォルダに同期ファイルを置き、変更のたびに自動で保存します。
+        ほかのパソコンでも同じファイルを選ぶと、同じ住所録・フォルダ・印刷位置・裏面デザインを使えます（他の端末の変更は、画面に戻ったときと1分ごとに取り込みます）。
+        <ol style="margin:6px 0 0 20px">
+          <li>最初の1台：「新しい同期ファイルを作る」→ Google ドライブのフォルダ（例：マイドライブ）を選んで保存</li>
+          <li>2台目以降：「既存の同期ファイルを開く」→ 同じファイルを選ぶ</li>
+          <li>次回からは、アプリを開いたときに必要なら「再接続」を押すだけです</li>
+        </ol>
+        2台で同時に変更すると、どちらを使うか確認が出ます（使わなかった方は退避ファイルとしてダウンロードされます）。
+        はがきの印刷位置はプリンターによって違うため、パソコンごとに「はがきの種類」を複製して名前を付けておくと便利です。
+      </div>
+      <div id="syncUnsupported" class="help hidden" style="color:#b06000;margin-top:10px">
+        このブラウザ（iPad / iPhone の Safari、Firefox など）は自動同期に対応していません。下の②のバックアップファイルを使ってください。
+      </div>
+      <div class="row" id="syncButtons" style="margin-top:12px">
+        <button class="btn primary" onclick="syncCreateFile()">新しい同期ファイルを作る</button>
+        <button class="btn" onclick="syncOpenFile()">既存の同期ファイルを開く</button>
+        <button class="btn soft hidden" id="syncReconnectBtn" onclick="syncReconnect()">再接続</button>
+        <button class="btn hidden" id="syncNowBtn" onclick="syncNow(true)">今すぐ同期</button>
+        <button class="btn danger hidden" id="syncDisconnectBtn" onclick="syncDisconnect()">接続を解除</button>
+      </div>
+      <div id="syncDetail" class="help" style="margin-top:10px"></div>
+    </div>
     <div class="card">
-      <div class="section-title">バックアップ</div>
-      <p class="help">データはこの端末のブラウザの中にだけ保存されます。定期的にバックアップしてください。</p>
+      <div class="section-title">② バックアップファイル（すべてのブラウザ）</div>
+      <p class="help">全データを1つのファイルに書き出し、別の端末で読み込みます（画面へのドラッグでも読み込めます）。読み込むと、この端末のデータはファイルの内容に<b>置き換わります</b>。</p>
       <div class="row" style="margin-top:10px">
-        <button class="btn" onclick="exportJSON()">バックアップを保存</button>
-        <button class="btn" onclick="document.getElementById('restoreInput').click()">バックアップから復元</button>
+        <button class="btn" onclick="exportJSON()">バックアップを書き出す</button>
+        <button class="btn" onclick="document.getElementById('restoreInput').click()">バックアップを読み込む</button>
         <input type="file" id="restoreInput" accept=".json" class="hidden">
       </div>
       <div class="row" style="margin-top:10px">
         <button class="btn" onclick="exportCSV()">表示中フォルダをCSVで書き出し</button>
       </div>
+    </div>
+    <div class="card">
+      <div class="section-title">パスワード（暗号化）</div>
+      <p class="help">住所・氏名などの個人情報を含むため、同期ファイルとバックアップはパスワードで暗号化することをおすすめします（AES-256）。
+        作成のときにパスワードを入力すると暗号化され、ほかの端末で開くときに同じパスワードが必要です。
+        パスワードはどこにも保存されません。<b>忘れるとデータを復元できません</b>。</p>
     </div>
   </div>
 </section>
@@ -253,6 +291,18 @@ td.addr{font-size:12px;color:#444}
 
 <div id="dragOverlay" class="hidden">ここにドロップして宛名を読み込み</div>
 <div id="modalRoot"></div>
+<dialog class="pw" id="pwDialog">
+  <form method="dialog">
+    <div id="pwMsg" style="font-size:13px;margin-bottom:10px;line-height:1.7;white-space:pre-line"></div>
+    <input type="password" id="pwInput" autocomplete="off" style="margin-bottom:8px">
+    <input type="password" id="pwConfirm" autocomplete="off" placeholder="確認のためもう一度" style="margin-bottom:8px">
+    <div id="pwErr" style="color:#d93025;font-size:12px;min-height:16px"></div>
+    <div class="modal-foot" style="margin-top:8px">
+      <button class="btn" value="cancel" formnovalidate>キャンセル</button>
+      <button class="btn primary" value="ok" id="pwOk">OK</button>
+    </div>
+  </form>
+</dialog>
 <div id="printArea"></div>
 
 <script>
@@ -332,6 +382,9 @@ let D = load();
 function load() {
   let d = null;
   try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  return normalize(d);
+}
+function normalize(d) {
   if (!d) {
     const f1 = uid();
     d = {
@@ -348,6 +401,8 @@ function load() {
   if (!d.designId || !d.designs.find(x => x.id === d.designId)) d.designId = d.designs[0].id;
   if (!d.folders.length) d.folders.push({ id: uid(), name: '未分類' });
   if (!d.folders.find(f => f.id === d.folderId)) d.folderId = d.folders[0].id;
+  if (!d.frontFolderId || !d.folders.find(f => f.id === d.frontFolderId)) d.frontFolderId = d.folderId;
+  if (!d.types.find(t => t.id === d.typeId)) d.typeId = d.types[0].id;
   return d;
 }
 let saveTimer = null;
@@ -356,6 +411,7 @@ function save() {
   saveTimer = setTimeout(() => {
     try { localStorage.setItem(KEY, JSON.stringify(D)); }
     catch (e) { alert('保存できませんでした（容量不足の可能性）。裏面の画像を小さくするか削除してください。'); }
+    syncCheckChanged();
   }, 200);
 }
 const curType = () => D.types.find(t => t.id === D.typeId) || D.types[0];
@@ -369,7 +425,7 @@ function showTab(t) {
   ['book', 'front', 'back', 'settings'].forEach(x => $('#tab-' + x).classList.toggle('hidden', x !== t));
   if (t === 'front') renderFront();
   if (t === 'back') renderBack();
-  if (t === 'settings') renderSettings();
+  if (t === 'settings') { renderSettings(); renderSyncPanel(); }
   if (t === 'book') renderBook();
 }
 
@@ -537,6 +593,7 @@ async function readFile(file) {
   try {
     if (ext === 'json') {
       const j = JSON.parse(decodeText(buf));
+      if (j && j.app === SYNC_APP) return importEnvelope(j);
       if (j && j.contacts && j.folders) return restoreData(j);
       const arr = Array.isArray(j) ? j : [];
       const keys = [...new Set(arr.flatMap(o => Object.keys(o)))];
@@ -1025,9 +1082,10 @@ function download(name, text, type) {
   a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
-function exportJSON() {
-  const d = new Date(); const ymd = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
-  download(`住所録バックアップ_${ymd}.json`, JSON.stringify(D), 'application/json');
+async function exportJSON() {
+  const pw = await syncAskPassword('バックアップファイルのパスワードを決めてください。\n読み込むときに必要です（空欄にすると暗号化しません。非推奨）。', true);
+  if (pw === null) return;
+  syncDownload(await syncPack(syncCollect(), pw || null), `住所録バックアップ_${syncStamp()}.json`);
 }
 function exportCSV() {
   const cols = ['name', 'kana', 'honorific', 'zip', 'addr1', 'addr2', 'company', 'dept', 'title', 'renmei', 'tel', 'memo'];
@@ -1036,17 +1094,258 @@ function exportCSV() {
   const rows = D.contacts.filter(c => c.folder === D.folderId).map(c => cols.map(k => q(k === 'zip' ? fmtZip(c.zip) : String(c[k] || ''))).join(','));
   download(`${folderName(D.folderId)}.csv`, '﻿' + [head.join(','), ...rows].join('\r\n'), 'text/csv');
 }
-function restoreData(j) {
-  if (!confirm('バックアップから復元します。今のデータは置き換わります。よろしいですか？')) return;
-  localStorage.setItem(KEY, JSON.stringify(j)); D = load(); showTab('book'); alert('復元しました。');
+function restoreData(j, savedAt) {
+  const n = (j.contacts || []).length;
+  if (!confirm(`バックアップ（${savedAt ? '保存日時：' + syncFmtTime(savedAt) + '、' : ''}宛名 ${n} 件）を読み込みます。\nこの端末のデータはバックアップの内容に置き換わります。よろしいですか？`)) return;
+  syncApply(j); alert('読み込みました。');
+}
+async function importEnvelope(env) {
+  try {
+    const res = await syncUnpack(env, null, 'バックアップファイル');
+    if (res) restoreData(res.data, env.savedAt);
+  } catch (err) { alert('読み込めませんでした：' + err.message); }
 }
 $('#restoreInput').onchange = async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-  try { const j = JSON.parse(decodeText(await f.arrayBuffer())); if (!j.contacts || !j.folders) throw new Error('形式が違います'); restoreData(j); }
-  catch (err) { alert('復元できませんでした：' + err.message); }
+  try {
+    const j = JSON.parse(decodeText(await f.arrayBuffer()));
+    if (j.app === SYNC_APP) return importEnvelope(j);
+    if (!j.contacts || !j.folders) throw new Error('住所録のバックアップファイルではありません');
+    restoreData(j);
+  } catch (err) { alert('読み込めませんでした：' + err.message); }
 };
 
+// ===== Google ドライブ等のクラウドフォルダで同期 =====
+// 歯科自費管理と同じ方式：パソコンと同期されるフォルダ内の JSON ファイルを File System Access API で読み書きする
+const SYNC_APP = 'atena';
+const SYNC_PBKDF2_ITER = 600000;
+const SYNC_META_KEY = 'atena_sync_meta';
+const LOCAL_KEYS = ['folderId', 'frontFolderId', 'typeId', 'designId']; // 端末ごとの選択状態（同期しない）
+let syncHandle = null, syncPassword = null, syncKeyCache = null, syncTimer = null;
+let syncBusy = false, syncPaused = false, syncChangeSeq = 0;
+let syncLastJSON = null; // 最後に同期（または読み込み）した時点のデータ
+
+function syncSupported() { return 'showSaveFilePicker' in window && 'showOpenFilePicker' in window; }
+function syncMeta() { try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}'); } catch (e) { return {}; } }
+function syncSetMeta(m) { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(syncMeta(), m))); }
+function syncCollect() { const o = Object.assign({}, D); LOCAL_KEYS.forEach(k => delete o[k]); return o; }
+function syncLocalHasData() { return D.contacts.length > 0 || !!(D.sender.name || D.sender.addr1); }
+function syncApply(data) {
+  const keep = {}; LOCAL_KEYS.forEach(k => keep[k] = D[k]);
+  D = normalize(Object.assign(clone(data), keep));
+  syncLastJSON = JSON.stringify(syncCollect());
+  try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { alert('この端末に保存できませんでした（容量不足の可能性）。'); }
+  const active = document.querySelector('.tab.active');
+  showTab(active ? active.dataset.tab : 'book');
+}
+// 保存のたびに呼ばれ、同期するデータが変わっていたら同期ファイルへの書き込みを予約する
+function syncCheckChanged() {
+  const j = JSON.stringify(syncCollect());
+  if (syncLastJSON === null) { syncLastJSON = j; return; }
+  if (j === syncLastJSON) return;
+  syncLastJSON = j;
+  syncChangeSeq++;
+  syncSetMeta({ dirty: true });
+  if (syncHandle && !syncPaused) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(syncNow, 1500);
+    syncShowStatus('同期：保存待ち…', 'warn');
+  }
+}
+
+// 暗号化（AES-GCM 256bit / PBKDF2-SHA256）
+function syncB64(bytes) { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); }
+function syncUnB64(str) { return Uint8Array.from(atob(str), c => c.charCodeAt(0)); }
+async function syncDeriveKey(password, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: iter }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function syncPack(data, password) {
+  const env = { app: SYNC_APP, version: 1, savedAt: new Date().toISOString() };
+  if (!password) { env.data = data; return env; }
+  if (!syncKeyCache || syncKeyCache.password !== password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    syncKeyCache = { password, salt, key: await syncDeriveKey(password, salt, SYNC_PBKDF2_ITER) };
+  }
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, syncKeyCache.key, new TextEncoder().encode(JSON.stringify(data)));
+  env.encrypted = { alg: 'AES-GCM', kdf: 'PBKDF2-SHA256', iter: SYNC_PBKDF2_ITER, salt: syncB64(syncKeyCache.salt), iv: syncB64(iv), data: syncB64(new Uint8Array(ct)) };
+  return env;
+}
+// 戻り値 {data, password}。パスワード入力をキャンセルしたら null
+async function syncUnpack(env, password, label) {
+  if (!env || env.app !== SYNC_APP) throw new Error('住所録のデータファイルではありません');
+  if (!env.encrypted) return { data: env.data, password: null };
+  const e = env.encrypted;
+  let msg = label + 'のパスワードを入力してください。';
+  for (;;) {
+    if (password === null) { password = await syncAskPassword(msg, false); if (password === null) return null; }
+    try {
+      const key = await syncDeriveKey(password, syncUnB64(e.salt), e.iter);
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: syncUnB64(e.iv) }, key, syncUnB64(e.data));
+      syncKeyCache = { password, salt: syncUnB64(e.salt), key };
+      return { data: JSON.parse(new TextDecoder().decode(pt)), password };
+    } catch (err) { password = null; msg = 'パスワードが違います。もう一度入力してください。'; }
+  }
+}
+function syncAskPassword(msg, isNew) {
+  return new Promise(resolve => {
+    const dlg = $('#pwDialog'), inp = $('#pwInput'), conf = $('#pwConfirm'), err = $('#pwErr'), ok = $('#pwOk');
+    $('#pwMsg').textContent = msg;
+    inp.value = ''; conf.value = ''; err.textContent = '';
+    inp.placeholder = isNew ? 'パスワード（空欄＝暗号化しない）' : 'パスワード';
+    conf.classList.toggle('hidden', !isNew);
+    const onOk = e => { if (isNew && inp.value !== conf.value) { e.preventDefault(); err.textContent = '2回の入力が一致しません'; } };
+    ok.addEventListener('click', onOk);
+    dlg.addEventListener('close', () => { ok.removeEventListener('click', onOk); resolve(dlg.returnValue === 'ok' ? inp.value : null); }, { once: true });
+    dlg.returnValue = '';
+    dlg.showModal(); inp.focus();
+  });
+}
+function syncDownload(env, filename) { download(filename, JSON.stringify(env), 'application/json'); }
+function syncStamp() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+function syncFmtTime(iso) { return iso ? new Date(iso).toLocaleString('ja-JP') : '—'; }
+
+// 同期ファイルの保存先（IndexedDB に記憶）
+function syncIdb() {
+  return new Promise((ok, ng) => { const r = indexedDB.open('atena_sync', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); });
+}
+async function syncIdbPut(key, value) {
+  const db = await syncIdb();
+  return new Promise((ok, ng) => { const tx = db.transaction('kv', 'readwrite'); if (value === null) tx.objectStore('kv').delete(key); else tx.objectStore('kv').put(value, key); tx.oncomplete = () => ok(); tx.onerror = () => ng(tx.error); });
+}
+async function syncIdbGet(key) {
+  const db = await syncIdb();
+  return new Promise((ok, ng) => { const r = db.transaction('kv').objectStore('kv').get(key); r.onsuccess = () => ok(r.result || null); r.onerror = () => ng(r.error); });
+}
+const SYNC_TYPES = [{ description: '住所録データ', accept: { 'application/json': ['.json'] } }];
+async function syncCreateFile() {
+  if (!syncSupported()) return alert('このブラウザは自動同期に対応していません。バックアップファイルを使ってください。');
+  try {
+    const handle = await window.showSaveFilePicker({ suggestedName: 'atena_sync.json', types: SYNC_TYPES });
+    const pw = await syncAskPassword('同期ファイルのパスワードを決めてください。\nほかの端末で開くときにも必要です（空欄にすると暗号化しません。非推奨）。', true);
+    if (pw === null) return;
+    syncPassword = pw || null; syncHandle = handle;
+    await syncIdbPut('fileHandle', handle);
+    await syncWrite();
+    syncShowStatus('同期：✓ ' + syncClock() + ' 保存済み', 'ok');
+    renderSyncPanel();
+    alert('同期ファイルを作成しました。ほかのパソコンでは「既存の同期ファイルを開く」でこのファイルを選んでください。');
+  } catch (err) { if (err.name !== 'AbortError') alert('同期ファイルを作成できませんでした：' + err.message); }
+}
+async function syncOpenFile() {
+  if (!syncSupported()) return alert('このブラウザは自動同期に対応していません。バックアップファイルを使ってください。');
+  try {
+    const [handle] = await window.showOpenFilePicker({ types: SYNC_TYPES });
+    if (await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return alert('ファイルへの書き込みが許可されませんでした。');
+    syncHandle = handle; syncPassword = null;
+    // 初めてつなぐファイルなので、この端末にデータがあれば「変更あり」として扱い、上書き前に確認する
+    syncSetMeta({ syncedAt: null, dirty: syncLocalHasData() });
+    await syncIdbPut('fileHandle', handle);
+    await syncNow(true);
+    renderSyncPanel();
+  } catch (err) { if (err.name !== 'AbortError') alert('同期ファイルを開けませんでした：' + err.message); }
+}
+async function syncReconnect() {
+  const handle = syncHandle || await syncIdbGet('fileHandle');
+  if (!handle) return;
+  try {
+    if (await handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return;
+    syncHandle = handle;
+    await syncNow(true);
+  } catch (err) { syncShowStatus('同期：エラー', 'err'); alert('再接続できませんでした：' + err.message); }
+  renderSyncPanel();
+}
+async function syncDisconnect() {
+  if (!confirm('同期ファイルとの接続を解除します（ファイルとこの端末のデータは消えません）。よろしいですか？')) return;
+  clearTimeout(syncTimer);
+  syncHandle = null; syncPassword = null; syncKeyCache = null;
+  await syncIdbPut('fileHandle', null);
+  syncSetMeta({ syncedAt: null });
+  syncShowStatus('同期：未接続（この端末のみ）', '');
+  renderSyncPanel();
+}
+async function syncWrite() {
+  const seq = syncChangeSeq;
+  const env = await syncPack(syncCollect(), syncPassword);
+  const w = await syncHandle.createWritable();
+  await w.write(JSON.stringify(env)); await w.close();
+  syncSetMeta({ syncedAt: env.savedAt, dirty: seq !== syncChangeSeq, fileName: syncHandle.name, encrypted: !!syncPassword });
+}
+const syncClock = () => new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+// 同期ファイルとこの端末のデータを突き合わせ、新しい方に揃える
+async function syncNow(manual) {
+  if (!syncHandle || syncBusy) return;
+  if (manual === true) syncPaused = false;
+  if (syncPaused) return;
+  syncBusy = true; clearTimeout(syncTimer);
+  let failed = false;
+  try {
+    if (await syncHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') { syncShowStatus('同期：再接続が必要です', 'warn'); failed = true; return; }
+    const text = await (await syncHandle.getFile()).text();
+    const env = text.trim() ? JSON.parse(text) : null;
+    const meta = syncMeta();
+    if (!env) await syncWrite();
+    else if (env.savedAt !== meta.syncedAt) {
+      const res = await syncUnpack(env, syncPassword, '同期ファイル');
+      if (!res) { syncPaused = true; syncShowStatus('同期：停止中（パスワード未入力）', 'warn'); failed = true; return; }
+      syncPassword = res.password;
+      let useRemote = true;
+      if (meta.dirty) {
+        useRemote = confirm((meta.syncedAt ? 'この端末と同期ファイル（他の端末）の両方でデータが変更されています。' : 'この端末にもデータがあります。')
+          + `\n\n同期ファイルの保存日時：${syncFmtTime(env.savedAt)}`
+          + '\n\nOK：同期ファイルのデータを使う\nキャンセル：この端末のデータを使う'
+          + '\n\n使わなかった方のデータは、念のためバックアップファイルとしてダウンロードします。');
+        if (useRemote) syncDownload(await syncPack(syncCollect(), syncPassword), `住所録_退避_この端末_${syncStamp()}.json`);
+        else syncDownload(env, `住所録_退避_同期ファイル_${syncStamp()}.json`);
+      }
+      if (useRemote) { syncApply(res.data); syncSetMeta({ syncedAt: env.savedAt, dirty: false, fileName: syncHandle.name, encrypted: !!env.encrypted }); }
+      else await syncWrite();
+    } else if (meta.dirty) await syncWrite();
+    syncShowStatus('同期：✓ ' + syncClock() + ' 確認済み', 'ok');
+  } catch (err) {
+    failed = true; console.error(err);
+    syncShowStatus('同期：エラー（' + err.message + '）', 'err');
+  } finally {
+    syncBusy = false;
+    if (!failed && syncMeta().dirty) syncTimer = setTimeout(syncNow, 1500);
+    if (!$('#tab-settings').classList.contains('hidden')) renderSyncPanel();
+  }
+}
+function syncShowStatus(text, cls) { const el = $('#syncStatus'); el.textContent = text; el.className = 'sync-badge' + (cls ? ' ' + cls : ''); }
+async function renderSyncPanel() {
+  const supported = syncSupported();
+  $('#syncUnsupported').classList.toggle('hidden', supported);
+  $('#syncButtons').classList.toggle('hidden', !supported);
+  const saved = supported ? (syncHandle || await syncIdbGet('fileHandle').catch(() => null)) : null;
+  const connected = !!syncHandle && await syncHandle.queryPermission({ mode: 'readwrite' }) === 'granted';
+  $('#syncReconnectBtn').classList.toggle('hidden', !(saved && !connected));
+  $('#syncNowBtn').classList.toggle('hidden', !connected);
+  $('#syncDisconnectBtn').classList.toggle('hidden', !saved);
+  const meta = syncMeta();
+  $('#syncDetail').innerHTML = saved
+    ? `同期ファイル：<b>${esc(saved.name)}</b>（${connected ? '接続中' : '再接続が必要'}）<br>最後に同期したデータの保存日時：${syncFmtTime(meta.syncedAt)}　暗号化：${meta.encrypted ? 'あり' : 'なし'}`
+    : '同期ファイルは未設定です。データはこの端末のブラウザにだけ保存されています。';
+}
+async function syncInit() {
+  syncLastJSON = JSON.stringify(syncCollect());
+  if (!syncSupported() || !('indexedDB' in window)) return;
+  try {
+    const handle = await syncIdbGet('fileHandle');
+    if (!handle) return;
+    if (await handle.queryPermission({ mode: 'readwrite' }) === 'granted') { syncHandle = handle; syncNow(); }
+    else syncShowStatus('同期：再接続が必要です（ここを押して「再接続」）', 'warn');
+  } catch (err) { console.error(err); }
+}
+// 他の端末で保存された内容を取り込むため、画面に戻ったときと1分ごとに確認する
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(); });
+setInterval(() => { if (!document.hidden) syncNow(); }, 60000);
+window.addEventListener('beforeunload', e => {
+  if (syncHandle && (syncBusy || syncMeta().dirty)) { syncNow(); e.preventDefault(); e.returnValue = ''; }
+});
+
 renderBook();
+syncInit();
 </script>
 </body>
 </html>
