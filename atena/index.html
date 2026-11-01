@@ -135,7 +135,7 @@ td.addr{font-size:12px;color:#444}
       <div class="dropzone" onclick="document.getElementById('fileInput').click()">
         Excel / CSV ファイルを<br><b>ここ（画面のどこでも）へドラッグ</b><br>またはクリックして選択
       </div>
-      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.txt,.tsv,.json" class="hidden">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.txt,.tsv,.json,.ata" class="hidden">
       <p class="help" style="margin-top:10px">連絡先の行を左のフォルダへドラッグすると移動できます（Ctrlを押しながらでコピー）。</p>
     </div>
     <div class="card">
@@ -588,6 +588,7 @@ function parseCSV(text, sep) {
 }
 async function readFile(file) {
   const name = file.name; const ext = name.split('.').pop().toLowerCase();
+  if (ext === 'ata') return alert(ATA_HELP);
   const buf = await file.arrayBuffer();
   let rows;
   try {
@@ -612,6 +613,9 @@ async function readFile(file) {
       }
       rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: false, defval: '' });
     } else {
+      // 文字のデータではないファイル（宛名ソフト専用の形式など）は文字化けするので読み込まない
+      const head = new Uint8Array(buf.slice(0, 4096));
+      if (head.some(x => x === 0)) return alert('このファイルは文字のデータ（CSV）ではないため読み込めません。\n元のソフトで「CSV形式」に書き出してから読み込んでください。\n\n' + ATA_HELP);
       const text = decodeText(buf);
       const first = text.split(/\r?\n/)[0] || '';
       const sep = ext === 'tsv' || (first.split('\t').length > first.split(',').length) ? '\t' : ',';
@@ -623,6 +627,7 @@ async function readFile(file) {
   mappingDialog(rows, name);
 }
 
+const ATA_HELP = '「.ata」は宛名職人の住所録の専用形式のため、そのままでは読み込めません（文字化けします）。\n\n宛名職人で CSV に書き出してから、その CSV をドラッグしてください。\n\n【宛名職人】住所録を開く →「他の住所録」→「外部ファイルに書き出す」→ ファイル形式「カンマ区切り形式（CSV）」→「全追加」→「実行」\n【宛名職人 Premium】「ファイル」→「データ書き出し」→「CSV形式（*.csv）」\n\n※版によってメニュー名が違うことがあります。';
 function guessField(h) {
   const k = toHalf(h).replace(/[\s　・_()（）]/g, '').toLowerCase();
   if (!k) return '';
