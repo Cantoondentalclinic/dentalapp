@@ -97,9 +97,10 @@ details summary{cursor:pointer;font-size:14px;font-weight:600}
   <div id="welcome" class="welcome">
     <p>レシート・領収書を保存しているフォルダを選ぶと、<br>ファイル名から <b>日付・金額・取引先</b> を読み取って一覧にします。</p>
     <div class="btns">
+      <button class="btn primary hidden" id="resumeBtn" style="font-size:15px;padding:10px 22px">いつものフォルダを開く</button>
       <button class="btn primary" id="pickBtn2">フォルダを選択</button>
-      <button class="btn hidden" id="resumeBtn">前回のフォルダを開く</button>
     </div>
+    <p id="resumeHint" class="hidden" style="font-size:12px;color:#888">ブラウザから確認が出たら<b>「毎回許可する」</b>を選ぶと、次回からは開くだけで自動で読み込みます。</p>
     <p style="font-size:12px;color:#888">ファイルはこの端末の中で読むだけで、どこにも送信されません。<br>Google ドライブのフォルダも、パソコンに同期したフォルダ（「マイドライブ」等）を選べば使えます。</p>
   </div>
 
@@ -281,6 +282,7 @@ async function openHandle(h){
   const out = [];
   await walk(h, '', out);
   $('folderName').textContent = '📁 ' + h.name;
+  $('pickBtn').textContent = 'フォルダを変更';
   buildRows(out);
 }
 
@@ -328,18 +330,26 @@ async function loadHandle(){
   } catch (e) { return null; }
 }
 
+// 起動時：いつものフォルダを自動で開く。許可が切れているときはボタン1回で開く
 (async () => {
   if (!window.showDirectoryPicker) return;
   const h = await loadHandle();
   if (!h) return;
+  try {
+    if ((await h.queryPermission({ mode: 'read' })) === 'granted'){ await openHandle(h); return; }
+  } catch (e) {}
   const btn = $('resumeBtn');
-  btn.textContent = `前回のフォルダを開く（${h.name}）`;
+  btn.textContent = `いつものフォルダを開く（${h.name}）`;
   btn.classList.remove('hidden');
+  $('resumeHint').classList.remove('hidden');
+  $('pickBtn2').textContent = '別のフォルダを選択';
+  $('pickBtn2').classList.remove('primary');
+  btn.focus();
   btn.onclick = async () => {
     try {
-      if ((await h.queryPermission({ mode: 'read' })) !== 'granted' && (await h.requestPermission({ mode: 'read' })) !== 'granted') return;
+      if ((await h.requestPermission({ mode: 'read' })) !== 'granted') return;
       await openHandle(h);
-    } catch (e) { alert('前回のフォルダを開けませんでした。もう一度「フォルダを選択」してください。'); }
+    } catch (e) { alert('いつものフォルダを開けませんでした。フォルダの場所が変わった可能性があります。「別のフォルダを選択」から選び直してください。'); }
   };
 })();
 
