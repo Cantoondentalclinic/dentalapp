@@ -565,8 +565,12 @@ window.addEventListener('dragover', e => { if (isFileDrag(e)) e.preventDefault()
 window.addEventListener('drop', e => {
   if (!isFileDrag(e)) return;
   e.preventDefault(); dragDepth = 0; $('#dragOverlay').classList.add('hidden');
-  const f = e.dataTransfer.files[0]; if (f) readFile(f);
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  // 裏面タブで画像・PDFをドロップしたら背景にする
+  if (!$('#tab-back').classList.contains('hidden') && isBgFile(f)) return setBg(f);
+  readFile(f);
 });
+const isBgFile = f => f.type.startsWith('image/') || f.type === 'application/pdf' || /\.(pdf|png|jpe?g|gif|webp|bmp)$/i.test(f.name);
 $('#fileInput').onchange = e => { const f = e.target.files[0]; if (f) readFile(f); e.target.value = ''; };
 
 function loadScript(src) {
@@ -1064,11 +1068,11 @@ function renderDesignPanel() {
     <div class="adj-group">
       <h4>背景の画像・写真</h4>
       <div class="row">
-        <button class="btn sm" onclick="document.getElementById('bgInput').click()">画像を選ぶ</button>
+        <button class="btn sm" onclick="document.getElementById('bgInput').click()">画像・PDFを選ぶ</button>
         ${ds.bg ? `<select id="bgFit" style="width:auto;font-size:12px;padding:3px 6px"><option value="cover" ${ds.bgFit !== 'contain' ? 'selected' : ''}>全面に広げる</option><option value="contain" ${ds.bgFit === 'contain' ? 'selected' : ''}>全体を収める</option></select>
-        <button class="btn sm danger" onclick="curDesign().bg='';save();renderBack()">画像を外す</button>` : '<span class="muted">画像ファイルをここへドラッグしても設定できます</span>'}
+        <button class="btn sm danger" onclick="curDesign().bg='';save();renderBack()">画像を外す</button>` : '<span class="muted">画像やPDFをこの画面へドラッグしても設定できます</span>'}
       </div>
-      <input type="file" id="bgInput" accept="image/*" class="hidden">
+      <input type="file" id="bgInput" accept="image/*,application/pdf,.pdf" class="hidden">
     </div>
     <div class="adj-group">
       <h4>文字</h4>
@@ -1083,7 +1087,7 @@ function renderDesignPanel() {
   pan.ondragover = e => { if (isFileDrag(e)) { e.preventDefault(); e.stopPropagation(); } };
   pan.ondrop = e => {
     const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) { e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('#dragOverlay').classList.add('hidden'); setBg(f); }
+    if (f && isBgFile(f)) { e.preventDefault(); e.stopPropagation(); dragDepth = 0; $('#dragOverlay').classList.add('hidden'); setBg(f); }
   };
   pan.querySelectorAll('.txt-block').forEach(b => {
     const t = ds.texts[+b.dataset.i];
@@ -1101,36 +1105,83 @@ function renderDesignPanel() {
     b.querySelector('[data-del]').onclick = () => { ds.texts.splice(+b.dataset.i, 1); save(); renderBack(); };
   });
 }
+const BG_MAX_CHARS = 600000; // 1枚あたりの data URL の上限（localStorage 対策）
+// 画像またはPDF（1ページ）を読み込み、背景にする
+async function setBg(file) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  let src;
+  try { src = isPdf ? await pdfToCanvas(file) : await fileToImage(file); }
+  catch (e) { console.error(e); return alert((isPdf ? 'PDF' : '画像') + 'を読み込めませんでした：' + (e.message || e)); }
+  if (!src) return;
+  const w = src.naturalWidth || src.width, h = src.naturalHeight || src.height;
+  if (w > h * 1.05 && confirm('横向きのデザインです。はがきの裏面（縦向き）に合わせて、右に90度回転して取り込みますか？\n\nOK：回転する　キャンセル：そのまま取り込む')) src = rotate90(src, w, h);
+  curDesign().bg = encodeBg(src); save(); renderBack();
+}
+function fileToImage(file) {
+  return new Promise((ok, ng) => {
+    const fr = new FileReader();
+    fr.onload = () => { const img = new Image(); img.onload = () => ok(img); img.onerror = () => ng(new Error('画像の形式に対応していません')); img.src = fr.result; };
+    fr.onerror = () => ng(fr.error);
+    fr.readAsDataURL(file);
+  });
+}
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+async function pdfToCanvas(file) {
+  if (!window.pdfjsLib) {
+    try { await loadScript(PDFJS + 'pdf.min.js'); }
+    catch (e) { throw new Error('PDFを読み込む部品を取得できませんでした（インターネット接続が必要です）'); }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
+  }
+  let pdf;
+  try { pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise; }
+  catch (e) { throw new Error(e && e.name === 'PasswordException' ? 'パスワード付きのPDFは読み込めません' : 'PDFファイルを開けませんでした'); }
+  let n = 1;
+  if (pdf.numPages > 1) {
+    const pick = prompt(`このPDFは ${pdf.numPages} ページあります。背景にするページの番号を入力してください。`, '1');
+    if (pick === null) return null;
+    n = Math.min(pdf.numPages, Math.max(1, parseInt(toHalf(pick), 10) || 1));
+  }
+  const page = await pdf.getPage(n);
+  const vp1 = page.getViewport({ scale: 1 });
+  const scale = 2400 / Math.max(vp1.width, vp1.height); // 長辺2400pxで描いてから encodeBg で整える
+  const vp = page.getViewport({ scale });
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  const g = cv.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+  await page.render({ canvasContext: g, viewport: vp }).promise;
+  return cv;
+}
+function rotate90(src, w, h) {
+  const cv = document.createElement('canvas');
+  cv.width = h; cv.height = w;
+  const g = cv.getContext('2d');
+  g.translate(h, 0); g.rotate(Math.PI / 2);
+  g.drawImage(src, 0, 0, w, h);
+  return cv;
+}
 // 背景画像は印刷品質のため長辺2000px（はがき148mmで約340dpi）に収める。
 // PNG と JPEG を両方つくって小さいほうを採用し、容量が大きすぎるときは段階的に縮小する。
-const BG_MAX_CHARS = 600000; // 1枚あたりの data URL の上限（localStorage 対策）
-function setBg(file) {
-  const fr = new FileReader();
-  fr.onload = () => {
-    const img = new Image();
-    img.onload = () => {
-      const encode = (long, q) => {
-        const s = Math.min(1, long / Math.max(img.width, img.height));
-        const cv = document.createElement('canvas');
-        cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
-        const g = cv.getContext('2d');
-        g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-        g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
-        g.drawImage(img, 0, 0, cv.width, cv.height);
-        const jpg = cv.toDataURL('image/jpeg', q);
-        const png = cv.toDataURL('image/png');
-        return png.length < jpg.length ? png : jpg;
-      };
-      let data = '';
-      for (const [long, q] of [[2000, 0.92], [1600, 0.9], [1200, 0.85]]) {
-        data = encode(long, q);
-        if (data.length <= BG_MAX_CHARS) break;
-      }
-      curDesign().bg = data; save(); renderBack();
-    };
-    img.src = fr.result;
+function encodeBg(src) {
+  const W = src.naturalWidth || src.width, H = src.naturalHeight || src.height;
+  const encode = (long, q) => {
+    const s = Math.min(1, long / Math.max(W, H));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(W * s); cv.height = Math.round(H * s);
+    const g = cv.getContext('2d');
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.drawImage(src, 0, 0, cv.width, cv.height);
+    const jpg = cv.toDataURL('image/jpeg', q);
+    const png = cv.toDataURL('image/png');
+    return png.length < jpg.length ? png : jpg;
   };
-  fr.readAsDataURL(file);
+  let data = '';
+  for (const [long, q] of [[2000, 0.92], [1600, 0.9], [1200, 0.85]]) {
+    data = encode(long, q);
+    if (data.length <= BG_MAX_CHARS) break;
+  }
+  return data;
 }
 function addText() {
   curDesign().texts.push({ text: '文章', x: 10, y: 10, w: 80, h: 20, fs: 12, vert: false, align: 'start', color: '#000000', bold: false });
