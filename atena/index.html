@@ -46,6 +46,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
 .folder.active{background:#e8f0fe;color:#1a73e8;font-weight:600}
 .folder .cnt{margin-left:auto;font-size:11px;color:#888}
 .folder.drop{outline:2px dashed #1a73e8}
+.lcell{position:absolute;box-sizing:border-box;border:0.3mm solid #9bb7e0;border-radius:1mm;cursor:pointer;overflow:hidden}
+.lcell.used{background:repeating-linear-gradient(45deg,#eee,#eee 2mm,#f8f8f8 2mm,#f8f8f8 4mm);border-color:#ccc}
+.lcell.start{outline:1.2mm solid #1a73e8;outline-offset:-1.2mm}
+.lcell .no{position:absolute;right:1.2mm;top:0.8mm;font:3mm sans-serif;color:#9bb7e0}
+.lcell:hover{background-color:rgba(26,115,232,.06)}
+.sheet .lt{position:absolute;white-space:nowrap;line-height:1.25}
 .rm-chk{display:inline-flex;align-items:center;gap:3px;margin-right:10px;cursor:pointer;color:#1a1a1a}
 .rm-chk input{margin:0}
 .dropzone{border:1.5px dashed rgba(0,0,0,0.25);border-radius:10px;padding:14px;text-align:center;color:#666;font-size:12px;line-height:1.7;margin-top:12px;cursor:pointer}
@@ -122,6 +128,7 @@ td.addr{font-size:12px;color:#444}
     <button class="tab active" data-tab="book">住所録</button>
     <button class="tab" data-tab="front">宛名面</button>
     <button class="tab" data-tab="back">裏面</button>
+    <button class="tab" data-tab="label">ラベル</button>
     <button class="tab" data-tab="settings">差出人・設定</button>
   </nav>
   <button class="sync-badge" id="syncStatus" onclick="showTab('settings')" title="同期の設定">同期：未接続（この端末のみ）</button>
@@ -222,6 +229,35 @@ td.addr{font-size:12px;color:#444}
       </div>
     </div>
     <div class="card adjust" id="designPanel"></div>
+  </div>
+</section>
+
+<!-- ラベル（A-one） -->
+<section class="main hidden" id="tab-label">
+  <div class="print-layout">
+    <div class="card">
+      <div class="grid2" style="grid-template-columns:150px 1fr;margin-bottom:10px">
+        <div class="fg"><label>品番（数字5桁）</label><input id="lblHinban" inputmode="numeric" placeholder="例：72212"></div>
+        <div class="fg"><label>ラベルの種類（エーワン A4）</label><select id="lblFormat"></select></div>
+      </div>
+      <div id="lblHinbanMsg" class="help" style="margin:-4px 0 8px"></div>
+      <div class="row" style="margin-bottom:10px">
+        <label class="muted">印刷する内容</label>
+        <select id="lblMode" style="width:auto"><option value="contacts">宛先（印刷対象の宛名）</option><option value="sender">差出人（自分の住所）</option></select>
+        <span id="lblFolderWrap" class="row"><label class="muted">フォルダ</label><select id="lblFolder" style="width:auto"></select></span>
+        <span id="lblCountWrap" class="row hidden"><label class="muted">枚数</label><input type="number" id="lblCount" min="1" max="500" style="width:80px"></span>
+      </div>
+      <div class="help" id="lblInfo" style="margin-bottom:8px"></div>
+      <div class="stage">
+        <div class="stage-box"><div class="scaler" id="lblStage"></div></div>
+        <div class="row">
+          <button class="btn" onclick="printLabels(true)">テスト印刷（枠線つき）</button>
+          <button class="btn primary" id="lblPrintBtn" onclick="printLabels(false)">ラベルを印刷</button>
+        </div>
+        <p class="help" style="max-width:560px">印刷画面では、用紙サイズ「A4」、倍率「100%（実際のサイズ）」、余白「なし」を選んでください。まず普通紙にテスト印刷し、ラベル用紙と重ねて位置を確かめると失敗がありません。</p>
+      </div>
+    </div>
+    <div class="card adjust" id="lblAdjust"></div>
   </div>
 </section>
 
@@ -404,6 +440,7 @@ function normalize(d) {
   const ids = new Set(d.types.map(t => t.id));
   DEFAULT_TYPES().forEach(t => { if (!ids.has(t.id)) d.types.push(t); });
   if (!d.designs || !d.designs.length) d.designs = DEFAULT_DESIGNS();
+  d.label = Object.assign({ f: 'F12A4-1', start: 1, mode: 'contacts', count: 12, size: 1, off: {} }, d.label || {});
   if (!d.designId || !d.designs.find(x => x.id === d.designId)) d.designId = d.designs[0].id;
   if (!d.folders.length) d.folders.push({ id: uid(), name: '未分類' });
   if (!d.folders.find(f => f.id === d.folderId)) d.folderId = d.folders[0].id;
@@ -428,9 +465,10 @@ const folderName = id => (D.folders.find(f => f.id === id) || {}).name || '';
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 function showTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-  ['book', 'front', 'back', 'settings'].forEach(x => $('#tab-' + x).classList.toggle('hidden', x !== t));
+  ['book', 'front', 'back', 'label', 'settings'].forEach(x => $('#tab-' + x).classList.toggle('hidden', x !== t));
   if (t === 'front') renderFront();
   if (t === 'back') renderBack();
+  if (t === 'label') renderLabel();
   if (t === 'settings') { renderSettings(); renderSyncPanel(); }
   if (t === 'book') renderBook();
 }
@@ -1197,6 +1235,221 @@ function deleteDesign() {
   if (!confirm(`「${curDesign().name}」を削除しますか？`)) return;
   D.designs = D.designs.filter(d => d.id !== D.designId); D.designId = D.designs[0].id; save(); renderBack();
 }
+
+// ===== ラベル（エーワン A4 ラベルシール） =====
+// 寸法：エーワン公式サイトの各商品ページ（一片サイズ・面付・フォーマット番号）と、
+// 同ページの「テスト印刷用PDF」に描かれたラベルの枠線を測った値（mm）。
+// f=フォーマット番号, w×h=一片サイズ, c列×r段, t=上余白, l=左余白, gx/gy=ラベル間のすき間, hb=該当する品番
+const LABEL_FORMATS = [
+  {"f":"F10A4-2","w":86.4,"h":50.8,"c":2,"r":5,"t":20.9,"l":18.3,"gx":0.0,"gy":0.0,"hb":"28367 28387 28647 28939 28940 28942 31164 39101 72210 75210 76210"},
+  {"f":"F10A4-4","w":89.0,"h":48.0,"c":2,"r":5,"t":24.7,"l":9.9,"gx":2.0,"gy":0.0,"hb":"28177 28178 28724 28911 28912 28914"},
+  {"f":"F10A4-6","w":96.5,"h":44.5,"c":2,"r":5,"t":23.3,"l":7.1,"gx":2.6,"gy":0.0,"hb":"28173 28174 28722"},
+  {"f":"F10A4-7","w":84.0,"h":48.0,"c":2,"r":5,"t":24.7,"l":19.3,"gx":2.1,"gy":0.0,"hb":"28313 28314 28732"},
+  {"f":"F12A4-1","w":86.4,"h":42.3,"c":2,"r":6,"t":21.1,"l":18.5,"gx":0.0,"gy":0.0,"hb":"26503 26504 28362 28382 28642 28919 28920 28922 31161 31504 39102 42012 43012 72212 75212 76212"},
+  {"f":"F12A4-2","w":83.8,"h":42.3,"c":2,"r":6,"t":21.4,"l":19.2,"gx":3.9,"gy":0.0,"hb":"28183 28184 28727 28915 28916 28918 31155 31743 39103 65312 66312 75312 76312"},
+  {"f":"F12A4-6","w":83.8,"h":42.3,"c":2,"r":6,"t":19.9,"l":20.2,"gx":3.9,"gy":0.0,"hb":"28175 28176 28723 31153"},
+  {"f":"F12A4-7","w":84.0,"h":42.0,"c":2,"r":6,"t":23.1,"l":20.0,"gx":2.1,"gy":0.0,"hb":"28179 28180 28725 31154"},
+  {"f":"F12A4-8","w":90.2,"h":42.3,"c":2,"r":6,"t":19.9,"l":16.4,"gx":2.6,"gy":0.0,"hb":"28171 28172 28721 31152"},
+  {"f":"F12A4-9","w":84.0,"h":42.0,"c":2,"r":6,"t":22.4,"l":19.9,"gx":2.0,"gy":0.0,"hb":"28187 28188 28729"},
+  {"f":"F12A4-10","w":84.0,"h":42.0,"c":2,"r":6,"t":15.1,"l":15.1,"gx":5.0,"gy":0.0,"hb":"28311 28312 28731"},
+  {"f":"F12A4-11","w":85.0,"h":42.0,"c":2,"r":6,"t":22.4,"l":19.9,"gx":0.0,"gy":0.0,"hb":"28276"},
+  {"f":"F12A4-13","w":86.4,"h":42.3,"c":2,"r":6,"t":21.5,"l":18.5,"gx":0.0,"gy":0.0,"hb":"28273"},
+  {"f":"F14A4-1","w":82.6,"h":35.6,"c":2,"r":7,"t":17.9,"l":20.2,"gx":2.6,"gy":0.0,"hb":"28181 28182 28726"},
+  {"f":"F14A4-2","w":83.0,"h":36.0,"c":2,"r":7,"t":24.9,"l":20.9,"gx":2.0,"gy":0.0,"hb":"28189 28190 28730"},
+  {"f":"F14A4-4","w":83.0,"h":32.0,"c":2,"r":7,"t":23.9,"l":19.9,"gx":4.1,"gy":4.0,"hb":"29233"},
+  {"f":"F14A4-5","w":86.4,"h":38.1,"c":2,"r":7,"t":12.3,"l":18.8,"gx":0.0,"gy":0.0,"hb":"60214 65214 66214 72214"},
+  {"f":"F18A4-1","w":70.0,"h":42.3,"c":3,"r":6,"t":21.1,"l":0.0,"gx":0.0,"gy":0.0,"hb":"28364 28384 28644 28927 28928 28930 31534 75318 76318"},
+  {"f":"F18A4-2","w":63.5,"h":46.5,"c":3,"r":6,"t":9.1,"l":7.2,"gx":2.6,"gy":0.0,"hb":"28370 28390 28650 28857 28858 28860 31507 31508 72218"},
+  {"f":"F18A4-3","w":70.0,"h":42.3,"c":3,"r":6,"t":21.4,"l":0.0,"gx":0.0,"gy":0.0,"hb":"28185 28186 28728"},
+  {"f":"F21A4-1","w":70.0,"h":38.1,"c":3,"r":7,"t":14.7,"l":0.0,"gx":0.0,"gy":0.0,"hb":"28365 28385 28645 28931 28932 28934 31536 75321 76321"},
+  {"f":"F21A4-2","w":70.0,"h":42.3,"c":3,"r":7,"t":0.5,"l":0.0,"gx":0.0,"gy":0.0,"hb":"28363 28383 28643 28923 28924 28926 31162 31538 75421 76421"},
+  {"f":"F21A4-3","w":63.5,"h":38.1,"c":3,"r":7,"t":15.2,"l":7.3,"gx":2.6,"gy":0.0,"hb":"28379 28399 28659 28866 28867 28869 31509 31510 72221"},
+  {"f":"F21A4-5","w":64.0,"h":33.9,"c":3,"r":7,"t":23.4,"l":6.9,"gx":0.0,"gy":0.0,"hb":"28315 28316 28733"},
+  {"f":"F24A4-1","w":70.0,"h":33.9,"c":3,"r":8,"t":12.4,"l":0.0,"gx":0.0,"gy":0.0,"hb":"28366 28386 28646 28935 28936 28938 31163 75324 76324"},
+  {"f":"F24A4-3","w":66.0,"h":33.9,"c":3,"r":8,"t":12.7,"l":5.4,"gx":0.0,"gy":0.0,"hb":"28369 28389 28649 28947 28948 28950 31511 31512 72224 75224 76224"},
+  {"f":"F27A4-1","w":62.0,"h":31.0,"c":3,"r":9,"t":9.1,"l":9.1,"gx":3.0,"gy":0.0,"hb":"31751 60227 61227 65227 66227"},
+  {"f":"F44A4-1","w":48.3,"h":25.4,"c":4,"r":11,"t":8.7,"l":8.4,"gx":0.0,"gy":0.0,"hb":"31165 31516 72244"},
+  {"f":"F8A4-5","w":97.0,"h":69.0,"c":2,"r":4,"t":10.4,"l":7.9,"gx":0.0,"gy":0.0,"hb":"31266 60208 61208 65208 66208 75208 76208"}
+];
+const LBL_ORDER = 'ラベルの番号は、左上から右へ、段ごとに下へ数えます。';
+const lblFmt = () => LABEL_FORMATS.find(x => x.f === D.label.f) || LABEL_FORMATS.find(x => x.f === 'F12A4-1');
+const lblPerSheet = F => F.c * F.r;
+const lblPos = (F, i) => { const row = Math.floor(i / F.c), col = i % F.c; return { x: F.l + col * (F.w + F.gx), y: F.t + row * (F.h + F.gy), row, col }; };
+function lblFolderList() { return D.contacts.filter(c => c.folder === D.label.folder && c.print); }
+// 宛名ラベルに載せるデータ（宛先 or 差出人）
+function lblItems() {
+  if (D.label.mode === 'sender') {
+    const S = D.sender;
+    const n = Math.max(1, Math.min(500, parseInt(D.label.count, 10) || 1));
+    return [...Array(n)].map(() => ({ name: S.name, zip: normZip(S.zip), addr1: S.addr1, addr2: S.addr2, company: S.company, sender: true }));
+  }
+  return lblFolderList();
+}
+// 文字の幅（全角=1、半角=0.55）
+const emw = t => chars(t).reduce((a, ch) => a + (/[\u0000-ÿ｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
+function labelInner(c, F) {
+  const pad = Math.min(5, Math.max(2, F.h * 0.1));
+  const iw = F.w - pad * 2, ih = F.h - pad * 2;
+  const toCompany = !String(c.name || '').trim();
+  const hon = c.sender ? '' : (toCompany ? (c.honorific && c.honorific !== '様' ? c.honorific : '御中') : (c.honorific || D.opt.honorific || ''));
+  const lines = [];
+  if (c.zip) lines.push({ t: '〒' + fmtZip(c.zip), k: 0.9 });
+  if (c.addr1) lines.push({ t: toHalf(c.addr1), k: 1 });
+  if (c.addr2) lines.push({ t: toHalf(c.addr2), k: 1, ind: 1 });
+  const co = [toCompany ? '' : c.company, c.dept].filter(Boolean).join(' ');
+  if (co) lines.push({ t: co, k: 1 });
+  const nm = String((toCompany ? c.company : c.name) || '').replace(/\s+/g, '　').trim();
+  const parts = nm.split('　');
+  const sur = parts.length > 1 ? parts[0] + '　' : '';
+  const names = [{ pre: '', t: nm + (hon ? '　' + hon : '') }];
+  if (!c.sender && !toCompany && c.renmei) {
+    renmeiList(c).filter(r => renmeiOn(c, r)).forEach(r => {
+      const rp = r.replace(/\s+/g, '　').split('　');
+      const given = rp.length > 1 && rp[0] + '　' === sur ? rp.slice(1).join('') : rp.join('');
+      names.push({ pre: sur, t: given + (hon ? '　' + hon : '') });
+    });
+  }
+  const NK = 1.45; // 氏名は住所の1.45倍
+  const totalK = lines.reduce((a, l) => a + l.k, 0) + names.length * NK + 0.4;
+  const base = Math.min(4.2 * (D.label.size || 1), ih / (totalK * 1.25));
+  let h = '', y = 0;
+  lines.forEach(l => {
+    const ind = (l.ind || 0) * base;
+    const fs = Math.min(base * l.k, (iw - ind) / Math.max(1, emw(l.t)));
+    h += `<div class="lt" style="left:${(pad + ind).toFixed(2)}mm;top:${(pad + y).toFixed(2)}mm;font-size:${fs.toFixed(2)}mm">${esc(l.t)}</div>`;
+    y += base * l.k * 1.25;
+  });
+  y += base * 0.4;
+  const nind = base * 1.2;
+  const nfs = Math.min(base * NK, ...names.map(n => (iw - nind) / Math.max(1, emw(n.pre + n.t))));
+  names.forEach(n => {
+    h += `<div class="lt" style="left:${(pad + nind).toFixed(2)}mm;top:${(pad + y).toFixed(2)}mm;font-size:${nfs.toFixed(2)}mm"><span style="visibility:hidden">${esc(n.pre)}</span>${esc(n.t)}</div>`;
+    y += base * NK * 1.25;
+  });
+  return h;
+}
+// シート1枚分（A4）。items[k] を位置 slots[k] に置く。preview=true で枠と番号、クリック選択
+function labelSheet(F, slots, items, opt) {
+  const o = D.label.off[F.f] || { ox: 0, oy: 0 };
+  let h = '';
+  if (opt.preview) {
+    for (let i = 0; i < lblPerSheet(F); i++) {
+      const p = lblPos(F, i);
+      const cls = opt.used && i < opt.used ? 'used' : (opt.start === i ? 'start' : '');
+      h += `<div class="lcell ${cls}" data-pos="${i}" style="left:${p.x}mm;top:${p.y}mm;width:${F.w}mm;height:${F.h}mm"><span class="no">${i + 1}</span></div>`;
+    }
+  } else if (opt.guides) {
+    for (let i = 0; i < lblPerSheet(F); i++) {
+      const p = lblPos(F, i);
+      h += `<div class="guide" style="left:${p.x + o.ox}mm;top:${p.y + o.oy}mm;width:${F.w}mm;height:${F.h}mm;border-style:solid"></div>`;
+    }
+  }
+  slots.forEach((pos, k) => {
+    const p = lblPos(F, pos);
+    const dx = opt.preview ? 0 : o.ox, dy = opt.preview ? 0 : o.oy;
+    h += `<div style="position:absolute;left:${p.x + dx}mm;top:${p.y + dy}mm;width:${F.w}mm;height:${F.h}mm;pointer-events:none">${labelInner(items[k], F)}</div>`;
+  });
+  return `<div class="sheet ${D.opt.font === 'gothic' ? 'gothic' : ''}" style="width:210mm;height:297mm">${h}</div>`;
+}
+// 全体を何枚のシートに分けるか
+function labelPages(F, items, opt) {
+  const per = lblPerSheet(F); const start = Math.min(per, Math.max(1, D.label.start)) - 1;
+  const pages = []; let pos = start, k = 0;
+  while (k < items.length) {
+    const slots = [], its = [];
+    while (pos < per && k < items.length) { slots.push(pos++); its.push(items[k++]); }
+    pages.push({ slots, its, used: pages.length === 0 ? start : 0 });
+    pos = 0;
+  }
+  if (!pages.length) pages.push({ slots: [], its: [], used: start });
+  return pages.map(pg => labelSheet(F, pg.slots, pg.its, Object.assign({ used: pg.used }, opt)));
+}
+function renderLabel() {
+  if (!D.folders.find(f => f.id === D.label.folder)) D.label.folder = D.frontFolderId;
+  $('#lblFormat').innerHTML = LABEL_FORMATS.map(F => {
+    const hb = F.hb.split(' ');
+    return `<option value="${F.f}" ${F.f === D.label.f ? 'selected' : ''}>${F.c * F.r}面（${F.c}列×${F.r}段） ${F.w}×${F.h}mm ／ ${hb.slice(0, 3).join('・')}${hb.length > 3 ? ' ほか' : ''}（${F.f}）</option>`;
+  }).join('');
+  $('#lblMode').value = D.label.mode;
+  $('#lblFolder').innerHTML = D.folders.map(f => `<option value="${f.id}" ${f.id === D.label.folder ? 'selected' : ''}>${esc(f.name)}（${D.contacts.filter(c => c.folder === f.id && c.print).length}）</option>`).join('');
+  $('#lblCount').value = D.label.count;
+  drawLabel(); renderLabelAdjust();
+}
+function drawLabel() {
+  const F = lblFmt(), per = lblPerSheet(F);
+  if (D.label.start > per) D.label.start = 1;
+  $('#lblFolderWrap').classList.toggle('hidden', D.label.mode !== 'contacts');
+  $('#lblCountWrap').classList.toggle('hidden', D.label.mode !== 'sender');
+  const items = lblItems();
+  const pages = labelPages(F, items, { preview: true, start: D.label.start - 1 });
+  const p = lblPos(F, D.label.start - 1);
+  const nSheets = items.length ? Math.ceil((D.label.start - 1 + items.length) / per) : 0;
+  $('#lblInfo').innerHTML = `<b>${D.label.start}番目</b>（上から${p.row + 1}段目・左から${p.col + 1}列目）から印刷します。ラベルをクリックすると開始位置を変えられます。<br>`
+    + (items.length ? `${items.length}枚分 → シート ${nSheets}枚（2枚目以降は1番目から）` : (D.label.mode === 'contacts' ? '印刷対象の宛名がありません（住所録でチェック）' : ''))
+    + `<br><span class="muted">${LBL_ORDER}</span>`;
+  $('#lblPrintBtn').textContent = `ラベルを印刷（${items.length}枚）`;
+  $('#lblPrintBtn').disabled = !items.length;
+  stage($('#lblStage'), pages[0], { w: 210, h: 297 }, 560, 760);
+  $('#lblStage').querySelectorAll('[data-pos]').forEach(el => el.onclick = () => { D.label.start = +el.dataset.pos + 1; save(); drawLabel(); });
+}
+function renderLabelAdjust() {
+  const F = lblFmt(); const o = D.label.off[F.f] || { ox: 0, oy: 0 };
+  $('#lblAdjust').innerHTML = `
+    <div class="section-title">印刷位置の調整 <span class="muted">（${F.f}）</span></div>
+    <p class="help">テスト印刷がラベルの枠とずれていたら、ここで全体を動かします（右・下がプラス、単位mm）。ラベルの種類ごとに保存されます。</p>
+    <div class="row" style="align-items:center;gap:14px;margin:8px 0">
+      <div class="nudge">
+        <span></span><button class="btn" data-ln="0,-0.5">▲</button><span></span>
+        <button class="btn" data-ln="-0.5,0">◀</button><button class="btn sm" data-ln="reset" title="0に戻す">0</button><button class="btn" data-ln="0.5,0">▶</button>
+        <span></span><button class="btn" data-ln="0,0.5">▼</button><span></span>
+      </div>
+      <div class="adj-grid" style="grid-template-columns:1fr 1fr;flex:1">
+        <div class="fg"><label>横（右へ＋）</label><input type="number" step="0.1" id="lblOx" value="${o.ox}"></div>
+        <div class="fg"><label>縦（下へ＋）</label><input type="number" step="0.1" id="lblOy" value="${o.oy}"></div>
+      </div>
+    </div>
+    <div class="adj-group">
+      <h4>文字の大きさ</h4>
+      <select id="lblSize" style="width:auto">${[[0.85, '小さめ'], [1, '標準'], [1.2, '大きめ']].map(([v, l]) => `<option value="${v}" ${+D.label.size === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <p class="help" style="margin-top:6px">ラベルに入りきらないときは自動で小さくします。書体は「差出人・設定」の書体と同じです。</p>
+    </div>
+    <div class="adj-group">
+      <h4>このラベルの寸法</h4>
+      <p class="help">一片 ${F.w}×${F.h}mm、${F.c}列×${F.r}段、上余白 ${F.t}mm・左余白 ${F.l}mm、すき間 横${F.gx}mm・縦${F.gy}mm<br>
+      エーワン公式サイトの商品情報と、テスト印刷用PDFの枠線から求めた値です。<br>該当する品番：${esc(F.hb.split(' ').join('、'))}</p>
+    </div>`;
+  const setO = (ox, oy) => { D.label.off[F.f] = { ox: +ox.toFixed(2), oy: +oy.toFixed(2) }; save(); renderLabelAdjust(); drawLabel(); };
+  $('#lblAdjust').querySelectorAll('[data-ln]').forEach(b => b.onclick = () => {
+    if (b.dataset.ln === 'reset') return setO(0, 0);
+    const [dx, dy] = b.dataset.ln.split(',').map(Number); setO((o.ox || 0) + dx, (o.oy || 0) + dy);
+  });
+  $('#lblOx').onchange = e => setO(parseFloat(e.target.value) || 0, o.oy || 0);
+  $('#lblOy').onchange = e => setO(o.ox || 0, parseFloat(e.target.value) || 0);
+  $('#lblSize').onchange = e => { D.label.size = +e.target.value; save(); drawLabel(); };
+}
+function printLabels(test) {
+  const F = lblFmt(); let items = lblItems();
+  if (!items.length && !test) return;
+  if (test) items = items.slice(0, lblPerSheet(F) - (D.label.start - 1)); // テストは1シート分
+  doPrint(labelPages(F, items, { guides: test }).slice(0, test ? 1 : undefined), { w: 210, h: 297 });
+}
+$('#lblFormat').onchange = e => { D.label.f = e.target.value; D.label.start = 1; $('#lblHinban').value = ''; $('#lblHinbanMsg').textContent = ''; save(); drawLabel(); renderLabelAdjust(); };
+$('#lblHinban').oninput = e => {
+  const v = toHalf(e.target.value).replace(/\D/g, '');
+  const msg = $('#lblHinbanMsg');
+  if (v.length < 5) { msg.textContent = ''; return; }
+  const F = LABEL_FORMATS.find(x => x.hb.split(' ').includes(v));
+  if (F) {
+    msg.innerHTML = `品番 ${v} → ${F.c * F.r}面（${F.c}列×${F.r}段）${F.w}×${F.h}mm を選びました。`;
+    if (D.label.f !== F.f) { D.label.f = F.f; D.label.start = 1; save(); }
+    $('#lblFormat').value = F.f; drawLabel(); renderLabelAdjust();
+  } else {
+    msg.innerHTML = `<span style="color:#b06000">品番 ${v} は登録されていません。</span>パッケージに書かれた「一片サイズ」と「面付（◯列×◯段）」が同じものを下の一覧から選んでください。`;
+  }
+};
+$('#lblMode').onchange = e => { D.label.mode = e.target.value; save(); drawLabel(); };
+$('#lblFolder').onchange = e => { D.label.folder = e.target.value; save(); drawLabel(); };
+$('#lblCount').oninput = e => { D.label.count = Math.max(1, Math.min(500, parseInt(e.target.value, 10) || 1)); save(); drawLabel(); };
 
 // ===== 設定 =====
 function renderSettings() {
