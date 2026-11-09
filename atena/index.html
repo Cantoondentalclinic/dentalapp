@@ -185,6 +185,8 @@ td.addr{font-size:12px;color:#444}
         <select id="typeSelect" style="width:auto"></select>
         <label class="muted">フォルダ</label>
         <select id="frontFolder" style="width:auto"></select>
+        <label class="muted">差出人</label>
+        <select class="senderSel" style="width:auto"></select>
         <label class="row muted" style="gap:4px"><input type="checkbox" id="showGuides" checked>枠線を表示</label>
       </div>
       <div class="stage">
@@ -216,6 +218,8 @@ td.addr{font-size:12px;color:#444}
         <button class="btn sm" onclick="newDesign()">＋新規</button>
         <button class="btn sm" onclick="dupDesign()">複製</button>
         <button class="btn sm danger" onclick="deleteDesign()">削除</button>
+        <label class="muted" style="margin-left:8px">差出人</label>
+        <select class="senderSel" style="width:auto"></select>
       </div>
       <div class="stage">
         <div class="stage-box"><div class="scaler" id="backStage"></div></div>
@@ -245,6 +249,7 @@ td.addr{font-size:12px;color:#444}
         <label class="muted">印刷する内容</label>
         <select id="lblMode" style="width:auto"><option value="contacts">宛先（印刷対象の宛名）</option><option value="sender">差出人（自分の住所）</option></select>
         <span id="lblFolderWrap" class="row"><label class="muted">フォルダ</label><select id="lblFolder" style="width:auto"></select></span>
+        <span id="lblSenderWrap" class="row"><label class="muted">差出人</label><select class="senderSel" style="width:auto"></select></span>
         <span id="lblCountWrap" class="row hidden"><label class="muted">枚数</label><input type="number" id="lblCount" min="1" max="500" style="width:80px"></span>
       </div>
       <div class="help" id="lblInfo" style="margin-bottom:8px"></div>
@@ -266,16 +271,25 @@ td.addr{font-size:12px;color:#444}
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start">
     <div class="card">
       <div class="section-title">差出人</div>
+      <div class="row" style="margin-bottom:10px">
+        <select id="senderEdit" style="width:auto;flex:1"></select>
+        <button class="btn sm" onclick="addSender(false)">＋追加</button>
+        <button class="btn sm" onclick="addSender(true)">複製</button>
+        <button class="btn sm danger" onclick="deleteSender()">削除</button>
+      </div>
+      <p class="help" style="margin-bottom:10px">用途ごとに差出人を登録しておくと、宛名面・裏面・ラベルの各タブで選べます（例：医院、院長個人、家族連名）。</p>
       <div class="grid2">
+        <div class="fg full"><label>パターン名（例：医院、自宅・家族連名）</label><input data-s="label"></div>
         <div class="fg"><label>郵便番号</label><input data-s="zip"></div>
         <div class="fg"><label>電話（裏面の差込用 {電話}）</label><input data-s="tel"></div>
         <div class="fg full"><label>住所1</label><input data-s="addr1"></div>
         <div class="fg full"><label>住所2（建物など）</label><input data-s="addr2"></div>
         <div class="fg full"><label>会社・医院名</label><input data-s="company"></div>
-        <div class="fg full"><label>氏名</label><input data-s="name"></div>
+        <div class="fg"><label>氏名（姓と名の間に空白）</label><input data-s="name"></div>
+        <div class="fg"><label>連名（名のみ・「、」区切り）</label><input data-s="renmei" placeholder="例：花子、一郎"></div>
       </div>
       <label class="row muted" style="margin-top:10px;gap:6px"><input type="checkbox" data-s="onFront">宛名面に差出人を印刷する</label>
-      <p class="help" style="margin-top:6px">裏面の文章では {差出人} {差出人住所} {差出人郵便番号} {電話} が使えます。</p>
+      <p class="help" style="margin-top:6px">裏面の文章では {差出人}（連名も含む） {差出人住所} {差出人郵便番号} {電話} {医院名} が使えます。</p>
     </div>
     <div class="card">
       <div class="section-title">文字・表記</div>
@@ -440,6 +454,12 @@ function normalize(d) {
   const ids = new Set(d.types.map(t => t.id));
   DEFAULT_TYPES().forEach(t => { if (!ids.has(t.id)) d.types.push(t); });
   if (!d.designs || !d.designs.length) d.designs = DEFAULT_DESIGNS();
+  // 差出人は複数パターン（旧データの d.sender は「医院」パターンに移す）
+  if (!Array.isArray(d.senders) || !d.senders.length) {
+    d.senders = [Object.assign({ id: uid(), label: '医院', zip: '', addr1: '', addr2: '', company: '', name: '', renmei: '', tel: '', onFront: true }, d.sender || {})];
+  }
+  delete d.sender;
+  if (!d.senders.find(x => x.id === d.senderId)) d.senderId = d.senders[0].id;
   d.label = Object.assign({ f: 'F12A4-1', start: 1, mode: 'contacts', count: 12, size: 1, off: {} }, d.label || {});
   if (!d.designId || !d.designs.find(x => x.id === d.designId)) d.designId = d.designs[0].id;
   if (!d.folders.length) d.folders.push({ id: uid(), name: '未分類' });
@@ -457,6 +477,23 @@ function save() {
     syncCheckChanged();
   }, 200);
 }
+const curSender = () => D.senders.find(x => x.id === D.senderId) || D.senders[0];
+const senderName = S => S.label || S.company || S.name || '差出人';
+function renderSenderSelects() {
+  const opts = D.senders.map(x => `<option value="${x.id}" ${x.id === D.senderId ? 'selected' : ''}>${esc(senderName(x))}</option>`).join('');
+  document.querySelectorAll('.senderSel').forEach(el => {
+    el.innerHTML = opts;
+    el.onchange = () => { D.senderId = el.value; save(); const a = document.querySelector('.tab.active'); showTab(a ? a.dataset.tab : 'book'); };
+  });
+}
+// 差出人の氏名＋連名（連名は名だけ。姓は主の氏名と同じとみなす）
+function senderNames(S) {
+  const nm = String(S.name || '').trim().replace(/\s+/g, '　');
+  const parts = nm.split('　');
+  const sur = parts.length > 1 ? parts[0] : '';
+  const others = renmeiList(S).map(r => { const rp = r.replace(/\s+/g, '　').split('　'); return rp.length > 1 && rp[0] === sur ? rp.slice(1).join('') : rp.join(''); });
+  return { nm, sur, others };
+}
 const curType = () => D.types.find(t => t.id === D.typeId) || D.types[0];
 const curDesign = () => D.designs.find(x => x.id === D.designId) || D.designs[0];
 const folderName = id => (D.folders.find(f => f.id === id) || {}).name || '';
@@ -466,6 +503,7 @@ document.querySelectorAll('.tab').forEach(b => b.onclick = () => showTab(b.datas
 function showTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   ['book', 'front', 'back', 'label', 'settings'].forEach(x => $('#tab-' + x).classList.toggle('hidden', x !== t));
+  renderSenderSelects();
   if (t === 'front') renderFront();
   if (t === 'back') renderBack();
   if (t === 'label') renderLabel();
@@ -829,7 +867,7 @@ function frontHTML(c, T, guides) {
   if (guides) {
     h += `<div class="guide" style="left:${T.addr.x + ox - 30}mm;top:${T.addr.y + oy}mm;width:30mm;height:${T.addr.h}mm"></div>`;
     h += `<div class="guide" style="left:${T.nm.x + ox - 7}mm;top:${T.nm.y + oy}mm;width:14mm;height:${T.nm.h}mm"></div>`;
-    if (D.sender.onFront) h += `<div class="guide" style="left:${T.sender.x + ox}mm;top:${T.sender.y + oy}mm;width:${T.sender.w}mm;height:${T.sender.h}mm"></div>`;
+    if (curSender().onFront) h += `<div class="guide" style="left:${T.sender.x + ox}mm;top:${T.sender.y + oy}mm;width:${T.sender.w}mm;height:${T.sender.h}mm"></div>`;
   }
   if (c) {
     // 住所
@@ -867,7 +905,7 @@ function frontHTML(c, T, guides) {
     const honLen = chars(hon).length;
     const rows = (surLen ? surLen + 1 : 0) + maxGiven + (honLen ? 1 + honLen : 0);
     // 使える幅：住所の列と差出人の欄の間
-    const S0 = D.sender;
+    const S0 = curSender();
     const senderOn = S0.onFront && (S0.name || S0.addr1 || S0.company);
     const leftLimit = (senderOn ? T.sender.x + T.sender.w : 4) + ox + 1;
     const rightLimit = x + fs * 0.45 - 3; // 住所のいちばん左の列から3mmあける
@@ -897,19 +935,33 @@ function frontHTML(c, T, guides) {
     }
   }
   // 差出人
-  const S = D.sender;
+  const S = curSender();
   if (S.onFront && (S.name || S.addr1 || S.company)) {
     const R = T.sender;
     const sls = [vText(S.addr1, K), vText(S.addr2, K)].filter(Boolean);
-    const comp = fullWidth(S.company || ''), nm = fullWidth(S.name || '');
+    const comp = fullWidth(S.company || '');
+    const sn = senderNames(S);
+    const nm = fullWidth(sn.nm);
+    const others = sn.others.map(fullWidth);
+    const surLen = sn.sur ? chars(sn.sur).length + 1 : 0; // 姓＋空白の文字数（連名の名をそろえる位置）
     const all = [...sls, comp, nm].filter(Boolean);
     let fs = Math.min(...all.map(t => fitFs(R.fs, R.h, chars(t).length)));
-    let nfs = Math.min(fs * 1.3, fitFs(R.fs * 1.3, R.h, chars(nm).length));
-    const totalW = (sls.length + (comp ? 1 : 0)) * fs * 1.4 + (nm ? nfs * 1.3 : 0);
+    const nameRows = Math.max(chars(nm).length, ...others.map(g => surLen + chars(g).length));
+    let nfs = Math.min(fs * 1.3, fitFs(R.fs * 1.3, R.h, nameRows));
+    const nCols = nm ? 1 + others.length : 0;
+    // 欄の幅に収まるよう、列が多いときは文字を小さくする
+    const needW = () => (sls.length + (comp ? 1 : 0)) * fs * 1.4 + nCols * nfs * 1.3;
+    if (needW() > R.w) { const r = R.w / needW(); fs *= r; nfs *= r; }
+    const totalW = needW();
     let x = R.x + ox + Math.min(R.w, totalW + (R.w - totalW) / 2);
     sls.forEach((t, i) => { h += vcol(t, x, R.y + oy + (i ? fs : 0), fs); x -= fs * 1.4; });
     if (comp) { h += vcol(comp, x, R.y + oy + fs * 2, fs); x -= fs * 1.4; }
-    if (nm) { const ny = R.y + oy + Math.max(fs * 2, R.h - chars(nm).length * nfs); h += vcol(nm, x - (nfs - fs) * 0.3, ny, nfs); }
+    if (nm) {
+      const ny = R.y + oy + Math.max(fs * 2, R.h - nameRows * nfs);
+      let nx = x - (nfs - fs) * 0.3;
+      h += vcol(nm, nx, ny, nfs);
+      others.forEach(g => { nx -= nfs * 1.3; h += vcol(g, nx, ny + surLen * nfs, nfs); });
+    }
     h += zipDigits(normZip(S.zip), T.szip, ox, oy, T.drawZipBox, guides);
   } else if (guides || T.drawZipBox) {
     h += zipDigits('', T.szip, ox, oy, T.drawZipBox, guides);
@@ -917,10 +969,13 @@ function frontHTML(c, T, guides) {
   return `<div class="sheet ${D.opt.font === 'gothic' ? 'gothic' : ''}" style="width:${T.w}mm;height:${T.h}mm">${h}</div>`;
 }
 function fillVars(s, c) {
-  const S = D.sender;
+  const S = curSender();
+  // {差出人}：連名は2行目以降に、名の書き出しをそろえて並べる（全角の空白は1文字分なのでそろう）
+  const sn = senderNames(S);
+  const senderText = [fullWidth(sn.nm), ...sn.others.map(g => (sn.sur ? '　'.repeat(chars(sn.sur).length + 1) : '') + fullWidth(g))].filter(Boolean).join('\n');
   const map = {
     '氏名': c ? (c.name || c.company) : '', '敬称': c ? (c.name ? (c.honorific || D.opt.honorific) : (c.honorific && c.honorific !== '様' ? c.honorific : '御中')) : '', '会社': c ? c.company : '',
-    '差出人': S.name, '差出人住所': [S.addr1, S.addr2].filter(Boolean).join(' '), '差出人郵便番号': fmtZip(normZip(S.zip)),
+    '差出人': senderText, '差出人住所': [S.addr1, S.addr2].filter(Boolean).join(' '), '差出人郵便番号': fmtZip(normZip(S.zip)),
     '電話': S.tel, '医院名': S.company
   };
   return String(s).replace(/\{(.+?)\}/g, (m, k) => k in map ? (map[k] || '') : m);
@@ -1279,9 +1334,9 @@ function lblFolderList() { return D.contacts.filter(c => c.folder === D.label.fo
 // 宛名ラベルに載せるデータ（宛先 or 差出人）
 function lblItems() {
   if (D.label.mode === 'sender') {
-    const S = D.sender;
+    const S = curSender();
     const n = Math.max(1, Math.min(500, parseInt(D.label.count, 10) || 1));
-    return [...Array(n)].map(() => ({ name: S.name, zip: normZip(S.zip), addr1: S.addr1, addr2: S.addr2, company: S.company, sender: true }));
+    return [...Array(n)].map(() => ({ name: S.name, renmei: S.renmei, zip: normZip(S.zip), addr1: S.addr1, addr2: S.addr2, company: S.company, sender: true }));
   }
   return lblFolderList();
 }
@@ -1302,7 +1357,7 @@ function labelInner(c, F) {
   const parts = nm.split('　');
   const sur = parts.length > 1 ? parts[0] + '　' : '';
   const names = [{ pre: '', t: nm + (hon ? '　' + hon : '') }];
-  if (!c.sender && !toCompany && c.renmei) {
+  if (!toCompany && c.renmei) {
     renmeiList(c).filter(r => renmeiOn(c, r)).forEach(r => {
       const rp = r.replace(/\s+/g, '　').split('　');
       const given = rp.length > 1 && rp[0] + '　' === sur ? rp.slice(1).join('') : rp.join('');
@@ -1380,6 +1435,7 @@ function drawLabel() {
   if (D.label.start > per) D.label.start = 1;
   $('#lblFolderWrap').classList.toggle('hidden', D.label.mode !== 'contacts');
   $('#lblCountWrap').classList.toggle('hidden', D.label.mode !== 'sender');
+  $('#lblSenderWrap').classList.toggle('hidden', D.label.mode !== 'sender');
   const items = lblItems();
   const pages = labelPages(F, items, { preview: true, start: D.label.start - 1 });
   const p = lblPos(F, D.label.start - 1);
@@ -1453,16 +1509,34 @@ $('#lblCount').oninput = e => { D.label.count = Math.max(1, Math.min(500, parseI
 
 // ===== 設定 =====
 function renderSettings() {
+  const S = curSender();
+  $('#senderEdit').innerHTML = D.senders.map(x => `<option value="${x.id}" ${x.id === S.id ? 'selected' : ''}>${esc(senderName(x))}</option>`).join('');
+  $('#senderEdit').onchange = e => { D.senderId = e.target.value; save(); renderSettings(); };
   document.querySelectorAll('[data-s]').forEach(i => {
     const k = i.dataset.s;
-    if (i.type === 'checkbox') { i.checked = !!D.sender[k]; i.onchange = () => { D.sender[k] = i.checked; save(); }; }
-    else { i.value = D.sender[k] || ''; i.oninput = () => { D.sender[k] = i.value; save(); }; }
+    if (i.type === 'checkbox') { i.checked = !!S[k]; i.onchange = () => { S[k] = i.checked; save(); }; }
+    else {
+      i.value = S[k] || '';
+      i.oninput = () => { S[k] = i.value; save(); if (k === 'label' || k === 'name' || k === 'company') $('#senderEdit').selectedOptions[0].textContent = senderName(S); };
+    }
   });
   document.querySelectorAll('[data-o]').forEach(i => {
     const k = i.dataset.o;
     if (i.type === 'checkbox') { i.checked = !!D.opt[k]; i.onchange = () => { D.opt[k] = i.checked; save(); }; }
     else { i.value = D.opt[k] ?? ''; i[i.tagName === 'SELECT' ? 'onchange' : 'oninput'] = () => { D.opt[k] = i.value; save(); }; }
   });
+}
+function addSender(copy) {
+  const base = copy ? clone(curSender()) : { zip: '', addr1: '', addr2: '', company: '', name: '', renmei: '', tel: '', onFront: true };
+  const n = prompt('差出人のパターン名（例：院長個人、自宅・家族連名）', copy ? senderName(base) + ' のコピー' : '');
+  if (!n) return;
+  const S = Object.assign(base, { id: uid(), label: n.trim() });
+  D.senders.push(S); D.senderId = S.id; save(); renderSettings();
+}
+function deleteSender() {
+  if (D.senders.length <= 1) return alert('差出人は最低1つ必要です。');
+  if (!confirm(`差出人「${senderName(curSender())}」を削除しますか？`)) return;
+  D.senders = D.senders.filter(x => x.id !== D.senderId); D.senderId = D.senders[0].id; save(); renderSettings();
 }
 function download(name, text, type) {
   const a = document.createElement('a');
@@ -1516,7 +1590,7 @@ function syncSupported() { return 'showSaveFilePicker' in window && 'showOpenFil
 function syncMeta() { try { return JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}'); } catch (e) { return {}; } }
 function syncSetMeta(m) { localStorage.setItem(SYNC_META_KEY, JSON.stringify(Object.assign(syncMeta(), m))); }
 function syncCollect() { const o = Object.assign({}, D); LOCAL_KEYS.forEach(k => delete o[k]); return o; }
-function syncLocalHasData() { return D.contacts.length > 0 || !!(D.sender.name || D.sender.addr1); }
+function syncLocalHasData() { return D.contacts.length > 0 || D.senders.some(x => x.name || x.addr1); }
 function syncApply(data) {
   const keep = {}; LOCAL_KEYS.forEach(k => keep[k] = D[k]);
   D = normalize(Object.assign(clone(data), keep));
