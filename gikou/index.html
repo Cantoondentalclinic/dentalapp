@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>技工指示書保管</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-size:14px;color:#1a1a1a;background:#f5f5f3}
+header{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:16px;font-weight:600}
+.folder-name{font-size:12px;color:#888;margin-right:auto}
+.op-pick{display:flex;align-items:center;gap:6px;font-size:12px;color:#666}
+.op-pick select{width:auto}
+nav{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:0 12px;display:flex;gap:2px;overflow-x:auto}
+nav button{font-family:inherit;font-size:13px;padding:10px 14px;border:none;background:none;color:#666;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+nav button:hover{color:#1a1a1a}
+nav button.active{color:#1a73e8;border-bottom-color:#1a73e8;font-weight:500}
+nav .cnt{display:inline-block;font-size:11px;background:#fce8e6;color:#d93025;border-radius:10px;padding:0 6px;margin-left:4px}
+.main{padding:16px 20px;display:flex;flex-direction:column;gap:14px;max-width:1700px;margin:0 auto}
+.card{background:#fff;border:0.5px solid rgba(0,0,0,0.1);border-radius:12px;padding:14px 16px}
+.section-title{font-size:14px;font-weight:600;margin-bottom:10px}
+.sub{font-size:12px;color:#888;line-height:1.7}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;align-items:end}
+.form-group{display:flex;flex-direction:column;gap:4px;min-width:0}
+.form-group label{font-size:12px;color:#888}
+.form-group label .req{color:#d93025}
+.span2{grid-column:span 2}
+.full{grid-column:1/-1}
+.range{display:flex;gap:4px;align-items:center}
+.range span{color:#888;font-size:12px}
+input,select,textarea{font-family:inherit;font-size:13px;padding:6px 8px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1a73e8}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical;line-height:1.6}
+.btn{font-family:inherit;font-size:13px;padding:6px 14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f5f5f3}
+.btn.primary{background:#e8f0fe;color:#1a73e8;border-color:rgba(26,115,232,0.3)}
+.btn.success{background:#e6f4ea;color:#137333;border-color:rgba(19,115,51,0.3)}
+.btn.danger{background:#fce8e6;color:#d93025;border-color:rgba(217,48,37,0.3)}
+.btn.big{font-size:15px;padding:10px 22px}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:7px 8px;font-size:12px;font-weight:500;color:#888;border-bottom:0.5px solid rgba(0,0,0,0.1);position:sticky;top:0;background:#fff;white-space:nowrap}
+th[data-key]{cursor:pointer;user-select:none}
+th .arrow{color:#1a73e8}
+td{padding:6px 8px;border-bottom:0.5px solid rgba(0,0,0,0.07);vertical-align:top}
+th.num,td.num{text-align:right}
+tbody.click tr{cursor:pointer}
+tbody.click tr:hover td{background:#f9f9f9}
+tbody tr.sel td{background:#e8f0fe}
+tr.void td{color:#aaa;text-decoration:line-through}
+tr.void td.nodec{text-decoration:none}
+.nowrap{white-space:nowrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;word-break:break-all}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;white-space:nowrap;margin:1px 2px 1px 0}
+.badge.ok{background:#e6f4ea;color:#137333}
+.badge.warn{background:#fef7e0;color:#b06000}
+.badge.ng{background:#fce8e6;color:#d93025}
+.badge.gray{background:#f1f1ef;color:#666}
+.lab-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 460px;gap:14px;align-items:start}
+.reg-layout{display:grid;grid-template-columns:230px minmax(0,1fr) 380px;gap:14px;align-items:start}
+.table-wrap{overflow:auto;max-height:calc(100vh - 360px);min-height:280px}
+.pending-list{max-height:calc(100vh - 230px);overflow:auto;display:flex;flex-direction:column;gap:4px}
+.pending-item{padding:7px 9px;border-radius:8px;cursor:pointer;font-size:12px;word-break:break-all;border:0.5px solid transparent}
+.pending-item:hover{background:#f5f5f3}
+.pending-item.sel{background:#e8f0fe;border-color:rgba(26,115,232,0.3)}
+.pending-item .src{font-size:11px;color:#888}
+.preview{position:sticky;top:12px}
+.preview-body{height:calc(100vh - 260px);min-height:360px;background:#f5f5f3;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.preview-body.short{height:calc(100vh - 520px);min-height:300px}
+.preview-body img{max-width:100%;max-height:100%;object-fit:contain}
+.preview-body iframe{width:100%;height:100%;border:none;background:#fff}
+.file-info{font-size:12px;color:#555;line-height:1.8;margin-top:8px}
+.empty{color:#888;font-size:13px;text-align:center;padding:30px 10px;line-height:1.8}
+.kv{display:grid;grid-template-columns:92px 1fr;gap:3px 10px;font-size:13px;line-height:1.6;margin:8px 0}
+.kv dt{color:#888;font-size:12px}
+.kv dd{word-break:break-all}
+.hist{font-size:12px;line-height:1.6;border-left:2px solid #e0e0e0;padding-left:10px;margin-top:6px}
+.hist div{margin-bottom:6px}
+.hist .t{color:#888}
+.file-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.file-tabs button{font-size:11px;padding:3px 8px}
+.file-tabs button.on{background:#e8f0fe;color:#1a73e8}
+.welcome{max-width:760px;margin:30px auto;text-align:center}
+.welcome p{color:#555;line-height:1.9;margin:10px 0}
+.welcome .btns{justify-content:center;margin:18px 0}
+.note{background:#fef7e0;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.8;color:#5f4500}
+.note.blue{background:#e8f0fe;color:#174ea6}
+.note.red{background:#fce8e6;color:#a50e0e}
+.help{font-size:13px;line-height:1.85;color:#333}
+.help h3{font-size:14px;margin:14px 0 4px}
+.help ul,.help ol{padding-left:22px}
+.help table td,.help table th{border:0.5px solid rgba(0,0,0,0.15);position:static}
+details summary{cursor:pointer;font-weight:600}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;z-index:50;overflow:auto}
+.modal{background:#fff;border-radius:12px;padding:18px 20px;width:min(760px,100%);display:flex;flex-direction:column;gap:12px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:100;max-width:90vw}
+.drop{border:2px dashed rgba(26,115,232,0.4);border-radius:10px;padding:14px;text-align:center;font-size:12px;color:#1a73e8;margin-top:8px}
+.drop.over{background:#e8f0fe}
+.hidden{display:none!important}
+@media (max-width:1250px){.reg-layout{grid-template-columns:200px minmax(0,1fr)}.reg-layout .reg-form{grid-column:1/-1}}
+@media (max-width:1000px){
+  .layout,.reg-layout{grid-template-columns:1fr}
+  .preview{position:static}
+  .preview-body,.preview-body.short{height:60vh}
+  .table-wrap,.pending-list{max-height:none}
+}
+@media (max-width:600px){.main{padding:12px 16px}header{padding:10px 16px}.span2{grid-column:span 1}}
+@media print{header,nav,.no-print{display:none!important}.table-wrap{max-height:none;overflow:visible}.layout{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🦷 技工指示書保管</h1>
+  <span class="folder-name" id="folderName"></span>
+  <span class="op-pick hidden" id="opPick">入力者
+    <select id="opSel"></select>
+  </span>
+  <button class="btn primary" id="pickBtn">保存フォルダを選択</button>
+</header>
+<nav id="nav" class="hidden">
+  <button data-tab="register" class="active">取り込み・登録<span class="cnt hidden" id="pendCnt"></span></button>
+  <button data-tab="search">検索・一覧</button>
+  <button data-tab="labs">技工所</button>
+  <button data-tab="todo">要確認・保存期限<span class="cnt hidden" id="todoCnt"></span></button>
+  <button data-tab="audit">整合性・操作履歴</button>
+  <button data-tab="settings">設定・規程類</button>
+</nav>
+
+<div class="main">
+
+<!-- ===== 初期画面 ===== -->
+<div id="welcome" class="welcome">
+  <p>手書きの技工指示書をスキャンして、<b>技工所ごとにまとめて保存・検索</b>します。<br>
+  保存したファイルは <b>上書き・削除せず</b>、修正は履歴として残し、改ざんがないかを点検できます。</p>
+  <div class="btns">
+    <button class="btn primary big hidden" id="resumeBtn">いつものフォルダを開く</button>
+    <button class="btn primary big" id="pickBtn2">保存フォルダを選択</button>
+  </div>
+  <p id="resumeHint" class="hidden sub">ブラウザから確認が出たら<b>「毎回許可する」</b>を選ぶと、次回から開くだけで読み込みます。</p>
+  <div class="note blue" style="text-align:left">
+    ・保存先は、パソコンに同期した <b>Google ドライブのフォルダ</b>（例：マイドライブ／技工指示書）や院内NASのフォルダを選んでください。ブラウザの中には保存しません。<br>
+    ・複数のパソコンで同じフォルダを開けば、院内で共有できます。<br>
+    ・<b>パソコンの Chrome か Edge</b> で使ってください（Safari・スマホはフォルダへの書き込みができません）。
+  </div>
+  <p id="noSupport" class="hidden note red" style="text-align:left">このブラウザはフォルダへの保存に対応していません。パソコンの Google Chrome または Microsoft Edge で開いてください。</p>
+</div>
+
+<!-- ===== 初期設定 ===== -->
+<div id="initCard" class="card hidden" style="max-width:820px;margin:0 auto">
+  <div class="section-title">はじめての設定（このフォルダを技工指示書の保存先にします）</div>
+  <div class="form-grid">
+    <div class="form-group span2"><label>医院名 <span class="req">*</span></label><input id="iClinic"></div>
+    <div class="form-group span2"><label>保存の責任者（管理者） <span class="req">*</span></label><input id="iResp" placeholder="例：院長 山田太郎"></div>
+    <div class="form-group full"><label>入力者（スキャン・登録をする人。1行に1人）</label><textarea id="iOps" rows="3" placeholder="山田&#10;佐藤（歯科衛生士）"></textarea></div>
+    <div class="form-group span2"><label>保存期間</label>
+      <select id="iRet"><option value="7">7年（法人の税務書類としても保存）</option><option value="5">5年（個人事業の税務書類としても保存）</option><option value="3">3年（保険診療の記録として）</option></select>
+    </div>
+    <div class="form-group span2"><label>紙の原本</label>
+      <select id="iPaper"><option value="keep">保存期間中は紙も保管する（推奨）</option><option value="discard">スキャン・確認後に紙は廃棄する</option></select>
+    </div>
+  </div>
+  <div class="note" style="margin-top:12px" id="initNote"></div>
+  <div class="btns" style="margin-top:12px"><button class="btn primary" id="initBtn">この内容で始める</button></div>
+</div>
+
+<!-- ===== 取り込み・登録 ===== -->
+<section id="tab-register" class="tab hidden">
+  <div class="reg-layout">
+    <div class="card">
+      <div class="section-title">取り込み待ち</div>
+      <div class="btns" style="margin-bottom:8px">
+        <button class="btn" id="inboxReload" title="「_取込」フォルダを読み直します">取込フォルダを読む</button>
+        <button class="btn" id="addFilesBtn">ファイルを追加</button>
+        <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hidden">
+      </div>
+      <div class="pending-list" id="pendingList"></div>
+      <div class="drop" id="dropZone">ここにスキャンしたファイルを<br>ドラッグ＆ドロップ</div>
+      <p class="sub" style="margin-top:8px">スキャナの保存先を、保存フォルダ内の <b>「_取込」</b> にしておくと、ここに自動で並びます。</p>
+    </div>
+    <div class="card preview">
+      <div class="section-title" id="regTitle">プレビュー</div>
+      <div class="preview-body" id="regPreview"><div class="empty">左の一覧からファイルを選んでください</div></div>
+      <div class="file-info" id="regInfo"></div>
+    </div>
+    <div class="card reg-form">
+      <div class="section-title">指示書の内容を入力</div>
+      <div id="regForm"></div>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn primary big" id="regBtn" disabled>登録する（Ctrl+Enter）</button>
+        <button class="btn" id="skipBtn" disabled title="取り込み待ちから外すだけ（ファイルは消しません）">あとで</button>
+      </div>
+      <p class="sub" style="margin-top:8px">登録すると、ファイルは「指示書」フォルダに保存され、以後は上書き・削除できません（修正は履歴付きで行います）。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 検索・一覧 ===== -->
+<section id="tab-search" class="tab hidden">
+  <div class="card no-print">
+    <div class="form-grid">
+      <div class="form-group"><label>日付の種類</label>
+        <select id="fDateKind"><option value="issueDate">指示書発行日（取引年月日）</option><option value="doneDate">技工終了日（納品日）</option><option value="dueDate">納品予定日</option><option value="created">登録日</option></select>
+      </div>
+      <div class="form-group span2"><label>日付（範囲）</label><div class="range"><input type="date" id="fFrom"><span>〜</span><input type="date" id="fTo"></div></div>
+      <div class="form-group span2"><label>技工料（範囲・円）</label><div class="range"><input type="number" id="fAmtMin" placeholder="下限" inputmode="numeric"><span>〜</span><input type="number" id="fAmtMax" placeholder="上限" inputmode="numeric"></div></div>
+      <div class="form-group"><label>技工所（取引先）</label><select id="fLab"></select></div>
+      <div class="form-group"><label>患者（番号・氏名）</label><input type="search" id="fPatient"></div>
+      <div class="form-group"><label>キーワード</label><input type="search" id="fText" placeholder="技工物・部位・メモ等"></div>
+      <div class="form-group"><label>区分</label><select id="fKind"><option value="">すべて</option><option>保険</option><option>自費</option></select></div>
+      <div class="form-group"><label>状態</label>
+        <select id="fState"><option value="active">有効</option><option value="">すべて</option><option value="notdone">技工終了日 未入力</option><option value="void">取消済み</option><option value="disposed">廃棄済み</option></select>
+      </div>
+      <div class="form-group"><label>&nbsp;</label><button class="btn" id="clearBtn">条件クリア</button></div>
+    </div>
+  </div>
+  <div class="card btns no-print" style="justify-content:space-between">
+    <div class="btns"><span>表示 <b id="sCount">0</b> 件</span><span class="sub">技工料合計 <b id="sSum">¥0</b></span></div>
+    <div class="btns">
+      <span class="sub" id="selInfo"></span>
+      <input type="date" id="bulkDone" style="width:150px" title="チェックした指示書の技工終了日">
+      <button class="btn" id="bulkDoneBtn">チェックした分の技工終了日を入力</button>
+      <button class="btn success" id="csvBtn">CSV出力</button>
+      <button class="btn" onclick="window.print()">一覧を印刷</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="card" style="padding:6px">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="no-print"><input type="checkbox" id="chkAll"></th>
+            <th data-key="no">受付番号</th>
+            <th data-key="issueDate">発行日</th>
+            <th data-key="lab">技工所</th>
+            <th data-key="patient">患者</th>
+            <th data-key="item">技工物・部位</th>
+            <th data-key="amount" class="num">技工料</th>
+            <th data-key="doneDate">技工終了日</th>
+            <th>状態</th>
+          </tr></thead>
+          <tbody id="tbody" class="click"></tbody>
+        </table>
+        <div id="noRows" class="empty hidden">条件に合う指示書はありません</div>
+      </div>
+    </div>
+    <div class="card preview no-print" id="detail">
+      <div class="empty">一覧の行をクリックすると、ここに指示書が表示されます<br><span style="font-size:11px">↑↓キーで前後に移動できます</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 技工所 ===== -->
+<section id="tab-labs" class="tab hidden">
+  <div class="card">
+    <div class="section-title">技工所の一覧</div>
+    <table><thead><tr><th>表示</th><th>技工所名</th><th>電話</th><th>担当者</th><th>メモ</th><th class="num">登録件数</th><th>状態</th><th></th></tr></thead><tbody id="labBody"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="section-title" id="labFormTitle">技工所を追加</div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>技工所名 <span class="req">*</span></label><input id="lName"></div>
+      <div class="form-group"><label>色</label><input type="color" id="lColor" value="#1a73e8" style="height:32px;padding:2px"></div>
+      <div class="form-group"><label>電話</label><input id="lTel"></div>
+      <div class="form-group"><label>担当者</label><input id="lPerson"></div>
+      <div class="form-group span2"><label>メモ（住所・届出番号など）</label><input id="lMemo"></div>
+      <div class="form-group"><label>状態</label><select id="lActive"><option value="1">取引中</option><option value="0">取引終了</option></select></div>
+    </div>
+    <div class="btns" style="margin-top:10px">
+      <button class="btn primary" id="labSaveBtn">追加</button>
+      <button class="btn hidden" id="labCancelBtn">やめる</button>
+    </div>
+    <p class="sub" style="margin-top:8px">技工所は削除できません（過去の指示書の取引先として残すため）。取引をやめたら「取引終了」にすると、登録画面の選択肢から外れます。</p>
+  </div>
+</section>
+
+<!-- ===== 要確認・保存期限 ===== -->
+<section id="tab-todo" class="tab hidden">
+  <div class="card">
+    <div class="section-title">要確認</div>
+    <div id="todoList"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">保存期限を過ぎた指示書</div>
+    <p class="sub" id="retInfo"></p>
+    <div id="expiredList" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<!-- ===== 整合性・操作履歴 ===== -->
+<section id="tab-audit" class="tab hidden">
+  <div class="card">
+    <div class="section-title">整合性チェック（改ざん・欠落の点検）</div>
+    <p class="sub">台帳の各記録はひとつ前の記録のハッシュ値（SHA-256）を含んで連結されており、指示書ファイルも登録時のハッシュ値と照合します。アプリの外でファイルや台帳が書き換えられたり消されたりすると、ここで検出されます。<b>月に1回程度</b>行ってください（結果も履歴に残ります）。</p>
+    <div class="btns" style="margin-top:10px">
+      <button class="btn primary" id="verifyBtn">整合性チェックを実行</button>
+      <button class="btn" id="dlLedgerBtn">台帳のコピーをダウンロード</button>
+    </div>
+    <div id="verifyResult" style="margin-top:10px"></div>
+    <div style="margin-top:12px" class="sub">最新の台帳ハッシュ値（控えとして定期的に紙に記録したり、自分あてにメールしておくと、その時点以前の記録が後から書き換えられていないことの証明に役立ちます）</div>
+    <div class="btns" style="margin-top:4px"><span class="mono" id="headHash"></span><button class="btn" id="copyHashBtn">コピー</button></div>
+  </div>
+  <div class="card">
+    <div class="section-title">操作履歴（台帳）</div>
+    <div class="form-grid" style="margin-bottom:8px">
+      <div class="form-group"><label>操作</label><select id="aOp"><option value="">すべて</option></select></div>
+      <div class="form-group"><label>受付番号</label><input id="aRec" placeholder="例：2026-00001"></div>
+      <div class="form-group"><label>入力者</label><input id="aBy"></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>日時</th><th>操作</th><th>受付番号</th><th>入力者</th><th>内容</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+  </div>
+</section>
+
+<!-- ===== 設定・規程類 ===== -->
+<section id="tab-settings" class="tab hidden">
+  <div class="card">
+    <div class="section-title">設定</div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>医院名</label><input id="sClinic"></div>
+      <div class="form-group span2"><label>保存の責任者（管理者）</label><input id="sResp"></div>
+      <div class="form-group span2"><label>保存期間</label><select id="sRet"><option value="7">7年（法人の税務書類としても保存）</option><option value="5">5年（個人事業の税務書類としても保存）</option><option value="3">3年（保険診療の記録として）</option></select></div>
+      <div class="form-group span2"><label>紙の原本</label><select id="sPaper"><option value="keep">保存期間中は紙も保管する（推奨）</option><option value="discard">スキャン・確認後に紙は廃棄する</option></select></div>
+      <div class="form-group"><label>指示書の用紙サイズ</label><select id="sPaperSize"><option value="A4">A4</option><option value="B5">B5</option><option value="A5">A5</option><option value="B6">B6</option></select></div>
+      <div class="form-group"><label>登録の遅れ警告（日）</label><input type="number" id="sWarn" min="1"></div>
+      <div class="form-group full"><label>入力者（1行に1人）</label><textarea id="sOps" rows="3"></textarea></div>
+      <div class="form-group full"><label>技工物の選択肢（1行に1つ）</label><textarea id="sItems" rows="3"></textarea></div>
+    </div>
+    <div class="btns" style="margin-top:10px"><button class="btn primary" id="saveSettingsBtn">設定を保存</button></div>
+  </div>
+  <div class="card">
+    <div class="section-title">備え付ける書類（印刷して保管）</div>
+    <p class="sub">電子帳簿保存法のスキャナ保存では「事務処理規程」等の備付けが、厚生労働省のガイドラインでは運用管理規程や患者への周知が求められます。医院名・責任者を入れたひな形を作ります。内容は医院の運用に合わせて手直ししてください。</p>
+    <div class="btns" style="margin-top:10px">
+      <button class="btn" data-doc="rule">事務処理規程</button>
+      <button class="btn" data-doc="system">システム概要書</button>
+      <button class="btn" data-doc="notice">院内掲示（患者さんへのお知らせ）</button>
+      <button class="btn" data-doc="scanner">スキャナ設定メモ</button>
+    </div>
+  </div>
+  <div class="card help">
+    <details>
+      <summary>このアプリが満たしている法令上の要件</summary>
+      <div id="lawHelp"></div>
+    </details>
+  </div>
+</section>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+'use strict';
+// ================= 定数 =================
+const LEDGER = '_system/ledger.jsonl';
+const INBOX = '_取込';
+const SCANS = '指示書';
+const INDEX_CSV = '索引（一覧）.csv';
+const EXTS = ['pdf', 'jpg', 'jpeg', 'png'];
+const MIME = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+const FIELDS = ['lab', 'issueDate', 'dueDate', 'doneDate', 'patientId', 'patientName', 'dentist', 'item', 'teeth', 'kind', 'amount', 'memo'];
+const LABEL = { lab: '技工所', issueDate: '指示書発行日', dueDate: '納品予定日', doneDate: '技工終了日', patientId: 'カルテ番号', patientName: '患者名', dentist: '指示した歯科医師', item: '技工物', teeth: '部位', kind: '区分', amount: '技工料', memo: 'メモ' };
+const OPNAME = { init: '初期設定', settings: '設定変更', 'lab-add': '技工所追加', 'lab-update': '技工所変更', create: '登録', update: '修正', 'add-file': 'ファイル追加', void: '取消', restore: '取消を戻す', dispose: '廃棄', verify: '整合性チェック' };
+const PAPER_LONG_INCH = { A4: 297 / 25.4, B5: 257 / 25.4, A5: 210 / 25.4, B6: 182 / 25.4 };
+const DEFAULT_ITEMS = ['インレー', 'クラウン（FMC）', 'CAD/CAM冠', '前装冠', 'ジルコニア', 'e.max', 'ブリッジ', '有床義歯（総義歯）', '有床義歯（部分床）', '義歯修理', 'コア', 'ナイトガード', 'マウスピース', 'インプラント上部構造', 'その他'];
+const ZERO = '0'.repeat(64);
+
+// ================= 状態 =================
+let root = null;          // 保存フォルダ
+let ledger = [];          // 台帳（追記のみ）
+let S = null;             // 台帳から組み立てた現在の状態
+let broken = '';          // 台帳の異常（書き込み停止）
+let pending = [];         // 取り込み待ち
+let pendSel = -1;
+let view = [], sortKey = 'no', sortDir = -1, selNo = null, checked = new Set();
+let labEditId = null;
+let urls = [];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const yen = n => (n === '' || n == null || isNaN(n)) ? '' : '¥' + Math.round(n).toLocaleString('ja-JP');
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const dt = iso => { const d = new Date(iso); return `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+function addYears(s, n){ const [y, m, d] = s.split('-').map(Number); const r = new Date(y + n, m - 1, d); if (r.getMonth() !== m - 1) r.setDate(0); return ymd(r); }
+function daysBetween(a, b){ return Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 86400000); }
+function toast(msg, ms = 2600){ const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), ms); }
+function freeUrls(){ urls.forEach(u => URL.revokeObjectURL(u)); urls = []; }
+function objUrl(blob){ const u = URL.createObjectURL(blob); urls.push(u); return u; }
+function operator(){ return $('opSel').value || ''; }
+
+// ================= ハッシュ =================
+async function sha256(buf){
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+const sha256Text = s => sha256(new TextEncoder().encode(s));
+function entryBody(e){ return { seq: e.seq, ts: e.ts, op: e.op, rec: e.rec, by: e.by, data: e.data }; }
+
+// ================= ファイル操作 =================
+async function dirOf(parts, create){ let d = root; for (const p of parts) if (p) d = await d.getDirectoryHandle(p, { create }); return d; }
+async function fileHandle(path, create){ const parts = path.split('/'); const name = parts.pop(); return (await dirOf(parts, create)).getFileHandle(name, { create }); }
+async function exists(path){ try { await fileHandle(path, false); return true; } catch (e) { if (e.name === 'NotFoundError' || e.name === 'TypeError') return false; throw e; } }
+async function readText(path){ try { return await (await (await fileHandle(path, false)).getFile()).text(); } catch (e) { if (e.name === 'NotFoundError') return null; throw e; } }
+async function readFile(path){ return (await fileHandle(path, false)).getFile(); }
+async function writeBlob(path, blob, noOverwrite){
+  if (noOverwrite && await exists(path)) throw new Error('同じ名前のファイルがすでにあります：' + path);
+  const w = await (await fileHandle(path, true)).createWritable();
+  await w.write(blob); await w.close();
+}
+async function appendText(path, text){
+  const h = await fileHandle(path, true);
+  const size = (await h.getFile()).size;
+  const w = await h.createWritable({ keepExistingData: true });
+  await w.write({ type: 'write', position: size, data: text }); await w.close();
+}
+async function removeFile(path){ const parts = path.split('/'); const name = parts.pop(); await (await dirOf(parts, false)).removeEntry(name); }
+const safeName = s => String(s).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40);
+
+// ================= 台帳 =================
+function resetState(){
+  S = { settings: { clinicName: '', responsible: '', operators: [], retentionYears: 7, paper: 'keep', paperSize: 'A4', warnDays: 7, items: DEFAULT_ITEMS.slice() }, labs: {}, recs: {} };
+}
+function apply(e){
+  const d = e.data || {};
+  if (e.op === 'init' || e.op === 'settings'){ Object.assign(S.settings, d); return; }
+  if (e.op === 'lab-add'){ S.labs[d.id] = { ...d }; return; }
+  if (e.op === 'lab-update'){ if (S.labs[d.id]) Object.assign(S.labs[d.id], d); return; }
+  if (e.op === 'create'){
+    S.recs[e.rec] = { ...d.fields, no: e.rec, files: [{ ...d.file, ts: e.ts, by: e.by }], created: e.ts, createdBy: e.by, status: 'active', hist: [e.seq] };
+    return;
+  }
+  const r = S.recs[e.rec];
+  if (!r) return;
+  r.hist.push(e.seq);
+  if (e.op === 'update'){ for (const k of FIELDS) if (d.after && k in d.after) r[k] = d.after[k]; }
+  else if (e.op === 'add-file'){ if (d.replace) r.files.forEach(f => { if (!f.superseded) f.superseded = e.seq; }); r.files.push({ ...d.file, ts: e.ts, by: e.by }); }
+  else if (e.op === 'void'){ r.status = 'void'; r.voidReason = d.reason; }
+  else if (e.op === 'restore'){ r.status = 'active'; r.voidReason = ''; }
+  else if (e.op === 'dispose'){ r.status = 'disposed'; r.disposed = e.ts; }
+}
+function parseLedger(text){
+  const lines = (text || '').split('\n').filter(l => l.trim());
+  const out = [];
+  lines.forEach((l, i) => { try { out.push(JSON.parse(l)); } catch (e) { throw new Error(`台帳の ${i + 1} 行目が読めません（壊れているか、書き換えられています）`); } });
+  return out;
+}
+// ほかのパソコンでの追記を取り込む
+async function sync(){
+  const list = parseLedger(await readText(LEDGER));
+  const same = list.length === ledger.length && (!list.length || list[list.length - 1].hash === ledger[ledger.length - 1].hash);
+  if (same) return false;
+  if (list.length < ledger.length) throw new Error('台帳の記録が減っています。整合性チェックを行ってください。');
+  ledger = list; resetState(); ledger.forEach(apply);
+  return true;
+}
+async function append(op, rec, data){
+  if (broken) throw new Error('台帳に異常があるため書き込みを止めています：' + broken);
+  await sync();
+  if (op === 'create' && S.recs[rec]) throw new Error('受付番号が重なりました。もう一度登録してください。');
+  const prev = ledger.length ? ledger[ledger.length - 1].hash : ZERO;
+  const body = { seq: ledger.length + 1, ts: new Date().toISOString(), op, rec: rec || null, by: operator(), data: data || {} };
+  const hash = await sha256Text(prev + JSON.stringify(body));
+  const e = { ...body, prev, hash };
+  await appendText(LEDGER, JSON.stringify(e) + '\n');
+  ledger.push(e); apply(e);
+  scheduleIndex();
+  return e;
+}
+
+// ================= 索引CSV（アプリがなくても一覧を見られるように） =================
+let idxTimer = null;
+function scheduleIndex(){ clearTimeout(idxTimer); idxTimer = setTimeout(() => writeIndex().catch(e => console.warn(e)), 1500); }
+function csvOf(recs){
+  const head = ['受付番号', '技工所', '指示書発行日', '納品予定日', '技工終了日', 'カルテ番号', '患者名', '指示した歯科医師', '技工物', '部位', '区分', '技工料', 'メモ', '状態', '保存期限', 'ファイル', 'SHA-256', '登録日時', '登録者'];
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = recs.map(r => { const f = curFiles(r); return [r.no, labName(r.lab), r.issueDate, r.dueDate, r.doneDate, r.patientId, r.patientName, r.dentist, r.item, r.teeth, r.kind, r.amount, r.memo, stateName(r), expiry(r).date, f.map(x => x.path).join(' / '), f.map(x => x.sha256).join(' / '), dt(r.created), r.createdBy]; });
+  return '﻿' + [head, ...rows].map(r => r.map(q).join(',')).join('\r\n');
+}
+async function writeIndex(){ await writeBlob(INDEX_CSV, new Blob([csvOf(allRecs().sort((a, b) => a.no.localeCompare(b.no)))], { type: 'text/csv' })); }
+
+// ================= 共通 =================
+const allRecs = () => Object.values(S.recs);
+const labName = id => S.labs[id]?.name || '（不明）';
+const curFiles = r => r.files.filter(f => !f.superseded);
+const stateName = r => r.status === 'void' ? '取消' : r.status === 'disposed' ? '廃棄済' : '有効';
+function expiry(r){
+  const base = r.doneDate || r.issueDate;
+  return { date: base ? addYears(base, +S.settings.retentionYears) : '', provisional: !r.doneDate };
+}
+function labOptions(sel, withAll, includeInactive){
+  const labs = Object.values(S.labs).filter(l => includeInactive || l.active !== false || l.id === sel).sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+  return (withAll ? '<option value="">すべて</option>' : '<option value="">選択してください</option>') +
+    labs.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.name)}${l.active === false ? '（取引終了）' : ''}</option>`).join('');
+}
+function dpiBadge(f){
+  if (!f.dpi) return f.type === 'application/pdf' ? '<span class="badge gray">解像度：不明（PDF）</span>' : '';
+  const cls = f.dpi >= 290 ? 'ok' : f.dpi >= 195 ? 'warn' : 'ng';
+  const txt = f.dpi >= 290 ? '' : f.dpi >= 195 ? '（300dpi未満）' : '（200dpi未満：不足）';
+  return `<span class="badge ${cls}">約${f.dpi}dpi${txt}</span>`;
+}
+
+// ================= ファイルの解析（解像度の推定） =================
+async function inspectFile(file){
+  const buf = await file.arrayBuffer();
+  const ext = file.name.split('.').pop().toLowerCase();
+  const info = { name: file.name, size: file.size, type: MIME[ext] || file.type, sha256: await sha256(buf), w: 0, h: 0, dpi: 0, pages: 0, color: '' };
+  const long = PAPER_LONG_INCH[S.settings.paperSize] || PAPER_LONG_INCH.A4;
+  if (info.type.startsWith('image/')){
+    try {
+      const bmp = await createImageBitmap(new Blob([buf], { type: info.type }));
+      info.w = bmp.width; info.h = bmp.height;
+      // 白黒・グレー・カラーの判定（縮小して調べる）
+      const c = document.createElement('canvas'); const sc = Math.min(1, 400 / Math.max(bmp.width, bmp.height));
+      c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+      const ctx = c.getContext('2d'); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+      const px = ctx.getImageData(0, 0, c.width, c.height).data; let colorful = 0;
+      for (let i = 0; i < px.length; i += 4){ if (Math.max(px[i], px[i + 1], px[i + 2]) - Math.min(px[i], px[i + 1], px[i + 2]) > 24) colorful++; }
+      info.color = colorful / (px.length / 4) > 0.002 ? 'カラー' : 'グレー/白黒';
+      bmp.close();
+      info.dpi = Math.round(Math.max(info.w, info.h) / long);
+    } catch (e) {}
+  } else if (info.type === 'application/pdf'){
+    // PDFの中の画像の画素数と用紙寸法から推定（読めないときは不明）
+    const s = new TextDecoder('latin1').decode(buf.byteLength > 30e6 ? buf.slice(0, 30e6) : buf);
+    info.pages = (s.match(/\/Type\s*\/Page(?![a-zA-Z])/g) || []).length;
+    const mb = s.match(/\/MediaBox\s*\[\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\]/);
+    const re = /\/Subtype\s*\/Image/g; let m, best = 0;
+    while ((m = re.exec(s)) && best === 0){
+      const start = s.lastIndexOf('<<', m.index), end = s.indexOf('>>', m.index);
+      const dict = s.slice(Math.max(0, start - 300), end + 2);
+      const w = dict.match(/\/Width\s+(\d+)/), h = dict.match(/\/Height\s+(\d+)/);
+      if (w && h){ info.w = +w[1]; info.h = +h[1]; best = 1; const cs = dict.match(/\/ColorSpace\s*\/(\w+)/); if (cs) info.color = cs[1] === 'DeviceRGB' ? 'カラー' : cs[1] === 'DeviceGray' ? 'グレー/白黒' : ''; }
+    }
+    if (best && mb){
+      const pw = Math.abs(+mb[3] - +mb[1]) / 72, ph = Math.abs(+mb[4] - +mb[2]) / 72;
+      const longPage = Math.max(pw, ph);
+      if (longPage > 0) info.dpi = Math.round(Math.max(info.w, info.h) / longPage);
+    }
+  }
+  return { info, buf };
+}
+function fileInfoHtml(f, extra = ''){
+  const dup = allRecs().find(r => r.files.some(x => x.sha256 === f.sha256));
+  return [
+    `${esc(f.name)}（${(f.size / 1024).toFixed(0)} KB${f.pages ? '・' + f.pages + 'ページ' : ''}${f.w ? `・${f.w}×${f.h}px` : ''}${f.color ? '・' + f.color : ''}）`,
+    dpiBadge(f),
+    dup ? `<span class="badge ng">同じファイルが登録済み：${esc(dup.no)}</span>` : '',
+    extra
+  ].filter(Boolean).join('<br>');
+}
+
+// ================= フォルダを開く =================
+function idb(){
+  return new Promise((res, rej) => { const r = indexedDB.open('gikou-shijisho', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function saveHandle(h){ try { (await idb()).transaction('kv', 'readwrite').objectStore('kv').put(h, 'root'); } catch (e) {} }
+async function loadHandle(){ try { const db = await idb(); return await new Promise(res => { const r = db.transaction('kv').objectStore('kv').get('root'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); }); } catch (e) { return null; } }
+
+async function pickFolder(){
+  try {
+    const h = await window.showDirectoryPicker({ mode: 'readwrite', id: 'gikou' });
+    await saveHandle(h);
+    await openRoot(h);
+  } catch (e) { if (e.name !== 'AbortError') alert('フォルダを開けませんでした：' + e.message); }
+}
+async function openRoot(h){
+  root = h;
+  $('folderName').textContent = '📁 ' + h.name;
+  $('pickBtn').textContent = 'フォルダを変更';
+  $('welcome').classList.add('hidden');
+  broken = '';
+  let text;
+  try { text = await readText(LEDGER); } catch (e) { alert('台帳を読めませんでした：' + e.message); return; }
+  resetState();
+  if (text === null){
+    // 指示書フォルダがあるのに台帳がない＝台帳が消えた可能性
+    let hasScans = false; try { await root.getDirectoryHandle(SCANS); hasScans = true; } catch (e) {}
+    if (hasScans){ alert('このフォルダには「指示書」フォルダがありますが、台帳（_system/ledger.jsonl）が見つかりません。\n台帳が消えた可能性があります。バックアップ（Google ドライブのゴミ箱・版の履歴など）から台帳を戻してください。'); return; }
+    showInit(); return;
+  }
+  try { ledger = parseLedger(text); ledger.forEach(apply); }
+  catch (e) { broken = e.message; ledger = []; resetState(); }
+  startApp();
+  if (broken) { alert(broken + '\n書き込みを止めています。「整合性・操作履歴」を確認してください。'); showTab('audit'); return; }
+  // 開くたびに台帳のつながりだけ素早く点検（ファイルの照合は「整合性チェック」で）
+  let prev = ZERO;
+  for (const e of ledger){
+    if (e.prev !== prev || await sha256Text(e.prev + JSON.stringify(entryBody(e))) !== e.hash){
+      alert(`台帳の #${e.seq} 以降に書き換えの疑いがあります。「整合性・操作履歴」で整合性チェックを実行してください。`);
+      break;
+    }
+    prev = e.hash;
+  }
+}
+function showInit(){
+  $('initCard').classList.remove('hidden');
+  updateInitNote();
+}
+function updateInitNote(){
+  $('initNote').innerHTML = $('iPaper').value === 'keep'
+    ? '紙の原本も保存期間中保管する運用です。スキャンデータは検索・閲覧用になり、法令上もっとも安全な運用です。'
+    : '<b>紙を廃棄する運用</b>では、スキャンデータが「原本」の扱いになります。厚生労働省のガイドラインでは、スキャンした作業責任者による<b>電子署名・タイムスタンプ</b>が求められています。このアプリは改ざん検知と履歴は記録しますが、認定タイムスタンプは付けられません。「設定・規程類」の説明を読んでから選んでください。';
+}
+$('iPaper').onchange = updateInitNote;
+$('initBtn').onclick = async () => {
+  const clinic = $('iClinic').value.trim(), resp = $('iResp').value.trim();
+  if (!clinic || !resp){ alert('医院名と責任者を入力してください'); return; }
+  const ops = $('iOps').value.split('\n').map(s => s.trim()).filter(Boolean);
+  try {
+    await root.getDirectoryHandle('_system', { create: true });
+    await root.getDirectoryHandle(INBOX, { create: true });
+    await root.getDirectoryHandle(SCANS, { create: true });
+    fillOperators(ops.length ? ops : [resp]);
+    await append('init', null, { clinicName: clinic, responsible: resp, operators: ops.length ? ops : [resp], retentionYears: +$('iRet').value, paper: $('iPaper').value, paperSize: 'A4', warnDays: 7, items: DEFAULT_ITEMS.slice(), version: 1 });
+    await writeBlob('はじめにお読みください.txt', new Blob([readmeText()], { type: 'text/plain' }));
+    $('initCard').classList.add('hidden');
+    startApp();
+    showTab('labs');
+    toast('準備ができました。まず技工所を登録してください。', 4000);
+  } catch (e) { alert('初期設定に失敗しました：' + e.message); }
+};
+function readmeText(){
+  return `このフォルダは「技工指示書保管」アプリの保存先です（${S.settings.clinicName || ''}）。
+
+・指示書/          … 登録した指示書ファイル（登録した年/月ごと）
+・_取込/           … スキャナの保存先にするフォルダ（登録すると空になります）
+・_system/ledger.jsonl … 台帳（すべての登録・修正・取消の履歴。1行1件、追記のみ）
+・索引（一覧）.csv  … 全指示書の一覧（Excelで開けます。アプリが使えないときの検索用）
+
+【大切】
+・このフォルダの中のファイルを、エクスプローラー等で直接 消したり・名前を変えたり・上書きしたりしないでください。
+  アプリの整合性チェックで「改ざん・欠落」として検出されます。
+・台帳（ledger.jsonl）は特に大切です。必ずバックアップしてください。
+・アプリ：https://cantoondentalclinic.github.io/dentalapp/gikou/
+`;
+}
+function fillOperators(list){
+  const saved = (() => { try { return localStorage.getItem('gikou-operator') || ''; } catch (e) { return ''; } })();
+  const ops = list || S.settings.operators || [];
+  const pick = ops.includes(saved) ? saved : (ops.length === 1 ? ops[0] : '');
+  $('opSel').innerHTML = '<option value="">（選択）</option>' + ops.map(o => `<option ${o === pick ? 'selected' : ''}>${esc(o)}</option>`).join('');
+  $('opPick').classList.remove('hidden');
+}
+$('opSel').onchange = () => { try { localStorage.setItem('gikou-operator', operator()); } catch (e) {} };
+
+function startApp(){
+  fillOperators();
+  $('nav').classList.remove('hidden');
+  $('fLab').innerHTML = labOptions('', true, true);
+  showTab(currentTab || 'register');
+  loadInbox();
+  renderTodoCount();
+}
+
+// ================= タブ =================
+let currentTab = '';
+function showTab(t){
+  currentTab = t;
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  document.querySelectorAll('.tab').forEach(s => s.classList.toggle('hidden', s.id !== 'tab-' + t));
+  if (t === 'register') renderRegForm();
+  if (t === 'search'){ $('fLab').innerHTML = labOptions($('fLab').value, true, true); renderSearch(); }
+  if (t === 'labs') renderLabs();
+  if (t === 'todo') renderTodo();
+  if (t === 'audit') renderAudit();
+  if (t === 'settings') renderSettings();
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = async () => {
+  try { if (root && !broken && await sync()) toast('ほかのパソコンでの変更を読み込みました'); } catch (e) { alert(e.message); }
+  showTab(b.dataset.tab);
+});
+
+// ================= 取り込み・登録 =================
+async function loadInbox(){
+  if (!root) return;
+  pending = pending.filter(p => p.src !== 'inbox');
+  try {
+    const dir = await root.getDirectoryHandle(INBOX, { create: true });
+    const list = [];
+    for await (const [name, h] of dir.entries()){
+      if (h.kind !== 'file' || name.startsWith('.') || name.startsWith('~')) continue;
+      const ext = name.split('.').pop().toLowerCase();
+      if (!EXTS.includes(ext)) continue;
+      list.push({ id: 'i:' + name, name, src: 'inbox', getFile: () => h.getFile() });
+    }
+    list.sort((a, b) => a.name.localeCompare(b.name, 'ja', { numeric: true }));
+    pending = [...list, ...pending];
+  } catch (e) { console.warn(e); }
+  renderPending();
+}
+function addLocalFiles(files){
+  let n = 0;
+  for (const f of files){
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!EXTS.includes(ext)) continue;
+    pending.push({ id: 'l:' + Date.now() + ':' + (n++), name: f.name, src: 'local', getFile: async () => f });
+  }
+  if (!n) alert('PDF・JPEG・PNG のファイルを選んでください');
+  renderPending();
+  if (pendSel < 0 && pending.length) selectPending(0);
+}
+function renderPending(){
+  $('pendCnt').textContent = pending.length; $('pendCnt').classList.toggle('hidden', !pending.length);
+  $('pendingList').innerHTML = pending.length ? pending.map((p, i) =>
+    `<div class="pending-item ${i === pendSel ? 'sel' : ''}" data-i="${i}">${esc(p.name)}<div class="src">${p.src === 'inbox' ? '取込フォルダ' : '追加したファイル'}</div></div>`).join('')
+    : '<div class="empty" style="padding:16px 4px">取り込み待ちはありません</div>';
+  $('pendingList').querySelectorAll('.pending-item').forEach(el => el.onclick = () => selectPending(+el.dataset.i));
+  $('regBtn').disabled = $('skipBtn').disabled = pendSel < 0;
+}
+let pendInfo = null;
+async function selectPending(i){
+  pendSel = i; pendInfo = null; renderPending();
+  freeUrls();
+  const p = pending[i];
+  if (!p){ $('regPreview').innerHTML = '<div class="empty">左の一覧からファイルを選んでください</div>'; $('regInfo').innerHTML = ''; $('regTitle').textContent = 'プレビュー'; return; }
+  $('regTitle').textContent = p.name;
+  $('regInfo').textContent = '読み込み中…';
+  try {
+    const file = await p.getFile();
+    const { info } = await inspectFile(file);
+    if (pending[pendSel] !== p) return;
+    pendInfo = info;
+    showBlob($('regPreview'), file, info.type);
+    $('regInfo').innerHTML = fileInfoHtml(info);
+    setTimeout(() => $('rf_issueDate')?.focus(), 50);
+  } catch (e) { $('regInfo').innerHTML = `<span class="badge ng">読めませんでした：${esc(e.message)}</span>`; }
+}
+function showBlob(el, blob, type){
+  const u = objUrl(blob.type ? blob : new Blob([blob], { type }));
+  el.innerHTML = (type || blob.type) === 'application/pdf' ? `<iframe src="${u}#view=FitH"></iframe>` : `<img src="${u}" alt="">`;
+}
+
+// 入力フォーム（登録・修正で共通）
+function formHtml(prefix, r){
+  r = r || {};
+  const items = (S.settings.items || DEFAULT_ITEMS);
+  return `<div class="form-grid" style="grid-template-columns:1fr 1fr">
+    <div class="form-group full"><label>技工所（取引先） <span class="req">*</span></label><select id="${prefix}lab">${labOptions(r.lab, false, false)}</select></div>
+    <div class="form-group"><label>指示書発行日 <span class="req">*</span></label><input type="date" id="${prefix}issueDate" value="${esc(r.issueDate || '')}"></div>
+    <div class="form-group"><label>納品予定日</label><input type="date" id="${prefix}dueDate" value="${esc(r.dueDate || '')}"></div>
+    <div class="form-group"><label>カルテ番号</label><input id="${prefix}patientId" value="${esc(r.patientId || '')}"></div>
+    <div class="form-group"><label>患者名</label><input id="${prefix}patientName" value="${esc(r.patientName || '')}"></div>
+    <div class="form-group"><label>技工物</label><input id="${prefix}item" list="itemList" value="${esc(r.item || '')}"><datalist id="itemList">${items.map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+    <div class="form-group"><label>部位</label><input id="${prefix}teeth" value="${esc(r.teeth || '')}" placeholder="例：右下6、#36"></div>
+    <div class="form-group"><label>区分</label><select id="${prefix}kind"><option value="">—</option>${['保険', '自費'].map(k => `<option ${r.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+    <div class="form-group"><label>技工料（税込・円）</label><input type="number" inputmode="numeric" id="${prefix}amount" value="${esc(r.amount ?? '')}" placeholder="わかれば"></div>
+    <div class="form-group"><label>指示した歯科医師</label><input id="${prefix}dentist" value="${esc(r.dentist || '')}"></div>
+    <div class="form-group"><label>技工終了日（納品日）</label><input type="date" id="${prefix}doneDate" value="${esc(r.doneDate || '')}"></div>
+    <div class="form-group full"><label>メモ</label><input id="${prefix}memo" value="${esc(r.memo || '')}"></div>
+  </div>`;
+}
+function readForm(prefix){
+  const o = {};
+  for (const k of FIELDS){ const el = $(prefix + k); if (!el) continue; let v = el.value.trim(); if (k === 'amount') v = v === '' ? '' : Math.round(+v); o[k] = v; }
+  return o;
+}
+function validate(o){
+  if (!o.lab) return '技工所を選んでください';
+  if (!o.issueDate) return '指示書発行日を入力してください';
+  if (o.issueDate > today()) return '指示書発行日が未来の日付になっています';
+  if (o.doneDate && o.doneDate < o.issueDate) return '技工終了日が発行日より前になっています';
+  if (o.amount !== '' && (isNaN(o.amount) || o.amount < 0)) return '技工料の数字を確認してください';
+  return '';
+}
+let sticky = {};
+function renderRegForm(){
+  if (!Object.keys(S.labs).length){
+    $('regForm').innerHTML = '<div class="note">まだ技工所が登録されていません。<br><a href="#" id="goLabs">「技工所」タブ</a>で取引先の技工所を登録してください。</div>';
+    $('goLabs').onclick = e => { e.preventDefault(); showTab('labs'); };
+    return;
+  }
+  $('regForm').innerHTML = formHtml('rf_', { lab: sticky.lab, dentist: sticky.dentist, kind: sticky.kind, issueDate: sticky.issueDate || today() });
+  $('rf_issueDate').addEventListener('change', checkLate);
+  checkLate();
+}
+function checkLate(){
+  const el = $('rf_issueDate'); if (!el || !el.value) return;
+  let n = $('lateNote'); if (!n){ n = document.createElement('div'); n.id = 'lateNote'; n.className = 'note'; n.style.marginTop = '8px'; $('regForm').appendChild(n); }
+  const d = daysBetween(el.value, today());
+  n.classList.toggle('hidden', d <= +S.settings.warnDays);
+  n.textContent = `発行日から${d}日たっています。スキャン・登録は遅れずに（目安：${S.settings.warnDays}日以内）行ってください。遅れた理由はメモに残してください。`;
+}
+async function register(){
+  const p = pending[pendSel]; if (!p) return;
+  if (!operator()){ alert('画面右上の「入力者」を選んでください（だれが登録したかを記録します）'); $('opSel').focus(); return; }
+  const o = readForm('rf_');
+  const err = validate(o); if (err){ alert(err); return; }
+  if (!pendInfo){ alert('ファイルの読み込みが終わっていません'); return; }
+  const dup = allRecs().find(r => r.files.some(x => x.sha256 === pendInfo.sha256));
+  if (dup && !confirm(`同じファイルが ${dup.no} として登録済みです。それでも登録しますか？`)) return;
+  if (pendInfo.dpi && pendInfo.dpi < 195 && !confirm(`解像度が約${pendInfo.dpi}dpiで、電子帳簿保存法の基準（200dpi以上）に足りません。\nスキャナの設定を300dpiにして読み直すことをおすすめします。\nこのまま登録しますか？`)) return;
+  $('regBtn').disabled = true;
+  try {
+    await sync();
+    const file = await p.getFile();
+    const buf = await file.arrayBuffer();
+    const hash = await sha256(buf);
+    if (hash !== pendInfo.sha256) throw new Error('ファイルが読み込み後に変わりました。もう一度選び直してください。');
+    const y = new Date().getFullYear();
+    const no = `${y}-${String(allRecs().filter(r => r.no.startsWith(y + '-')).length + 1).padStart(5, '0')}`;
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = `${SCANS}/${y}/${pad(new Date().getMonth() + 1)}/${no}_1_${safeName(labName(o.lab))}.${ext}`;
+    await writeBlob(path, new Blob([buf], { type: pendInfo.type }), true);
+    // 書き込んだファイルを読み直して確認
+    const check = await sha256(await (await readFile(path)).arrayBuffer());
+    if (check !== hash){ throw new Error('保存したファイルの確認に失敗しました（書き込みエラー）。'); }
+    const f = { path, name: file.name, size: file.size, type: pendInfo.type, sha256: hash, w: pendInfo.w, h: pendInfo.h, dpi: pendInfo.dpi, pages: pendInfo.pages, color: pendInfo.color };
+    await append('create', no, { fields: o, file: f });
+    if (p.src === 'inbox'){ try { await removeFile(INBOX + '/' + p.name); } catch (e) { console.warn(e); } }
+    sticky = { lab: o.lab, dentist: o.dentist, kind: o.kind, issueDate: o.issueDate };
+    pending.splice(pendSel, 1);
+    toast(`${no} として登録しました`);
+    renderRegForm();
+    renderTodoCount();
+    selectPending(Math.min(pendSel, pending.length - 1));
+  } catch (e) { alert('登録できませんでした：' + e.message); }
+  finally { $('regBtn').disabled = pendSel < 0; }
+}
+$('regBtn').onclick = register;
+$('skipBtn').onclick = () => { if (pendSel < 0) return; pending.push(pending.splice(pendSel, 1)[0]); selectPending(Math.min(pendSel, pending.length - 1)); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && currentTab === 'register' && !$('modalRoot').innerHTML){ e.preventDefault(); register(); }
+});
+$('inboxReload').onclick = () => { pendSel = -1; loadInbox().then(() => pending.length && selectPending(0)); };
+$('addFilesBtn').onclick = () => $('fileInput').click();
+$('fileInput').onchange = e => { addLocalFiles([...e.target.files]); e.target.value = ''; };
+const dz = $('dropZone');
+['dragover', 'dragenter'].forEach(t => document.addEventListener(t, e => { if (currentTab === 'register'){ e.preventDefault(); dz.classList.add('over'); } }));
+['dragleave', 'drop'].forEach(t => document.addEventListener(t, () => dz.classList.remove('over')));
+document.addEventListener('drop', e => { if (currentTab !== 'register') return; e.preventDefault(); addLocalFiles([...e.dataTransfer.files]); });
+
+// ================= 検索・一覧 =================
+const filterIds = ['fDateKind', 'fFrom', 'fTo', 'fAmtMin', 'fAmtMax', 'fLab', 'fPatient', 'fText', 'fKind', 'fState'];
+filterIds.forEach(id => $(id).addEventListener('input', () => renderSearch()));
+$('clearBtn').onclick = () => { filterIds.forEach(id => { if (id === 'fDateKind') $(id).value = 'issueDate'; else if (id === 'fState') $(id).value = 'active'; else $(id).value = ''; }); renderSearch(); };
+function recDate(r, k){ return k === 'created' ? ymd(new Date(r.created)) : r[k] || ''; }
+function renderSearch(){
+  const k = $('fDateKind').value, from = $('fFrom').value, to = $('fTo').value;
+  const aMin = $('fAmtMin').value, aMax = $('fAmtMax').value, lab = $('fLab').value;
+  const pt = $('fPatient').value.trim().toLowerCase(), tx = $('fText').value.trim().toLowerCase(), kind = $('fKind').value, st = $('fState').value;
+  view = allRecs().filter(r => {
+    const d = recDate(r, k);
+    if (from && (!d || d < from)) return false;
+    if (to && (!d || d > to)) return false;
+    if (aMin !== '' && (r.amount === '' || r.amount < +aMin)) return false;
+    if (aMax !== '' && (r.amount === '' || r.amount > +aMax)) return false;
+    if (lab && r.lab !== lab) return false;
+    if (pt && !`${r.patientId} ${r.patientName}`.toLowerCase().includes(pt)) return false;
+    if (tx && !`${r.no} ${r.item} ${r.teeth} ${r.memo} ${r.dentist}`.toLowerCase().includes(tx)) return false;
+    if (kind && r.kind !== kind) return false;
+    if (st === 'active' && r.status !== 'active') return false;
+    if (st === 'notdone' && (r.status !== 'active' || r.doneDate)) return false;
+    if ((st === 'void' || st === 'disposed') && r.status !== st) return false;
+    return true;
+  });
+  const key = r => sortKey === 'lab' ? labName(r.lab) : sortKey === 'patient' ? (r.patientName || r.patientId || '') : sortKey === 'item' ? (r.item || '') : sortKey === 'amount' ? (r.amount === '' ? -1 : r.amount) : (r[sortKey] || '');
+  view.sort((a, b) => { const x = key(a), y = key(b); return (x < y ? -1 : x > y ? 1 : a.no.localeCompare(b.no)) * sortDir; });
+  document.querySelectorAll('#tab-search th[data-key]').forEach(th => {
+    th.innerHTML = th.textContent.replace(/[▲▼]/g, '') + (th.dataset.key === sortKey ? `<span class="arrow">${sortDir > 0 ? '▲' : '▼'}</span>` : '');
+  });
+  $('sCount').textContent = view.length;
+  $('sSum').textContent = yen(view.reduce((s, r) => s + (r.amount === '' ? 0 : +r.amount), 0)) || '¥0';
+  $('noRows').classList.toggle('hidden', !!view.length);
+  $('tbody').innerHTML = view.map(r => {
+    const l = S.labs[r.lab];
+    const badges = [r.status === 'void' ? '<span class="badge gray">取消</span>' : r.status === 'disposed' ? '<span class="badge gray">廃棄済</span>' : '',
+      r.status === 'active' && !r.doneDate ? '<span class="badge warn">未終了</span>' : '',
+      r.files.length > 1 ? `<span class="badge gray">ファイル${curFiles(r).length}</span>` : '',
+      r.hist.length > 1 && r.status === 'active' ? '<span class="badge gray">修正あり</span>' : ''].join('');
+    return `<tr data-no="${esc(r.no)}" class="${r.no === selNo ? 'sel' : ''} ${r.status !== 'active' ? 'void' : ''}">
+      <td class="no-print nodec"><input type="checkbox" class="chk" ${checked.has(r.no) ? 'checked' : ''} ${r.status !== 'active' ? 'disabled' : ''}></td>
+      <td class="nowrap">${esc(r.no)}</td><td class="nowrap">${esc(r.issueDate)}</td>
+      <td><span class="lab-dot" style="background:${esc(l?.color || '#999')}"></span>${esc(labName(r.lab))}</td>
+      <td>${esc(r.patientId)} ${esc(r.patientName)}</td><td>${esc(r.item)} ${esc(r.teeth)}</td>
+      <td class="num">${yen(r.amount)}</td><td class="nowrap">${esc(r.doneDate)}</td><td class="nodec">${badges}</td></tr>`;
+  }).join('');
+  $('tbody').querySelectorAll('tr').forEach(tr => {
+    tr.onclick = e => { if (e.target.classList.contains('chk')) return; showDetail(tr.dataset.no); };
+    tr.querySelector('.chk').onchange = e => { e.target.checked ? checked.add(tr.dataset.no) : checked.delete(tr.dataset.no); updateSel(); };
+  });
+  updateSel();
+}
+function updateSel(){ $('selInfo').textContent = checked.size ? `${checked.size}件チェック中` : ''; }
+document.querySelectorAll('#tab-search th[data-key]').forEach(th => th.onclick = () => {
+  if (sortKey === th.dataset.key) sortDir = -sortDir; else { sortKey = th.dataset.key; sortDir = 1; }
+  renderSearch();
+});
+$('chkAll').onchange = e => { view.filter(r => r.status === 'active').forEach(r => e.target.checked ? checked.add(r.no) : checked.delete(r.no)); renderSearch(); };
+$('bulkDoneBtn').onclick = async () => {
+  const d = $('bulkDone').value;
+  if (!checked.size){ alert('一覧の左のチェックで指示書を選んでください'); return; }
+  if (!d){ alert('技工終了日を入れてください'); return; }
+  if (!operator()){ alert('画面右上の「入力者」を選んでください'); return; }
+  const list = [...checked].map(n => S.recs[n]).filter(r => r && r.status === 'active');
+  const over = list.filter(r => r.doneDate && r.doneDate !== d);
+  if (!confirm(`${list.length}件の技工終了日を ${d} にします。${over.length ? `\n（うち${over.length}件はすでに別の日付が入っています。上書きします）` : ''}`)) return;
+  try {
+    for (const r of list){
+      if (r.doneDate === d) continue;
+      if (d < r.issueDate){ alert(`${r.no} は発行日（${r.issueDate}）より前の日付になるため飛ばします`); continue; }
+      await append('update', r.no, { before: { doneDate: r.doneDate || '' }, after: { doneDate: d }, reason: r.doneDate ? '技工終了日の訂正（一括）' : '技工終了日の入力（一括）' });
+    }
+    checked.clear(); toast('技工終了日を入力しました'); renderSearch(); renderTodoCount();
+    if (selNo) showDetail(selNo);
+  } catch (e) { alert(e.message); }
+};
+$('csvBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.href = objUrl(new Blob([csvOf(view)], { type: 'text/csv' }));
+  a.download = `技工指示書_${today()}.csv`; a.click();
+};
+document.addEventListener('keydown', e => {
+  if (currentTab !== 'search' || !view.length || ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName) || $('modalRoot').innerHTML) return;
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  let i = view.findIndex(r => r.no === selNo);
+  i = e.key === 'ArrowDown' ? Math.min(view.length - 1, i + 1) : Math.max(0, i - 1);
+  showDetail(view[i].no);
+  document.querySelector(`#tbody tr[data-no="${CSS.escape(view[i].no)}"]`)?.scrollIntoView({ block: 'nearest' });
+});
+
+async function showDetail(no, fileIdx){
+  selNo = no;
+  document.querySelectorAll('#tbody tr').forEach(tr => tr.classList.toggle('sel', tr.dataset.no === no));
+  const r = S.recs[no]; if (!r) return;
+  freeUrls();
+  const files = r.files;
+  const cur = curFiles(r);
+  const fi = fileIdx ?? files.indexOf(cur[0]);
+  const ex = expiry(r);
+  const hist = r.hist.map(seq => ledger[seq - 1]).filter(Boolean);
+  const el = $('detail');
+  el.innerHTML = `
+    <div class="btns" style="justify-content:space-between"><div class="section-title" style="margin:0">${esc(r.no)} <span class="badge ${r.status === 'active' ? 'ok' : 'gray'}">${stateName(r)}</span></div>
+    <div class="btns">${r.status === 'active' ? `<button class="btn" id="dEdit">修正</button><button class="btn" id="dAdd">ファイル追加・差し替え</button><button class="btn danger" id="dVoid">取消</button>` : r.status === 'void' ? '<button class="btn" id="dRestore">取消を戻す</button>' : ''}</div></div>
+    ${r.status === 'void' ? `<div class="note red" style="margin-top:8px">取消理由：${esc(r.voidReason)}</div>` : ''}
+    <div class="file-tabs" style="margin-top:8px">${files.map((f, i) => `<button class="btn ${i === fi ? 'on' : ''}" data-fi="${i}">${f.superseded ? '旧' : ''}ファイル${i + 1}</button>`).join('')}</div>
+    <div class="preview-body short" id="dPrev">${r.status === 'disposed' ? '<div class="empty">保存期限後に廃棄済み</div>' : '<div class="empty">読み込み中…</div>'}</div>
+    <div class="file-info" id="dFileInfo"></div>
+    <div class="btns" style="margin-top:6px">${r.status !== 'disposed' ? '<button class="btn" id="dOpen">別タブで開く・印刷</button>' : ''}</div>
+    <dl class="kv">
+      <dt>技工所</dt><dd>${esc(labName(r.lab))}</dd>
+      <dt>指示書発行日</dt><dd>${esc(r.issueDate)}</dd>
+      <dt>納品予定日</dt><dd>${esc(r.dueDate)}</dd>
+      <dt>技工終了日</dt><dd>${esc(r.doneDate) || '<span class="badge warn">未入力</span>'}</dd>
+      <dt>患者</dt><dd>${esc(r.patientId)} ${esc(r.patientName)}</dd>
+      <dt>技工物・部位</dt><dd>${esc(r.item)} ${esc(r.teeth)}</dd>
+      <dt>区分</dt><dd>${esc(r.kind)}</dd>
+      <dt>技工料</dt><dd>${yen(r.amount)}</dd>
+      <dt>歯科医師</dt><dd>${esc(r.dentist)}</dd>
+      <dt>メモ</dt><dd>${esc(r.memo)}</dd>
+      <dt>保存期限</dt><dd>${esc(ex.date)}${ex.provisional ? '（技工終了日が未入力のため発行日から仮計算）' : ''}</dd>
+      <dt>登録</dt><dd>${dt(r.created)} ${esc(r.createdBy)}</dd>
+    </dl>
+    <details ${hist.length > 1 ? 'open' : ''}><summary style="font-size:13px">履歴（${hist.length}件）</summary><div class="hist">${hist.map(histLine).join('')}</div></details>`;
+  el.querySelectorAll('[data-fi]').forEach(b => b.onclick = () => showDetail(no, +b.dataset.fi));
+  $('dEdit') && ($('dEdit').onclick = () => editRecord(no));
+  $('dAdd') && ($('dAdd').onclick = () => addFileDialog(no));
+  $('dVoid') && ($('dVoid').onclick = () => voidRecord(no));
+  $('dRestore') && ($('dRestore').onclick = () => restoreRecord(no));
+  const f = files[fi];
+  if (!f || r.status === 'disposed') return;
+  $('dFileInfo').innerHTML = `${f.superseded ? '<span class="badge gray">差し替え前の旧ファイル（保存は継続）</span><br>' : ''}${esc(f.name)}（${(f.size / 1024).toFixed(0)} KB${f.w ? `・${f.w}×${f.h}px` : ''}${f.color ? '・' + esc(f.color) : ''}）${dpiBadge(f)}<br><span class="mono">SHA-256: ${esc(f.sha256)}</span>`;
+  try {
+    const blob = await readFile(f.path);
+    if (selNo !== no) return;
+    showBlob($('dPrev'), blob, f.type);
+    $('dOpen').onclick = () => window.open(objUrl(new Blob([blob], { type: f.type })), '_blank');
+  } catch (e) { $('dPrev').innerHTML = `<div class="empty" style="color:#d93025">ファイルが見つかりません：${esc(f.path)}<br>整合性チェックを行ってください</div>`; }
+}
+function histLine(e){
+  const d = e.data || {};
+  let body = '';
+  if (e.op === 'create') body = 'ファイル ' + esc(d.file?.name || '');
+  if (e.op === 'update') body = Object.keys(d.after || {}).map(k => `${LABEL[k] || k}：${esc(fmtVal(k, d.before?.[k]))} → ${esc(fmtVal(k, d.after[k]))}`).join('<br>') + (d.reason ? `<br>理由：${esc(d.reason)}` : '');
+  if (e.op === 'add-file') body = (d.replace ? '差し替え：' : '追加：') + esc(d.file?.name || '') + (d.reason ? `<br>理由：${esc(d.reason)}` : '');
+  if (e.op === 'void' || e.op === 'restore') body = '理由：' + esc(d.reason || '');
+  if (e.op === 'dispose') body = esc(d.basis || '');
+  return `<div><span class="t">${dt(e.ts)} ${esc(e.by)}</span> <b>${OPNAME[e.op] || e.op}</b><br>${body}</div>`;
+}
+function fmtVal(k, v){ if (v === '' || v == null) return '（空）'; if (k === 'lab') return labName(v); if (k === 'amount') return yen(v); return v; }
+
+// ================= モーダル =================
+function modal(title, html, onOk, okLabel = '保存'){
+  $('modalRoot').innerHTML = `<div class="modal-bg"><div class="modal"><div class="section-title" style="margin:0">${esc(title)}</div>${html}
+    <div class="btns"><button class="btn primary" id="mOk">${esc(okLabel)}</button><button class="btn" id="mCancel">やめる</button></div></div></div>`;
+  const close = () => { $('modalRoot').innerHTML = ''; };
+  $('mCancel').onclick = close;
+  $('mOk').onclick = async () => {
+    $('mOk').disabled = true;
+    try { if (await onOk() !== false) close(); } catch (e) { alert(e.message); }
+    finally { if ($('mOk')) $('mOk').disabled = false; }
+  };
+}
+function needOp(){ if (!operator()){ alert('画面右上の「入力者」を選んでください'); return false; } return true; }
+function editRecord(no){
+  if (!needOp()) return;
+  const r = S.recs[no];
+  modal(`${no} を修正`, formHtml('ef_', r) + `<div class="form-group"><label>修正の理由 <span class="req">*</span>（すでに入っている内容を変えるとき）</label><input id="efReason" placeholder="例：患者名の入力ミス"></div><p class="sub">修正前の内容は履歴に残ります。</p>`, async () => {
+    const o = readForm('ef_');
+    const err = validate(o); if (err){ alert(err); return false; }
+    const before = {}, after = {};
+    for (const k of FIELDS){ const a = r[k] ?? '', b = o[k] ?? ''; if (String(a) !== String(b)){ before[k] = a; after[k] = b; } }
+    if (!Object.keys(after).length){ toast('変更はありません'); return; }
+    const reason = $('efReason').value.trim();
+    const changesExisting = Object.keys(after).some(k => before[k] !== '');
+    if (changesExisting && !reason){ alert('すでに入っている内容を変えるので、修正の理由を入力してください'); return false; }
+    await append('update', no, { before, after, reason: reason || '未入力項目の追記' });
+    toast('修正しました'); renderSearch(); renderTodoCount(); showDetail(no);
+  });
+}
+function addFileDialog(no){
+  if (!needOp()) return;
+  const r = S.recs[no];
+  modal(`${no} にファイルを追加・差し替え`, `
+    <div class="form-group"><label>ファイル（PDF・JPEG・PNG）</label><input type="file" id="afFile" accept=".pdf,.jpg,.jpeg,.png"></div>
+    <div id="afInfo" class="file-info"></div>
+    <div class="form-group"><label>種類</label><select id="afMode"><option value="add">追加（裏面・2枚目・技工所から戻った指示書など）</option><option value="replace">差し替え（読み直し。旧ファイルも消さずに残ります）</option></select></div>
+    <div class="form-group"><label>理由 <span class="req">*</span></label><input id="afReason" placeholder="例：裏面の追加／不鮮明のため300dpiで読み直し"></div>`, async () => {
+    const file = $('afFile').files[0]; if (!file){ alert('ファイルを選んでください'); return false; }
+    const ext = file.name.split('.').pop().toLowerCase(); if (!EXTS.includes(ext)){ alert('PDF・JPEG・PNG のファイルを選んでください'); return false; }
+    const reason = $('afReason').value.trim(); if (!reason){ alert('理由を入力してください'); return false; }
+    await sync();
+    const { info, buf } = await inspectFile(file);
+    const n = S.recs[no].files.length + 1;
+    const y = new Date().getFullYear();
+    const path = `${SCANS}/${y}/${pad(new Date().getMonth() + 1)}/${no}_${n}_${safeName(labName(r.lab))}.${ext}`;
+    await writeBlob(path, new Blob([buf], { type: info.type }), true);
+    const check = await sha256(await (await readFile(path)).arrayBuffer());
+    if (check !== info.sha256) throw new Error('保存したファイルの確認に失敗しました');
+    await append('add-file', no, { file: { path, name: info.name, size: info.size, type: info.type, sha256: info.sha256, w: info.w, h: info.h, dpi: info.dpi, pages: info.pages, color: info.color }, replace: $('afMode').value === 'replace', reason });
+    toast('ファイルを保存しました'); renderSearch(); showDetail(no);
+  });
+  $('afFile').onchange = async () => { const f = $('afFile').files[0]; if (f){ const { info } = await inspectFile(f); $('afInfo').innerHTML = fileInfoHtml(info); } };
+}
+function voidRecord(no){
+  if (!needOp()) return;
+  modal(`${no} を取り消す`, `<p class="sub">登録の誤り（別の書類を登録した、二重登録など）のときに使います。ファイルは削除されず、取消の記録とともに保存されます。</p>
+    <div class="form-group"><label>取消の理由 <span class="req">*</span></label><input id="vReason" placeholder="例：2026-00012 と二重登録"></div>`, async () => {
+    const reason = $('vReason').value.trim(); if (!reason){ alert('理由を入力してください'); return false; }
+    await append('void', no, { reason }); toast('取り消しました'); renderSearch(); showDetail(no); renderTodoCount();
+  }, '取り消す');
+}
+function restoreRecord(no){
+  if (!needOp()) return;
+  modal(`${no} の取消を戻す`, `<div class="form-group"><label>理由 <span class="req">*</span></label><input id="rReason"></div>`, async () => {
+    const reason = $('rReason').value.trim(); if (!reason){ alert('理由を入力してください'); return false; }
+    await append('restore', no, { reason }); toast('有効に戻しました'); renderSearch(); showDetail(no);
+  }, '戻す');
+}
+
+// ================= 技工所 =================
+function renderLabs(){
+  const cnt = {}; allRecs().forEach(r => { if (r.status !== 'void') cnt[r.lab] = (cnt[r.lab] || 0) + 1; });
+  const labs = Object.values(S.labs).sort((a, b) => (b.active !== false) - (a.active !== false) || a.name.localeCompare(b.name, 'ja'));
+  $('labBody').innerHTML = labs.length ? labs.map(l => `<tr><td><span class="lab-dot" style="background:${esc(l.color)}"></span></td><td>${esc(l.name)}</td><td>${esc(l.tel)}</td><td>${esc(l.person)}</td><td>${esc(l.memo)}</td>
+    <td class="num"><a href="#" data-lab="${esc(l.id)}">${cnt[l.id] || 0}</a></td><td>${l.active === false ? '<span class="badge gray">取引終了</span>' : '<span class="badge ok">取引中</span>'}</td>
+    <td><button class="btn" data-edit="${esc(l.id)}">編集</button></td></tr>`).join('') : '<tr><td colspan="8" class="empty">まだ登録がありません。下のフォームから追加してください。</td></tr>';
+  $('labBody').querySelectorAll('[data-edit]').forEach(b => b.onclick = () => editLab(b.dataset.edit));
+  $('labBody').querySelectorAll('[data-lab]').forEach(a => a.onclick = e => { e.preventDefault(); $('fLab').innerHTML = labOptions(a.dataset.lab, true, true); $('fState').value = ''; showTab('search'); });
+}
+function editLab(id){
+  labEditId = id; const l = S.labs[id];
+  $('lName').value = l.name; $('lColor').value = l.color || '#1a73e8'; $('lTel').value = l.tel || ''; $('lPerson').value = l.person || ''; $('lMemo').value = l.memo || ''; $('lActive').value = l.active === false ? '0' : '1';
+  $('labFormTitle').textContent = '技工所を編集'; $('labSaveBtn').textContent = '変更を保存'; $('labCancelBtn').classList.remove('hidden');
+  $('lName').focus();
+}
+function resetLabForm(){
+  labEditId = null; ['lName', 'lTel', 'lPerson', 'lMemo'].forEach(i => $(i).value = '');
+  const palette = ['#1a73e8', '#d93025', '#137333', '#b06000', '#9334e6', '#00838f', '#c2185b', '#5f6368'];
+  $('lColor').value = palette[Object.keys(S.labs).length % palette.length]; $('lActive').value = '1';
+  $('labFormTitle').textContent = '技工所を追加'; $('labSaveBtn').textContent = '追加'; $('labCancelBtn').classList.add('hidden');
+}
+$('labCancelBtn').onclick = resetLabForm;
+$('labSaveBtn').onclick = async () => {
+  if (!needOp()) return;
+  const d = { name: $('lName').value.trim(), color: $('lColor').value, tel: $('lTel').value.trim(), person: $('lPerson').value.trim(), memo: $('lMemo').value.trim(), active: $('lActive').value === '1' };
+  if (!d.name){ alert('技工所名を入力してください'); return; }
+  if (Object.values(S.labs).some(l => l.name === d.name && l.id !== labEditId)){ alert('同じ名前の技工所がすでにあります'); return; }
+  try {
+    if (labEditId) await append('lab-update', null, { id: labEditId, ...d });
+    else await append('lab-add', null, { id: 'L' + Date.now().toString(36), ...d });
+    toast(labEditId ? '変更しました' : '追加しました');
+    resetLabForm(); renderLabs();
+  } catch (e) { alert(e.message); }
+};
+
+// ================= 要確認・保存期限 =================
+function todoItems(){
+  const t = today(), out = [];
+  for (const r of allRecs()){
+    if (r.status !== 'active') continue;
+    if (!r.doneDate && r.dueDate && r.dueDate < t) out.push({ r, msg: `納品予定日（${r.dueDate}）を過ぎていますが、技工終了日が未入力です` });
+    else if (!r.doneDate && daysBetween(r.issueDate, t) > 60) out.push({ r, msg: `発行から${daysBetween(r.issueDate, t)}日たっていますが、技工終了日が未入力です（保存期限の起算日になります）` });
+    const lowF = curFiles(r).find(f => f.dpi && f.dpi < 195);
+    if (lowF) out.push({ r, msg: `解像度が約${lowF.dpi}dpiで基準（200dpi）未満です。読み直して「差し替え」してください` });
+    const lag = daysBetween(r.issueDate, ymd(new Date(r.created)));
+    if (lag > +S.settings.warnDays && !/遅/.test(r.memo || '')) out.push({ r, msg: `発行から${lag}日後の登録です。遅れた理由をメモに残してください`, minor: true });
+  }
+  return out;
+}
+function renderTodoCount(){
+  if (!S) return;
+  const n = todoItems().filter(x => !x.minor).length + expired().length;
+  $('todoCnt').textContent = n; $('todoCnt').classList.toggle('hidden', !n);
+}
+function expired(){ const t = today(); return allRecs().filter(r => r.status !== 'disposed' && expiry(r).date && expiry(r).date < t && r.doneDate); }
+function renderTodo(){
+  const items = todoItems();
+  $('todoList').innerHTML = items.length ? `<table><thead><tr><th>受付番号</th><th>技工所</th><th>患者</th><th>内容</th></tr></thead><tbody class="click">${items.map(x =>
+    `<tr data-no="${esc(x.r.no)}"><td class="nowrap">${esc(x.r.no)}</td><td>${esc(labName(x.r.lab))}</td><td>${esc(x.r.patientId)} ${esc(x.r.patientName)}</td><td>${x.minor ? '<span class="badge gray">参考</span>' : '<span class="badge warn">要対応</span>'} ${esc(x.msg)}</td></tr>`).join('')}</tbody></table>`
+    : '<div class="empty">要確認の指示書はありません</div>';
+  $('todoList').querySelectorAll('tr[data-no]').forEach(tr => tr.onclick = () => { showTab('search'); $('fState').value = ''; renderSearch(); showDetail(tr.dataset.no); });
+  $('retInfo').innerHTML = `保存期間：技工終了日から <b>${S.settings.retentionYears}年</b>（設定で変更できます）。期限を過ぎても自動では消しません。廃棄する場合は下から選んでください（廃棄の記録は台帳に残ります）。技工終了日が未入力の指示書は対象になりません。`;
+  const ex = expired();
+  $('expiredList').innerHTML = ex.length ? `<table><thead><tr><th><input type="checkbox" id="exAll"></th><th>受付番号</th><th>技工所</th><th>技工終了日</th><th>保存期限</th><th>状態</th></tr></thead><tbody>${ex.map(r =>
+    `<tr><td><input type="checkbox" class="exChk" value="${esc(r.no)}"></td><td>${esc(r.no)}</td><td>${esc(labName(r.lab))}</td><td>${esc(r.doneDate)}</td><td>${esc(expiry(r).date)}</td><td>${stateName(r)}</td></tr>`).join('')}</tbody></table>
+    <div class="btns" style="margin-top:10px"><button class="btn danger" id="disposeBtn">チェックした指示書のファイルを廃棄</button></div>`
+    : '<div class="empty">保存期限を過ぎた指示書はありません</div>';
+  if ($('exAll')) $('exAll').onchange = e => document.querySelectorAll('.exChk').forEach(c => c.checked = e.target.checked);
+  if ($('disposeBtn')) $('disposeBtn').onclick = disposeSelected;
+}
+async function disposeSelected(){
+  if (!needOp()) return;
+  const nos = [...document.querySelectorAll('.exChk:checked')].map(c => c.value);
+  if (!nos.length){ alert('廃棄する指示書をチェックしてください'); return; }
+  const ans = prompt(`${nos.length}件の指示書ファイルを削除します。元に戻せません。\n（台帳の記録とハッシュ値は残ります）\n\n実行するには「廃棄」と入力してください`);
+  if (ans !== '廃棄') return;
+  try {
+    for (const no of nos){
+      const r = S.recs[no]; if (!r || r.status === 'disposed') continue;
+      if (expiry(r).date >= today()) continue;
+      const files = r.files.map(f => ({ path: f.path, sha256: f.sha256 }));
+      for (const f of files){ try { await removeFile(f.path); } catch (e) { if (e.name !== 'NotFoundError') throw e; } }
+      await append('dispose', no, { files, basis: `保存期限（${expiry(r).date}）経過による廃棄` });
+    }
+    toast('廃棄しました'); renderTodo(); renderTodoCount();
+  } catch (e) { alert('廃棄の途中でエラー：' + e.message); }
+}
+
+// ================= 整合性・操作履歴 =================
+function renderAudit(){
+  $('headHash').textContent = ledger.length ? `#${ledger.length} ${ledger[ledger.length - 1].hash}` : '（記録なし）';
+  const ops = [...new Set(ledger.map(e => e.op))];
+  const cur = $('aOp').value;
+  $('aOp').innerHTML = '<option value="">すべて</option>' + ops.map(o => `<option value="${o}" ${o === cur ? 'selected' : ''}>${OPNAME[o] || o}</option>`).join('');
+  const op = $('aOp').value, rec = $('aRec').value.trim(), by = $('aBy').value.trim();
+  const list = ledger.filter(e => (!op || e.op === op) && (!rec || (e.rec || '').includes(rec)) && (!by || (e.by || '').includes(by))).slice(-1000).reverse();
+  $('auditBody').innerHTML = list.map(e => {
+    const d = e.data || {};
+    let s = '';
+    if (e.op === 'create') s = `${esc(labName(d.fields?.lab))} ／ ${esc(d.fields?.issueDate)} ／ ${esc(d.file?.name)}`;
+    else if (e.op === 'lab-add' || e.op === 'lab-update') s = esc(d.name);
+    else if (e.op === 'verify') s = d.ok ? `異常なし（ファイル${d.files}件）` : `<span class="badge ng">異常 ${d.problems}件</span>`;
+    else if (e.op === 'init' || e.op === 'settings') s = Object.keys(d).map(k => esc(k)).join(', ');
+    else s = histLine(e).replace(/^<div>.*?<br>/, '').replace(/<\/div>$/, '');
+    return `<tr><td>${e.seq}</td><td class="nowrap">${dt(e.ts)}</td><td>${OPNAME[e.op] || esc(e.op)}</td><td class="nowrap">${esc(e.rec || '')}</td><td>${esc(e.by)}</td><td>${s}</td></tr>`;
+  }).join('');
+}
+['aOp', 'aRec', 'aBy'].forEach(id => $(id).addEventListener('input', renderAudit));
+$('copyHashBtn').onclick = () => { navigator.clipboard.writeText($('headHash').textContent + ' ' + new Date().toISOString()).then(() => toast('コピーしました')); };
+$('dlLedgerBtn').onclick = async () => {
+  const t = await readText(LEDGER) || '';
+  const a = document.createElement('a'); a.href = objUrl(new Blob([t], { type: 'application/x-ndjson' })); a.download = `技工指示書_台帳_${today()}.jsonl`; a.click();
+};
+$('verifyBtn').onclick = async () => {
+  const out = $('verifyResult');
+  out.innerHTML = '<div class="sub">点検中…</div>';
+  const problems = [];
+  let list = [];
+  try { list = parseLedger(await readText(LEDGER)); } catch (e) { problems.push(e.message); }
+  let prev = ZERO;
+  for (let i = 0; i < list.length; i++){
+    const e = list[i];
+    if (e.seq !== i + 1) problems.push(`台帳 #${i + 1}：番号が連続していません（${e.seq}）`);
+    if (e.prev !== prev) problems.push(`台帳 #${i + 1}：前の記録とのつながりが切れています（削除・差し替えの疑い）`);
+    const h = await sha256Text(e.prev + JSON.stringify(entryBody(e)));
+    if (h !== e.hash) problems.push(`台帳 #${i + 1}（${dt(e.ts)} ${OPNAME[e.op] || e.op} ${e.rec || ''}）：内容が書き換えられています`);
+    prev = e.hash;
+  }
+  if (list.length < ledger.length) problems.push(`台帳の記録が減っています（${ledger.length}件 → ${list.length}件）`);
+  // ファイルの照合
+  const known = new Set();
+  let nFiles = 0, i = 0;
+  const recs = allRecs();
+  for (const r of recs){
+    i++; if (i % 20 === 0) out.innerHTML = `<div class="sub">ファイルを照合中… ${i}/${recs.length}</div>`;
+    for (const f of r.files){
+      known.add(f.path);
+      if (r.status === 'disposed') continue;
+      nFiles++;
+      try {
+        const h = await sha256(await (await readFile(f.path)).arrayBuffer());
+        if (h !== f.sha256) problems.push(`${r.no}：ファイルが登録時と異なります（${f.path}）`);
+      } catch (e) { problems.push(`${r.no}：ファイルが見つかりません（${f.path}）`); }
+    }
+  }
+  // 台帳にないファイル
+  async function walk(dir, path){
+    for await (const [name, h] of dir.entries()){
+      const p = path + '/' + name;
+      if (h.kind === 'directory') await walk(h, p);
+      else if (!name.startsWith('.') && !known.has(p) && !/^desktop\.ini$/i.test(name)) problems.push(`台帳にないファイルがあります：${p}`);
+    }
+  }
+  try { await walk(await root.getDirectoryHandle(SCANS), SCANS); } catch (e) {}
+  const ok = !problems.length;
+  out.innerHTML = ok
+    ? `<div class="note blue">✅ 異常はありません。台帳 ${list.length}件・ファイル ${nFiles}件を確認しました（${dt(new Date().toISOString())}）。</div>`
+    : `<div class="note red"><b>⚠ ${problems.length}件の異常があります。</b><br>${problems.slice(0, 200).map(esc).join('<br>')}<br><br>Google ドライブの「版を管理」やゴミ箱、バックアップから元のファイルを戻してください。原因がわからないときは、この画面を印刷して保管してください。</div>`;
+  if (!broken){ try { await append('verify', null, { ok, problems: problems.length, files: nFiles, head: prev }); renderAudit(); } catch (e) {} }
+};
+
+// ================= 設定・規程類 =================
+function renderSettings(){
+  const s = S.settings;
+  $('sClinic').value = s.clinicName; $('sResp').value = s.responsible; $('sRet').value = String(s.retentionYears); $('sPaper').value = s.paper;
+  $('sPaperSize').value = s.paperSize; $('sWarn').value = s.warnDays; $('sOps').value = (s.operators || []).join('\n'); $('sItems').value = (s.items || []).join('\n');
+  $('lawHelp').innerHTML = lawHelpHtml();
+}
+$('saveSettingsBtn').onclick = async () => {
+  if (!needOp()) return;
+  const n = { clinicName: $('sClinic').value.trim(), responsible: $('sResp').value.trim(), retentionYears: +$('sRet').value, paper: $('sPaper').value, paperSize: $('sPaperSize').value, warnDays: Math.max(1, +$('sWarn').value || 7),
+    operators: $('sOps').value.split('\n').map(x => x.trim()).filter(Boolean), items: $('sItems').value.split('\n').map(x => x.trim()).filter(Boolean) };
+  if (!n.clinicName || !n.responsible){ alert('医院名と責任者は空にできません'); return; }
+  const diff = {}; for (const k in n) if (JSON.stringify(n[k]) !== JSON.stringify(S.settings[k])) diff[k] = n[k];
+  if (!Object.keys(diff).length){ toast('変更はありません'); return; }
+  if (diff.retentionYears && diff.retentionYears < 3 && !confirm('保存期間を短くします。よろしいですか？')) return;
+  try { await append('settings', null, diff); fillOperators(); toast('保存しました'); renderSettings(); } catch (e) { alert(e.message); }
+};
+document.querySelectorAll('[data-doc]').forEach(b => b.onclick = () => printDoc(b.dataset.doc));
+function printDoc(kind){
+  const s = S.settings, c = esc(s.clinicName), resp = esc(s.responsible), d = today().replace(/-/g, '/');
+  const ops = (s.operators || []).map(esc).join('、') || '（入力者）';
+  const docs = {
+    rule: ['技工指示書のスキャナ保存に関する事務処理規程', `
+<p style="text-align:right">制定日：${d}　${c}</p>
+<h2>第1条（目的）</h2><p>この規程は、${c}（以下「当院」という。）において、歯科技工士法第19条により保存すべき歯科技工指示書（以下「指示書」という。）及び電子帳簿保存法第4条第3項に定める国税関係書類（注文書の写し）に該当する指示書を、スキャナで電子化して保存するための事務の手続を定め、見読性・真実性（真正性）・保存性を確保することを目的とする。</p>
+<h2>第2条（適用範囲）</h2><p>この規程は、当院が歯科技工所に交付した指示書（控え・写しを含む。）及び歯科技工所から返送された指示書に適用する。</p>
+<h2>第3条（管理責任者等）</h2><p>1　スキャナ保存の管理責任者は ${resp} とする。<br>2　スキャン及び登録を行う入力者は ${ops} とし、管理責任者が指名する。<br>3　入力者は、登録時にアプリの「入力者」欄で自分の名前を選び、操作者を記録する。</p>
+<h2>第4条（使用するシステム）</h2><p>指示書の保存には「技工指示書保管」アプリ（以下「本システム」という。）を使用し、保存先は管理責任者が定めたフォルダとする。本システムの概要は別紙「システム概要書」による。</p>
+<h2>第5条（スキャナの設定）</h2><p>スキャナは、解像度300dpi以上、カラー（赤・緑・青 各256階調以上）で読み取る。用紙全体が欠けずに読み取れていることを確認する。</p>
+<h2>第6条（入力の手順と期間）</h2><p>1　指示書を交付するとき（又は返送を受けたとき）は、遅滞なく（おおむね${s.warnDays}日以内に）スキャンし、本システムに登録する。<br>2　入力者は、登録前に画面上で画像と紙の指示書を見比べ、文字・記号・図が読み取れることを確認する。<br>3　登録時に、技工所、指示書発行日、患者を特定する情報その他の項目を入力する。技工料は判明したときに入力する。<br>4　技工物の納品を受けたときは、技工終了日を入力する。<br>5　期間内に登録できなかった場合は、その理由をメモ欄に記録する。</p>
+<h2>第7条（原本の取扱い）</h2><p>${s.paper === 'keep' ? '紙の指示書は、スキャン後も保存期間が終わるまで、年月ごとにまとめて保管する。' : '紙の指示書は、スキャン後に管理責任者が画像を確認し、第9条の措置を行ったうえで、管理責任者の承認を得て廃棄する。廃棄までの間は年月ごとにまとめて保管する。'}</p>
+<h2>第8条（訂正・削除）</h2><p>1　登録したデータの訂正は本システムの「修正」「ファイル追加・差し替え」により行い、理由を記録する。訂正前の内容及びファイルは消去せず保存する。<br>2　誤登録の場合は「取消」により処理し、理由を記録する。登録データの削除は行わない。<br>3　保存フォルダ内のファイルをエクスプローラー等で直接変更・削除してはならない。</p>
+<h2>第9条（真実性の確認）</h2><p>1　管理責任者は、月1回以上、本システムの「整合性チェック」を実行し、結果を確認する。<br>2　管理責任者は、月1回以上、台帳の最新ハッシュ値を記録し、第三者に時刻が記録される方法（電子メールの送信等）で控えを保存する。${s.paper === 'discard' ? '<br>3　紙の原本を廃棄する指示書については、管理責任者が電子署名及びタイムスタンプ（総務大臣が認定する時刻認証業務によるもの）を付す。' : ''}</p>
+<h2>第10条（保存期間）</h2><p>指示書の保存期間は、技工が終了した日から${s.retentionYears}年間とする（歯科技工士法第19条の2年間、保険医療機関及び保険医療養担当規則第9条の3年間を下回らない。）。</p>
+<h2>第11条（保存・バックアップ）</h2><p>保存フォルダは、${'定期的に別の媒体又はクラウドに複製し'}、障害時に復元できるようにする。保存フォルダへのアクセスは当院の職員に限り、パスワード及び二段階認証で保護する。</p>
+<h2>第12条（検索・閲覧）</h2><p>本システムにより、取引年月日（指示書発行日）、取引金額（技工料）、取引先（技工所）その他の項目で検索し、画面表示又は印刷により速やかに出力できる状態で保存する。税務職員等から求めがあった場合は、検索結果のCSV及び該当ファイルを提出する。</p>
+<h2>第13条（廃棄）</h2><p>保存期間を経過した指示書のデータは、管理責任者の承認を得て、本システムの「廃棄」により処理する。</p>
+<h2>附則</h2><p>この規程は、${d}から施行する。</p>`],
+    system: ['システム概要書（技工指示書保管）', `
+<p style="text-align:right">作成日：${d}　${c}　管理責任者 ${resp}</p>
+<table><tr><th>システム名</th><td>技工指示書保管（ウェブブラウザで動作。https://cantoondentalclinic.github.io/dentalapp/gikou/）</td></tr>
+<tr><th>動作環境</th><td>パソコンの Google Chrome 又は Microsoft Edge。データはブラウザやサーバーには送られず、指定した保存フォルダにのみ書き込まれる。</td></tr>
+<tr><th>保存先</th><td>${esc(root?.name || '')}（管理責任者が指定したフォルダ）</td></tr>
+<tr><th>フォルダ構成</th><td>指示書/年/月/ … 指示書ファイル（PDF・JPEG・PNG）<br>_system/ledger.jsonl … 台帳（登録・修正・取消・廃棄等の全操作を時系列で追記）<br>_取込/ … スキャナの出力先（登録後は空になる）<br>索引（一覧）.csv … 全件の一覧（自動更新）</td></tr>
+<tr><th>入力の流れ</th><td>①スキャン（300dpi・カラー）→ ②_取込に保存 → ③本システムで画像を確認し、技工所・発行日等を入力して登録 → ④ファイルのSHA-256ハッシュ値を計算して指示書フォルダへ保存、保存後に読み直して一致を確認 → ⑤台帳に登録記録を追記</td></tr>
+<tr><th>訂正・削除の防止と履歴</th><td>登録したファイルは上書き・削除できない（同名ファイルへの書込みを禁止）。項目の修正は修正前・修正後・理由・入力者・日時を台帳に追記。ファイルの差し替えは新しいファイルを追加し、旧ファイルも保存。誤登録は「取消」として記録し、データは残す。</td></tr>
+<tr><th>改ざんの検知</th><td>台帳の各記録に、直前の記録のハッシュ値を含めたSHA-256ハッシュ値を付して連結（ハッシュチェーン）。整合性チェックで、台帳の書換え・削除、ファイルの変更・欠落、台帳にないファイルを検出する。</td></tr>
+<tr><th>検索機能</th><td>指示書発行日・技工終了日・納品予定日・登録日（範囲指定）、技工料（範囲指定）、技工所、患者番号・氏名、区分、キーワードで検索。各条件は組み合わせて指定できる。検索結果はCSV出力・印刷ができる。</td></tr>
+<tr><th>見読性</th><td>画面で拡大表示、別タブで表示・印刷が可能。14インチ以上のカラーディスプレイ及びカラープリンタを備え付ける。</td></tr>
+<tr><th>保存期間の管理</th><td>技工終了日から${s.retentionYears}年で期限を表示。自動では削除しない。廃棄は管理責任者の承認のもとで行い、台帳に記録する。</td></tr>
+<tr><th>バックアップ</th><td>保存フォルダを Google ドライブ等に同期し、版の履歴を保持する。あわせて定期的に別媒体へ複製する。</td></tr></table>`],
+    notice: ['患者さまへのお知らせ', `
+<div style="font-size:20px;line-height:2;margin-top:30px">
+<p>当院では、歯科技工物（かぶせ物・入れ歯など）を作製するための<b>歯科技工指示書</b>を、スキャナで読み取り、<b>電子データとして保存</b>しています。</p>
+<p>保存したデータは、法令に基づき適切に管理し、診療と歯科技工の目的以外には使用しません。</p>
+<p>電子化による保存を希望されない方は、受付までお申し出ください。</p>
+<p style="text-align:right;margin-top:40px">${c}<br>管理責任者　${resp}</p></div>`],
+    scanner: ['スキャナ設定メモ', `
+<table><tr><th>解像度</th><td><b>300dpi</b>（最低でも200dpi以上）</td></tr>
+<tr><th>カラー</th><td><b>カラー</b>（24ビット）。赤字の訂正や色分けが残るようにするため、白黒にしない</td></tr>
+<tr><th>ファイル形式</th><td>PDF（推奨）または JPEG</td></tr>
+<tr><th>圧縮率</th><td>標準〜低圧縮（文字がにじまない程度）</td></tr>
+<tr><th>白紙ページの削除</th><td>オフ（裏面に書き込みがある指示書があるため）。または両面読み取り</td></tr>
+<tr><th>保存先</th><td>${esc(root?.name || '保存フォルダ')} ／ _取込</td></tr>
+<tr><th>ファイル名</th><td>自動（日時）でよい。アプリで登録すると、受付番号付きの名前で保存される</td></tr></table>
+<p style="margin-top:12px">ScanSnap の場合：「プロファイル」を新規作成 → 画質「スーパーファイン（300dpi）」、カラーモード「カラー」、保存先を上記の「_取込」フォルダに設定。</p>`]
+  };
+  const [title, body] = docs[kind];
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${title}</title><style>
+    body{font-family:'Hiragino Mincho ProN','Yu Mincho',serif;max-width:760px;margin:30px auto;padding:0 20px;line-height:1.9;font-size:14px;color:#000}
+    h1{text-align:center;font-size:20px;margin-bottom:20px}h2{font-size:15px;margin:16px 0 2px}
+    table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px 10px;text-align:left;vertical-align:top}th{width:150px;background:#f3f3f3;font-weight:normal}
+    .bar{font-family:sans-serif;background:#fef7e0;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:16px}@media print{.bar{display:none}}
+  </style></head><body><div class="bar">ひな形です。医院の運用に合わせて内容を確認してから印刷してください（このページの文字は直接書き換えできます）。 <button onclick="print()">印刷</button></div><div contenteditable="true"><h1>${title}</h1>${body}</div></body></html>`);
+  w.document.close();
+}
+function lawHelpHtml(){
+  return `
+<h3>1. 保存義務（どの法律で、何年）</h3>
+<table><tr><th>根拠</th><th>内容</th></tr>
+<tr><td>歯科技工士法 第19条</td><td>病院・診療所の管理者は、指示書を<b>技工が終了した日から2年間</b>保存しなければならない。</td></tr>
+<tr><td>保険医療機関及び保険医療養担当規則 第9条</td><td>療養の給付の担当に関する帳簿・書類その他の記録は<b>完結の日から3年間</b>保存（保険診療の技工指示書もこれに含めて指導されることが多い）。</td></tr>
+<tr><td>電子帳簿保存法・法人税法／所得税法</td><td>指示書は技工所への<b>注文書（の写し）</b>にあたるため、国税関係書類として法人は7年、個人事業は5年の保存が必要になりうる。</td></tr></table>
+<p>→ アプリの初期値は、もっとも長い7年です（設定で変更可）。</p>
+<h3>2. 電子保存してよい根拠</h3>
+<ul><li><b>e-文書法</b>（民間事業者等が行う書面の保存等における情報通信の技術の利用に関する法律）と厚生労働省令（平成17年厚生労働省令第44号）により、歯科技工士法第19条の指示書は電子保存（スキャナ保存を含む）が認められています（平成17年3月31日 医政発第0331009号ほか通知）。</li>
+<li>その条件として、厚生労働省「医療情報システムの安全管理に関するガイドライン」（第6.0版）の<b>見読性・真正性・保存性</b>を満たすことが求められます。</li>
+<li>国税関係書類としては、<b>電子帳簿保存法第4条第3項（スキャナ保存）</b>。注文書は「一般書類」で、グレースケール可・適時入力が認められています。令和4年以降、税務署長の事前承認は不要です。</li></ul>
+<h3>3. 要件とこのアプリの対応</h3>
+<table><tr><th>要件</th><th>このアプリでの対応</th></tr>
+<tr><td>解像度・階調（電帳法：200dpi以上・カラー256階調、医療GL：300dpi・カラー推奨）</td><td>画像の画素数から解像度を推定し、300dpi未満は注意、200dpi未満は警告。スキャナ設定メモを印刷可。</td></tr>
+<tr><td>速やかな入力</td><td>発行日から設定日数（初期7日）を過ぎた登録を警告し、要確認に表示。</td></tr>
+<tr><td>訂正・削除の履歴（ヴァージョン管理）</td><td>上書き・削除をしない。修正は前後の値・理由・入力者・日時を台帳に追記。差し替えても旧ファイルを保存。</td></tr>
+<tr><td>真正性（改ざん防止・責任の明確化）</td><td>入力者の記録、ファイルのSHA-256、台帳のハッシュチェーン、整合性チェック。</td></tr>
+<tr><td>検索（取引年月日・金額・取引先、範囲指定、組合せ）</td><td>発行日等の範囲、技工料の範囲、技工所、患者などを組み合わせて検索、CSV出力。</td></tr>
+<tr><td>見読性（すぐに画面・印刷で見られる）</td><td>画面表示・別タブで印刷。アプリがなくても「索引（一覧）.csv」とファイルで確認可能。</td></tr>
+<tr><td>保存性（期間中、消えない）</td><td>保存先をクラウド同期フォルダにし、バックアップする運用（事務処理規程に記載）。期限前の削除はできない。</td></tr>
+<tr><td>事務処理規程・システム概要書の備付け</td><td>ひな形を印刷可。</td></tr>
+<tr><td>患者への周知（医療GL：スキャンによる電子化を事前に掲示）</td><td>院内掲示のひな形を印刷可。</td></tr></table>
+<h3>4. このアプリだけでは満たせないこと（重要）</h3>
+<ul><li><b>電子署名・認定タイムスタンプ</b>：医療情報GLでは、紙を廃棄してスキャンデータを原本とする場合、作業責任者が電子署名法に適合した電子署名とタイムスタンプを付すことが求められます。このアプリは付けられません（日時はパソコンの時計で記録）。<br>
+→ <b>紙の指示書も保存期間中は保管する運用（初期設定）</b>にすれば、スキャンデータは検索・閲覧用の写しとなり、この要件は問題になりません。紙を廃棄したい場合は、認定タイムスタンプ付きのサービス（JIIMA認証製品など）との併用を検討してください。</li>
+<li>電子帳簿保存法では、タイムスタンプの代わりに「訂正削除の履歴が残るシステムで、入力期間内に保存したことを確認できる」方法が認められていますが、パソコンのフォルダに保存する方式ではフォルダを直接操作される余地があるため、ハッシュ値の控えを定期的にメールで送るなど、時刻を第三者に記録させる運用を併せて行ってください（事務処理規程 第9条）。</li>
+<li>保存フォルダのアクセス管理（Google アカウントの二段階認証、共有範囲の限定）は医院側で行ってください。指示書には患者の個人情報が含まれます。</li></ul>
+<p class="sub">最終的な判断は、所轄の税務署・保健所・地方厚生局、または顧問税理士にご確認ください。</p>`;
+}
+
+// ================= 起動 =================
+$('pickBtn').onclick = pickFolder;
+$('pickBtn2').onclick = pickFolder;
+(async () => {
+  if (!window.showDirectoryPicker){ $('noSupport').classList.remove('hidden'); $('pickBtn').disabled = $('pickBtn2').disabled = true; return; }
+  const h = await loadHandle();
+  if (!h) return;
+  try { if ((await h.queryPermission({ mode: 'readwrite' })) === 'granted'){ await openRoot(h); return; } } catch (e) {}
+  const btn = $('resumeBtn');
+  btn.textContent = `いつものフォルダを開く（${h.name}）`;
+  btn.classList.remove('hidden'); $('resumeHint').classList.remove('hidden');
+  $('pickBtn2').textContent = '別のフォルダを選択'; $('pickBtn2').classList.remove('primary');
+  btn.onclick = async () => {
+    try { if ((await h.requestPermission({ mode: 'readwrite' })) !== 'granted') return; await openRoot(h); }
+    catch (e) { alert('いつものフォルダを開けませんでした。「別のフォルダを選択」から選び直してください。'); }
+  };
+})();
+</script>
+</body>
+</html>
