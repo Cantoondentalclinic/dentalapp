@@ -62,6 +62,9 @@ th{text-align:left;padding:7px 8px;font-size:12px;font-weight:500;color:#888;bor
 td{padding:6px 8px;border-bottom:0.5px solid rgba(0,0,0,0.07);vertical-align:top}
 tbody tr:hover td{background:#f9f9f9}
 td.addr{font-size:12px;color:#444}
+.use-pill{font-family:inherit;font-size:11px;padding:1px 8px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.2);background:#f1f1ef;color:#555;cursor:pointer;margin-left:4px;white-space:nowrap}
+.use-pill.work{background:#e8f0fe;color:#1a73e8;border-color:#1a73e8}
+.modal .subhead{grid-column:1/-1;font-size:12px;font-weight:600;color:#555;margin-top:6px;border-bottom:0.5px solid rgba(0,0,0,0.1);padding-bottom:3px}
 .empty{color:#888;font-size:13px;text-align:center;padding:40px 10px;line-height:1.9}
 #dragOverlay{position:fixed;inset:0;background:rgba(26,115,232,0.12);border:4px dashed #1a73e8;z-index:50;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#1a73e8;pointer-events:none}
 /* ダイアログ */
@@ -379,7 +382,8 @@ const chars = s => [...String(s ?? '')];
 const FIELDS = [
   ['name', '氏名'], ['last', '姓'], ['first', '名'], ['kana', 'フリガナ'], ['honorific', '敬称'],
   ['zip', '郵便番号'], ['addr1', '住所1'], ['addr2', '住所2（建物）'], ['company', '会社・医院名'],
-  ['dept', '部署'], ['title', '役職'], ['renmei', '連名'], ['tel', '電話'], ['memo', 'メモ']
+  ['dept', '部署'], ['title', '役職'], ['renmei', '連名'], ['tel', '電話'], ['memo', 'メモ'],
+  ['wzip', '勤務先 郵便番号'], ['waddr1', '勤務先 住所1'], ['waddr2', '勤務先 住所2'], ['wtel', '勤務先 電話']
 ];
 const SYN = {
   name: ['氏名', '名前', 'お名前', '宛名', '姓名', 'フルネーム', '患者名', '患者氏名', '顧客名', '院長名', '院長', '代表者', '代表者名', '担当者', '担当者名', 'name', 'fullname'],
@@ -395,8 +399,23 @@ const SYN = {
   title: ['役職', '肩書'],
   renmei: ['連名', '連名1', '家族'],
   tel: ['電話', '電話番号', 'tel', '携帯', '携帯電話'],
-  memo: ['備考', 'メモ', 'memo', 'note']
+  memo: ['備考', 'メモ', 'memo', 'note'],
+  wzip: ['勤務先郵便番号', '会社郵便番号', '勤務先〒', '会社〒'],
+  waddr1: ['勤務先住所', '勤務先住所1', '会社住所', '会社住所1'],
+  waddr2: ['勤務先住所2', '会社住所2', '勤務先建物名'],
+  wtel: ['勤務先電話', '勤務先電話番号', '会社電話', '会社電話番号']
 };
+// 自宅と勤務先の2つの住所。useWork が true なら勤務先の住所で印刷する
+const hasWork = c => !!(c && (c.wzip || c.waddr1 || c.waddr2));
+const usesWork = c => !!(c && c.useWork && hasWork(c));
+// 印刷用に、使う住所を zip/addr1/addr2 に入れた写しを返す
+function P(c) {
+  if (!c || c.sender) return c;
+  if (usesWork(c)) return Object.assign({}, c, { zip: c.wzip || '', addr1: c.waddr1 || '', addr2: c.waddr2 || '', tel: c.wtel || c.tel });
+  // 勤務先の住所が別にあって自宅あてに出すときは、会社名・部署・役職は印刷しない
+  if (hasWork(c)) return Object.assign({}, c, { company: '', dept: '', title: '' });
+  return c;
+}
 
 // ===== はがきの種類（初期値・mm／文字はpt） =====
 function baseType(id, name, dx = 0, extra = {}) {
@@ -535,7 +554,7 @@ function renderBook() {
   $('#bulkTarget').innerHTML = D.folders.map(f => `<option value="${f.id}">→ ${esc(f.name)}</option>`).join('');
   const q = $('#search').value.trim();
   const list = D.contacts.filter(c => c.folder === D.folderId)
-    .filter(c => !q || [c.name, c.kana, c.addr1, c.addr2, c.company, c.zip, c.memo].join(' ').includes(q));
+    .filter(c => !q || [c.name, c.kana, c.addr1, c.addr2, c.company, c.zip, c.waddr1, c.waddr2, c.wzip, c.memo].join(' ').includes(q));
   const all = D.contacts.filter(c => c.folder === D.folderId);
   $('#selInfo').textContent = `${all.length}件中 印刷対象 ${all.filter(c => c.print).length}件`;
   $('#emptyMsg').classList.toggle('hidden', list.length > 0);
@@ -543,13 +562,16 @@ function renderBook() {
     <tr draggable="true" data-id="${c.id}">
       <td><input type="checkbox" ${c.print ? 'checked' : ''} data-chk="${c.id}"></td>
       <td><b>${esc(c.name || c.company)}</b> <span class="muted">${esc(c.honorific || '')}</span>${renmeiList(c).length ? `<div class="muted" style="margin-top:2px">連名：${renmeiChecks(c)}</div>` : ''}${c.kana ? `<div class="muted">${esc(c.kana)}</div>` : ''}</td>
-      <td style="white-space:nowrap">${esc(fmtZip(c.zip))}</td>
-      <td class="addr">${esc(c.addr1)}<br>${esc(c.addr2)}</td>
+      <td style="white-space:nowrap">${esc(fmtZip(P(c).zip))}${hasWork(c) ? `<div><button class="use-pill ${usesWork(c) ? 'work' : ''}" data-use="${c.id}" title="クリックで印刷に使う住所を切り替え">${usesWork(c) ? '勤務先' : '自宅'}</button></div>` : ''}</td>
+      <td class="addr">${esc(P(c).addr1)}<br>${esc(P(c).addr2)}</td>
       <td class="addr">${esc(c.company)} ${esc(c.dept)} ${esc(c.title)}</td>
       <td style="white-space:nowrap"><button class="btn sm" data-edit="${c.id}">編集</button></td>
     </tr>`).join('');
   $('#contactRows').querySelectorAll('[data-chk]').forEach(el => el.onchange = () => {
     const c = D.contacts.find(x => x.id === el.dataset.chk); c.print = el.checked; save(); renderBook();
+  });
+  $('#contactRows').querySelectorAll('[data-use]').forEach(el => el.onclick = () => {
+    const c = D.contacts.find(x => x.id === el.dataset.use); c.useWork = !usesWork(c); save(); renderBook();
   });
   bindRenmeiChecks($('#contactRows'), () => {});
   $('#contactRows').querySelectorAll('[data-edit]').forEach(el => el.onclick = () => editContact(el.dataset.edit));
@@ -609,10 +631,18 @@ function editContact(id) {
     <div class="grid2">
       ${f('name', '氏名（姓と名の間に空白）')}${f('kana', 'フリガナ')}
       ${f('honorific', '敬称（空欄なら「' + esc(D.opt.honorific) + '」）')}${f('renmei', '連名（名のみ・「、」区切り）')}
+      ${f('memo', 'メモ', true)}
+      <div class="fg full"><label>印刷に使う住所</label>
+        <div class="row" style="gap:16px"><label class="row" style="gap:4px"><input type="radio" name="useAddr" value="home" ${c.useWork ? '' : 'checked'} style="width:auto">自宅</label>
+        <label class="row" style="gap:4px"><input type="radio" name="useAddr" value="work" ${c.useWork ? 'checked' : ''} style="width:auto">勤務先</label></div></div>
+      <div class="subhead">自宅</div>
       ${f('zip', '郵便番号')}${f('tel', '電話')}
       ${f('addr1', '住所1', true)}${f('addr2', '住所2（建物・部屋番号）', true)}
+      <div class="subhead">勤務先</div>
       ${f('company', '会社・医院名')}${f('dept', '部署')}
-      ${f('title', '役職')}${f('memo', 'メモ')}
+      ${f('title', '役職')}${f('wtel', '電話')}
+      ${f('wzip', '郵便番号')}<div></div>
+      ${f('waddr1', '住所1', true)}${f('waddr2', '住所2（建物・部屋番号）', true)}
     </div>
     <div class="modal-foot">
       ${id ? '<button class="btn danger" id="mDel" style="margin-right:auto">削除</button>' : ''}
@@ -621,7 +651,9 @@ function editContact(id) {
     </div>`);
   m.querySelector('#mSave').onclick = () => {
     m.querySelectorAll('[data-k]').forEach(i => c[i.dataset.k] = i.value.trim());
-    c.zip = normZip(c.zip);
+    c.zip = normZip(c.zip); c.wzip = normZip(c.wzip);
+    c.useWork = m.querySelector('input[name=useAddr]:checked').value === 'work';
+    if (c.useWork && !hasWork(c)) return alert('勤務先の住所が空欄です。勤務先の郵便番号・住所を入力するか、「自宅」を選んでください。');
     if (!c.name && !c.company) return alert('氏名か会社名を入力してください。');
     if (!id) { c.id = uid(); c.folder = D.folderId; D.contacts.push(c); }
     save(); closeModal(); renderBook();
@@ -714,6 +746,7 @@ function guessField(h) {
   const k = toHalf(h).replace(/[\s　・_()（）]/g, '').toLowerCase();
   if (!k) return '';
   for (const [f, list] of Object.entries(SYN)) if (list.some(s => s.toLowerCase() === k)) return f;
+  if (/^(勤務先|会社)/.test(k)) { if (/郵便|〒/.test(k)) return 'wzip'; if (/住所2|建物/.test(k)) return 'waddr2'; if (/住所/.test(k)) return 'waddr1'; if (/電話/.test(k)) return 'wtel'; }
   for (const [f, list] of Object.entries(SYN)) if (list.filter(s => s.length >= 2).some(s => k.includes(s.toLowerCase()))) return f;
   return '';
 }
@@ -759,7 +792,7 @@ function mappingDialog(rows, fname) {
   draw();
   m.querySelector('#hdr').onchange = e => { hasHeader = e.target.checked; map = auto(hasHeader); draw(); };
   m.querySelector('#doImport').onclick = () => {
-    const sep = { addr1: '', addr2: ' ', memo: ' ', renmei: '、' };
+    const sep = { addr1: '', addr2: ' ', waddr1: '', waddr2: ' ', memo: ' ', renmei: '、' };
     let dest = m.querySelector('#dest').value;
     if (!map.some(Boolean)) return alert('読み込む列を1つ以上選んでください。');
     if (!map.some(f => ['name', 'last', 'first', 'company'].includes(f)))
@@ -781,6 +814,8 @@ function mappingDialog(rows, fname) {
       if (c.name && /[〇○◯]{2}/.test(c.name)) c.name = '';
       if (!c.name && !c.company) { skipped++; return; }
       c.zip = normZip(c.zip);
+      if (c.wzip) c.wzip = normZip(c.wzip);
+      if (!c.zip && !c.addr1 && hasWork(c)) c.useWork = true;
       const k = [c.name, c.zip, c.addr1].join('|');
       if (exists.has(k)) { skipped++; return; }
       exists.add(k);
@@ -860,6 +895,7 @@ function zipDigits(zip, z, ox, oy, boxes, guides) {
   return h;
 }
 function frontHTML(c, T, guides) {
+  c = P(c);
   const ox = +T.ox || 0, oy = +T.oy || 0, K = D.opt.kanji;
   let h = '';
   // 郵便番号
@@ -969,6 +1005,7 @@ function frontHTML(c, T, guides) {
   return `<div class="sheet ${D.opt.font === 'gothic' ? 'gothic' : ''}" style="width:${T.w}mm;height:${T.h}mm">${h}</div>`;
 }
 function fillVars(s, c) {
+  c = P(c);
   const S = curSender();
   // {差出人}：連名は2行目以降に、名の書き出しをそろえて並べる（全角の空白は1文字分なのでそろう）
   const sn = senderNames(S);
@@ -1343,6 +1380,7 @@ function lblItems() {
 // 文字の幅（全角=1、半角=0.55）
 const emw = t => chars(t).reduce((a, ch) => a + (/[\u0000-ÿ｡-ﾟ]/.test(ch) ? 0.55 : 1), 0);
 function labelInner(c, F) {
+  c = P(c);
   const pad = Math.min(5, Math.max(2, F.h * 0.1));
   const iw = F.w - pad * 2, ih = F.h - pad * 2;
   const toCompany = !String(c.name || '').trim();
@@ -1549,7 +1587,7 @@ async function exportJSON() {
   syncDownload(await syncPack(syncCollect(), pw || null), `住所録バックアップ_${syncStamp()}.json`);
 }
 function exportCSV() {
-  const cols = ['name', 'kana', 'honorific', 'zip', 'addr1', 'addr2', 'company', 'dept', 'title', 'renmei', 'tel', 'memo'];
+  const cols = ['name', 'kana', 'honorific', 'zip', 'addr1', 'addr2', 'tel', 'company', 'dept', 'title', 'wzip', 'waddr1', 'waddr2', 'wtel', 'useWork', 'renmei', 'memo'];
   const head = cols.map(k => FIELDS.find(f => f[0] === k)[1]);
   const q = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
   const rows = D.contacts.filter(c => c.folder === D.folderId).map(c => cols.map(k => q(k === 'zip' ? fmtZip(c.zip) : String(c[k] || ''))).join(','));
