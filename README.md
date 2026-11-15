@@ -9,7 +9,7 @@
 | 🛒 **院内物販** | 商品をタッチ → 注文票を印刷 | https://cantoondentalclinic.github.io/dentalapp/shop-kiosk/web/ |
 | 🧾 **レシート一覧** | 保存したレシート・領収書をファイル名から一覧化・検索（電子帳簿保存法の検索用） | https://cantoondentalclinic.github.io/dentalapp/receipts/ |
 | 📮 **住所録・はがき印刷** | 宛名を用途別フォルダで管理、Excel / CSV をドラッグで読込、宛名面（はがきの種類ごとに位置調整）・裏面を印刷 | https://cantoondentalclinic.github.io/dentalapp/atena/ |
-| 🦷 **技工指示書保管** | 手書きの技工指示書をスキャンして技工所ごとに保存・検索（電子帳簿保存法・e-文書法に配慮：上書き禁止、修正履歴、改ざん検知、日付・金額・取引先で検索） | https://cantoondentalclinic.github.io/dentalapp/gikou/ |
+| 🦷 **技工指示書保管** | 手書きの技工指示書をスキャンして技工所ごとに保存・検索。AI（Claude）で様式の違う指示書の内容を自動読み取り（電子帳簿保存法・e-文書法に配慮：上書き禁止、修正履歴、改ざん検知、日付・金額・取引先で検索） | https://cantoondentalclinic.github.io/dentalapp/gikou/ |
 
 ## データについて
 

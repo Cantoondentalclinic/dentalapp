@@ -100,6 +100,14 @@ details summary{cursor:pointer;font-weight:600}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:100;max-width:90vw}
 .drop{border:2px dashed rgba(26,115,232,0.4);border-radius:10px;padding:14px;text-align:center;font-size:12px;color:#1a73e8;margin-top:8px}
 .drop.over{background:#e8f0fe}
+.ai-filled{background:#fffbe6}
+.ai-unsure{border-color:#d93025!important;background:#fce8e6!important}
+.ai-box{border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.7;margin-bottom:10px}
+.ai-box.run{background:#e8f0fe;color:#174ea6}
+.ai-box.ok{background:#fffbe6;color:#5f4500}
+.ai-box.ng{background:#fce8e6;color:#a50e0e}
+.spin{display:inline-block;width:10px;height:10px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-1px;margin-right:4px}
+@keyframes sp{to{transform:rotate(360deg)}}
 .hidden{display:none!important}
 @media (max-width:1250px){.reg-layout{grid-template-columns:200px minmax(0,1fr)}.reg-layout .reg-form{grid-column:1/-1}}
 @media (max-width:1000px){
@@ -177,6 +185,11 @@ details summary{cursor:pointer;font-weight:600}
         <button class="btn" id="addFilesBtn">ファイルを追加</button>
         <input type="file" id="fileInput" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" class="hidden">
       </div>
+      <div class="btns hidden" id="aiBatchBtns" style="margin-bottom:8px;flex-direction:column;align-items:stretch">
+        <button class="btn primary" id="aiBatchAuto" title="AIで読み取り、迷いがないものはそのまま登録します">🤖 全部読み取って自動登録</button>
+        <button class="btn" id="aiBatchRead" title="読み取りだけ行い、登録は1枚ずつ確認して行います">全部読み取る（登録は確認後）</button>
+      </div>
+      <div id="aiBatchStatus" class="ai-box run hidden"></div>
       <div class="pending-list" id="pendingList"></div>
       <div class="drop" id="dropZone">ここにスキャンしたファイルを<br>ドラッグ＆ドロップ</div>
       <p class="sub" style="margin-top:8px">スキャナの保存先を、保存フォルダ内の <b>「_取込」</b> にしておくと、ここに自動で並びます。</p>
@@ -187,13 +200,15 @@ details summary{cursor:pointer;font-weight:600}
       <div class="file-info" id="regInfo"></div>
     </div>
     <div class="card reg-form">
-      <div class="section-title">指示書の内容を入力</div>
+      <div class="btns" style="justify-content:space-between;margin-bottom:8px"><div class="section-title" style="margin:0">指示書の内容</div><button class="btn hidden" id="aiReadBtn">🤖 AIで読み取る</button></div>
+      <div id="aiStatus" class="ai-box hidden"></div>
       <div id="regForm"></div>
       <div class="btns" style="margin-top:12px">
         <button class="btn primary big" id="regBtn" disabled>登録する（Ctrl+Enter）</button>
         <button class="btn" id="skipBtn" disabled title="取り込み待ちから外すだけ（ファイルは消しません）">あとで</button>
       </div>
       <p class="sub" style="margin-top:8px">登録すると、ファイルは「指示書」フォルダに保存され、以後は上書き・削除できません（修正は履歴付きで行います）。</p>
+      <p class="sub" id="aiSetupHint" style="margin-top:6px">手入力を省くには「設定・規程類」で <b>AI読み取り</b> を有効にしてください。</p>
     </div>
   </div>
 </section>
@@ -268,6 +283,7 @@ details summary{cursor:pointer;font-weight:600}
       <div class="form-group"><label>担当者</label><input id="lPerson"></div>
       <div class="form-group span2"><label>メモ（住所・届出番号など）</label><input id="lMemo"></div>
       <div class="form-group"><label>状態</label><select id="lActive"><option value="1">取引中</option><option value="0">取引終了</option></select></div>
+      <div class="form-group full"><label>AI読み取りのヒント（この技工所の指示書の様式の特徴。任意）</label><textarea id="lHint" rows="2" placeholder="例：右上に技工所のロゴ。患者名は左上の枠。納品日は「セット日」欄。保険／自費は右上のチェック欄。"></textarea></div>
     </div>
     <div class="btns" style="margin-top:10px">
       <button class="btn primary" id="labSaveBtn">追加</button>
@@ -329,6 +345,25 @@ details summary{cursor:pointer;font-weight:600}
       <div class="form-group full"><label>技工物の選択肢（1行に1つ）</label><textarea id="sItems" rows="3"></textarea></div>
     </div>
     <div class="btns" style="margin-top:10px"><button class="btn primary" id="saveSettingsBtn">設定を保存</button></div>
+  </div>
+  <div class="card">
+    <div class="section-title">🤖 AI読み取り（手書き指示書の内容を自動入力）</div>
+    <p class="sub">スキャンした指示書の画像を Anthropic 社の AI（Claude）に送り、技工所・発行日・患者・技工物・部位などを読み取って入力欄に自動で入れます。技工所ごとに様式が違っても読み取れます。読み取りに自信がない項目は<span class="badge ng">赤枠</span>で示します。</p>
+    <div class="note" style="margin-top:10px">
+      <b>個人情報について（有効にする前に必ずお読みください）</b><br>
+      ・指示書の画像（患者名などを含む）が、<b>米国の事業者</b>である Anthropic 社のサーバーに送られます。API で送ったデータは同社のAIの学習には使われない取扱いですが、一定期間（原則30日）同社で保管されます。<br>
+      ・個人情報保護法では「外国にある第三者」への提供にあたるため、①患者さんの同意を得る、または ②同社と個人データの取扱いに関する契約（DPA）を結ぶなど、日本と同等の保護の体制を確認する ことが必要です。あわせて院内掲示（下の「院内掲示」に文言が入ります）と、患者さんから求めがあったときの説明を行ってください。<br>
+      ・厚生労働省の「医療情報システムの安全管理に関するガイドライン」に沿い、外部サービスの利用として管理責任者が判断し、記録を残してください（有効にした人と日付は台帳に記録されます）。
+    </div>
+    <div class="btns" style="margin-top:10px"><span id="aiConsentState"></span><button class="btn" id="aiConsentBtn"></button></div>
+    <div class="section-title" style="margin-top:16px;font-size:13px">このパソコンの設定（APIキーはこのパソコンのブラウザの中だけに保存し、保存フォルダには書きません）</div>
+    <div class="form-grid">
+      <div class="form-group span2"><label>Anthropic API キー</label><input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off"></div>
+      <div class="form-group"><label>読み取りの精度</label><select id="aiEffort"><option value="high">高精度（推奨・1枚 約10〜20円）</option><option value="medium">標準（1枚 約5〜10円）</option></select></div>
+      <div class="form-group"><label>ファイルを選んだら</label><select id="aiAuto"><option value="1">自動で読み取る</option><option value="0">ボタンで読み取る</option></select></div>
+    </div>
+    <div class="btns" style="margin-top:10px"><button class="btn primary" id="aiSaveBtn">この設定を保存</button><button class="btn" id="aiTestBtn">接続テスト</button><span class="sub" id="aiTestResult"></span></div>
+    <p class="sub" style="margin-top:8px">API キーは <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Console</a> で作成します（利用料は使った分だけ Anthropic 社から請求されます）。キーを入れたパソコンは、院外の人が触れないように管理してください。</p>
   </div>
   <div class="card">
     <div class="section-title">備え付ける書類（印刷して保管）</div>
@@ -706,10 +741,20 @@ function addLocalFiles(files){
 function renderPending(){
   $('pendCnt').textContent = pending.length; $('pendCnt').classList.toggle('hidden', !pending.length);
   $('pendingList').innerHTML = pending.length ? pending.map((p, i) =>
-    `<div class="pending-item ${i === pendSel ? 'sel' : ''}" data-i="${i}">${esc(p.name)}<div class="src">${p.src === 'inbox' ? '取込フォルダ' : '追加したファイル'}</div></div>`).join('')
+    `<div class="pending-item ${i === pendSel ? 'sel' : ''}" data-i="${i}">${esc(p.name)}<div class="src">${p.src === 'inbox' ? '取込フォルダ' : '追加したファイル'} ${aiBadge(p)}</div></div>`).join('')
     : '<div class="empty" style="padding:16px 4px">取り込み待ちはありません</div>';
   $('pendingList').querySelectorAll('.pending-item').forEach(el => el.onclick = () => selectPending(+el.dataset.i));
   $('regBtn').disabled = $('skipBtn').disabled = pendSel < 0;
+  const ready = S && aiReady();
+  $('aiBatchBtns').classList.toggle('hidden', !ready || !pending.length || aiBatchRunning);
+  $('aiReadBtn').classList.toggle('hidden', !ready || pendSel < 0);
+  $('aiSetupHint').classList.toggle('hidden', !!ready);
+}
+function aiBadge(p){
+  if (p.aiState === 'reading') return '<span class="badge gray"><span class="spin"></span>読み取り中</span>';
+  if (p.aiState === 'error') return '<span class="badge ng">読み取り失敗</span>';
+  if (p.aiState === 'done') return p.ai.unsure.length ? `<span class="badge warn">要確認 ${p.ai.unsure.length}</span>` : '<span class="badge ok">読み取り済</span>';
+  return '';
 }
 let pendInfo = null;
 async function selectPending(i){
@@ -723,10 +768,13 @@ async function selectPending(i){
     const file = await p.getFile();
     const { info } = await inspectFile(file);
     if (pending[pendSel] !== p) return;
-    pendInfo = info;
+    pendInfo = info; p.info = info;
     showBlob($('regPreview'), file, info.type);
     $('regInfo').innerHTML = fileInfoHtml(info);
-    setTimeout(() => $('rf_issueDate')?.focus(), 50);
+    renderRegForm();
+    if (p.ai || p.aiState) applyAiToForm(p);
+    else if (aiReady() && aiLocal().auto !== '0') aiRead(p);
+    else setTimeout(() => $('rf_issueDate')?.focus(), 50);
   } catch (e) { $('regInfo').innerHTML = `<span class="badge ng">読めませんでした：${esc(e.message)}</span>`; }
 }
 function showBlob(el, blob, type){
@@ -793,35 +841,53 @@ async function register(){
   const dup = allRecs().find(r => r.files.some(x => x.sha256 === pendInfo.sha256));
   if (dup && !confirm(`同じファイルが ${dup.no} として登録済みです。それでも登録しますか？`)) return;
   if (pendInfo.dpi && pendInfo.dpi < 195 && !confirm(`解像度が約${pendInfo.dpi}dpiで、電子帳簿保存法の基準（200dpi以上）に足りません。\nスキャナの設定を300dpiにして読み直すことをおすすめします。\nこのまま登録しますか？`)) return;
+  if (p.aiState === 'done' && p.ai.unsure.length){
+    const left = p.ai.unsure.filter(k => String(p.ai.fields[k] ?? '') === String(o[k] ?? ''));
+    if (left.length && !confirm(`AIが自信のない項目（${left.map(k => LABEL[k]).join('・')}）を確認しましたか？\n画像と見比べて正しければ「OK」で登録します。`)) return;
+  }
   $('regBtn').disabled = true;
   try {
-    await sync();
-    const file = await p.getFile();
-    const buf = await file.arrayBuffer();
-    const hash = await sha256(buf);
-    if (hash !== pendInfo.sha256) throw new Error('ファイルが読み込み後に変わりました。もう一度選び直してください。');
-    const y = new Date().getFullYear();
-    const no = `${y}-${String(allRecs().filter(r => r.no.startsWith(y + '-')).length + 1).padStart(5, '0')}`;
-    const ext = file.name.split('.').pop().toLowerCase();
-    const path = `${SCANS}/${y}/${pad(new Date().getMonth() + 1)}/${no}_1_${safeName(labName(o.lab))}.${ext}`;
-    await writeBlob(path, new Blob([buf], { type: pendInfo.type }), true);
-    // 書き込んだファイルを読み直して確認
-    const check = await sha256(await (await readFile(path)).arrayBuffer());
-    if (check !== hash){ throw new Error('保存したファイルの確認に失敗しました（書き込みエラー）。'); }
-    const f = { path, name: file.name, size: file.size, type: pendInfo.type, sha256: hash, w: pendInfo.w, h: pendInfo.h, dpi: pendInfo.dpi, pages: pendInfo.pages, color: pendInfo.color };
-    await append('create', no, { fields: o, file: f });
-    if (p.src === 'inbox'){ try { await removeFile(INBOX + '/' + p.name); } catch (e) { console.warn(e); } }
+    const no = await serial(() => saveRecord(p, o, pendInfo, aiMeta(p, o)));
     sticky = { lab: o.lab, dentist: o.dentist, kind: o.kind, issueDate: o.issueDate };
-    pending.splice(pendSel, 1);
     toast(`${no} として登録しました`);
-    renderRegForm();
-    renderTodoCount();
-    selectPending(Math.min(pendSel, pending.length - 1));
+    afterRemoved(p);
   } catch (e) { alert('登録できませんでした：' + e.message); }
   finally { $('regBtn').disabled = pendSel < 0; }
 }
+// 登録処理（手動・自動で共通）。台帳への書き込みは1件ずつ順番に行う
+let regChain = Promise.resolve();
+function serial(fn){ const r = regChain.then(fn); regChain = r.catch(() => {}); return r; }
+async function saveRecord(p, o, info, ai){
+  await sync();
+  const file = await p.getFile();
+  const buf = await file.arrayBuffer();
+  const hash = await sha256(buf);
+  if (hash !== info.sha256) throw new Error('ファイルが読み込み後に変わりました。もう一度選び直してください。');
+  const now = new Date(), y = now.getFullYear();
+  const no = `${y}-${String(allRecs().filter(r => r.no.startsWith(y + '-')).length + 1).padStart(5, '0')}`;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const path = `${SCANS}/${y}/${pad(now.getMonth() + 1)}/${no}_1_${safeName(labName(o.lab))}.${ext}`;
+  await writeBlob(path, new Blob([buf], { type: info.type }), true);
+  // 書き込んだファイルを読み直して確認
+  const check = await sha256(await (await readFile(path)).arrayBuffer());
+  if (check !== hash) throw new Error('保存したファイルの確認に失敗しました（書き込みエラー）。');
+  const f = { path, name: file.name, size: file.size, type: info.type, sha256: hash, w: info.w, h: info.h, dpi: info.dpi, pages: info.pages, color: info.color };
+  await append('create', no, ai ? { fields: o, file: f, ai } : { fields: o, file: f });
+  if (p.src === 'inbox'){ try { await removeFile(INBOX + '/' + p.name); } catch (e) { console.warn(e); } }
+  return no;
+}
+// 取り込み待ちから外したあと、画面を整える
+function afterRemoved(p){
+  const cur = pending[pendSel];
+  const i = pending.indexOf(p);
+  if (i >= 0) pending.splice(i, 1);
+  renderTodoCount();
+  if (cur === p){ renderRegForm(); selectPending(Math.min(i, pending.length - 1)); }
+  else { pendSel = pending.indexOf(cur); renderPending(); }
+}
 $('regBtn').onclick = register;
 $('skipBtn').onclick = () => { if (pendSel < 0) return; pending.push(pending.splice(pendSel, 1)[0]); selectPending(Math.min(pendSel, pending.length - 1)); };
+let pendingLabReturn = false;
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && currentTab === 'register' && !$('modalRoot').innerHTML){ e.preventDefault(); register(); }
 });
@@ -832,6 +898,239 @@ const dz = $('dropZone');
 ['dragover', 'dragenter'].forEach(t => document.addEventListener(t, e => { if (currentTab === 'register'){ e.preventDefault(); dz.classList.add('over'); } }));
 ['dragleave', 'drop'].forEach(t => document.addEventListener(t, () => dz.classList.remove('over')));
 document.addEventListener('drop', e => { if (currentTab !== 'register') return; e.preventDefault(); addLocalFiles([...e.dataTransfer.files]); });
+
+// ================= AI読み取り（Claude） =================
+const AI_MODEL = 'claude-opus-5-5';
+const SDK_URL = './vendor/anthropic-sdk-1.3.0.mjs';
+const AI_FIELDS = ['lab', 'issueDate', 'dueDate', 'patientId', 'patientName', 'dentist', 'item', 'teeth', 'kind', 'amount', 'memo'];
+let AnthropicSDK = null, aiBatchRunning = false;
+function aiLocal(){ try { return JSON.parse(localStorage.getItem('gikou-ai') || '{}'); } catch (e) { return {}; } }
+function saveAiLocal(o){ try { localStorage.setItem('gikou-ai', JSON.stringify(o)); } catch (e) { alert('このブラウザでは設定を保存できません（プライベートモード等）'); } }
+function aiReady(){ return !!(S && S.settings.aiConsent?.on && aiLocal().apiKey); }
+async function aiClient(){
+  if (!AnthropicSDK) AnthropicSDK = (await import(SDK_URL)).default;
+  // APIキーはこのパソコンのブラウザ内にだけ保存。院内のパソコンで使う前提で、ブラウザから直接呼び出す
+  return new AnthropicSDK({ apiKey: aiLocal().apiKey, dangerouslyAllowBrowser: true, maxRetries: 3, timeout: 5 * 60 * 1000 });
+}
+function b64(buf){ const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+async function aiInput(buf, type){
+  if (type === 'application/pdf'){
+    if (buf.byteLength > 20e6) throw new Error('PDFが大きすぎます（20MBまで）');
+    return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64(buf) } };
+  }
+  // 画像は長辺2576px以内のJPEGにして送る（それ以上はAI側で縮小されるため）
+  const bmp = await createImageBitmap(new Blob([buf], { type }));
+  const sc = Math.min(1, 2576 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height); bmp.close();
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  return { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64(await blob.arrayBuffer()) } };
+}
+function aiSchema(){
+  const labIds = Object.values(S.labs).filter(l => l.active !== false).map(l => l.id);
+  const str = d => ({ type: 'string', description: d });
+  const props = {
+    lab_id: { type: 'string', enum: [...labIds, ''], description: '登録済み技工所一覧のうち、この指示書の宛先（作製する技工所）のID。どれにも当てはまらない・判断できないときは空文字' },
+    lab_name_on_form: str('用紙に印刷・記入・押印されている技工所名（そのまま）。なければ空文字'),
+    issue_date: str('指示書の発行日（作成日・依頼日・印象日など、医院が指示書を書いた日）。YYYY-MM-DD。読めなければ空文字'),
+    due_date: str('納品予定日（納期・セット日・装着予定日・希望日）。YYYY-MM-DD。なければ空文字'),
+    patient_id: str('カルテ番号・患者番号。なければ空文字'),
+    patient_name: str('患者氏名（漢字またはカナ、記載どおり）。なければ空文字'),
+    dentist: str('指示した歯科医師名。なければ空文字'),
+    item: str('技工物の種類。選択肢に合うものはその表記で。複数あれば「、」区切り'),
+    teeth: str('部位（歯式）。「右上6」「左下4-6」のように 右上/左上/右下/左下＋番号 で表す。複数は「、」区切り'),
+    kind: { type: 'string', enum: ['保険', '自費', ''], description: '保険か自費か。判断できなければ空文字' },
+    amount: str('技工料の金額（数字のみ、税込が分かればそれ）。書かれていなければ空文字'),
+    memo: str('上記以外の大事な指示（シェード、材料、金属の種類、咬合、注意事項、再製作など）を短くまとめる。なければ空文字'),
+    unsure_fields: { type: 'array', items: { type: 'string', enum: AI_FIELDS }, description: '読み取りに自信がない、または推測が入った項目' },
+    unsure_note: str('自信がない理由や、読めなかった箇所の説明（短く）。なければ空文字')
+  };
+  return { type: 'object', additionalProperties: false, required: Object.keys(props), properties: props };
+}
+function aiSystem(){
+  const labs = Object.values(S.labs).filter(l => l.active !== false);
+  return `あなたは歯科医院の事務を手伝うアシスタントです。スキャンされた「歯科技工指示書」の画像から、指定の項目を読み取ります。
+
+- 指示書の様式は技工所ごとに異なります。欄の見出し・位置・チェック欄・押印・ロゴを手がかりに、各項目に当たる記載を探してください。
+- 多くは手書きです。読めない文字を推測で補ったときや、二通りに読めるときは、その項目を unsure_fields に入れてください。書かれていない項目は空文字にし、unsure_fields には入れません。
+- 日付は西暦の YYYY-MM-DD にします。和暦（R8＝令和8年＝2026年、H＝平成）や「11/5」のような年のない日付は、今日（${today()}）に近い日付として解釈し、年を補ったときは unsure_fields に入れてください。
+- 技工所は、下の一覧の名前・特徴と、用紙の印刷・押印・ロゴを照らし合わせて選びます。用紙が技工所の専用様式なら、その技工所を選んでください。
+
+登録済みの技工所：
+${labs.length ? labs.map(l => `- ID: ${l.id} ／ 名前: ${l.name}${l.hint ? ` ／ 様式の特徴: ${l.hint}` : ''}`).join('\n') : '（なし）'}
+
+技工物の選択肢（合うものはこの表記を使う。合わなければ記載どおり）：
+${(S.settings.items || DEFAULT_ITEMS).join('、')}`;
+}
+function normAi(j, model){
+  const d = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') && !isNaN(new Date(v)) ? v : '';
+  const amt = String(j.amount || '').replace(/[,，円¥￥\s]/g, '');
+  const f = {
+    lab: S.labs[j.lab_id] ? j.lab_id : '', issueDate: d(j.issue_date), dueDate: d(j.due_date),
+    patientId: (j.patient_id || '').trim(), patientName: (j.patient_name || '').trim(), dentist: (j.dentist || '').trim(),
+    item: (j.item || '').trim(), teeth: (j.teeth || '').trim(), kind: ['保険', '自費'].includes(j.kind) ? j.kind : '',
+    amount: /^\d+$/.test(amt) ? +amt : '', memo: (j.memo || '').trim()
+  };
+  const unsure = new Set((j.unsure_fields || []).filter(k => AI_FIELDS.includes(k)));
+  if (!f.lab) unsure.add('lab');
+  if (!f.issueDate || f.issueDate > today()) unsure.add('issueDate');
+  return { fields: f, unsure: AI_FIELDS.filter(k => unsure.has(k)), note: (j.unsure_note || '').trim(), labRaw: (j.lab_name_on_form || '').trim(), model };
+}
+async function aiExtract(buf, type){
+  const client = await aiClient();
+  const res = await client.beta.messages.create({
+    model: AI_MODEL,
+    max_tokens: 16000,
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',   // 安全判定で断られたときは、別モデルで自動的にやり直す
+    output_config: { effort: aiLocal().effort || 'high', format: { type: 'json_schema', schema: aiSchema() } },
+    system: aiSystem(),
+    messages: [{ role: 'user', content: [await aiInput(buf, type), { type: 'text', text: 'この歯科技工指示書を読み取ってください。' }] }]
+  });
+  if (res.stop_reason === 'refusal') throw new Error('AIが読み取りを断りました' + (res.stop_details?.explanation ? '：' + res.stop_details.explanation : ''));
+  if (res.stop_reason === 'max_tokens') throw new Error('AIの回答が途中で切れました。もう一度試してください。');
+  const text = res.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  let j; try { j = JSON.parse(text); } catch (e) { throw new Error('AIの回答を読み取れませんでした'); }
+  return normAi(j, res.model);
+}
+function aiErrMsg(e){
+  const st = e?.status;
+  if (st === 401) return 'APIキーが正しくありません（設定・規程類で確認）';
+  if (st === 403) return 'このAPIキーでは利用できません（権限・組織の設定を確認）';
+  if (st === 429) return '利用の上限に達しました。少し待つか、Claude Console で上限・残高を確認してください';
+  if (st === 400 && /credit|balance/i.test(e.message)) return 'Claude Console のクレジット残高が足りません';
+  if (st >= 500) return 'AIのサーバーが混み合っています。少し待ってからもう一度試してください';
+  if (e?.name === 'APIConnectionError' || /fetch|network/i.test(e?.message || '')) return 'インターネットに接続できません';
+  return e?.message || String(e);
+}
+function aiRead(p){
+  if (p.aiState === 'reading') return p.aiPromise;
+  p.aiState = 'reading'; p.aiErr = '';
+  renderPending(); if (pending[pendSel] === p) showAiStatus(p);
+  p.aiPromise = (async () => {
+    try {
+      const file = await p.getFile();
+      const { info, buf } = await inspectFile(file);
+      p.info = info;
+      p.ai = await aiExtract(buf, info.type);
+      p.aiState = 'done';
+    } catch (e) { p.aiState = 'error'; p.aiErr = aiErrMsg(e); console.warn(e); }
+    renderPending();
+    if (pending[pendSel] === p) applyAiToForm(p);
+  })();
+  return p.aiPromise;
+}
+function showAiStatus(p){
+  const box = $('aiStatus');
+  box.classList.toggle('hidden', !p?.aiState);
+  if (!p?.aiState) return;
+  if (p.aiState === 'reading'){ box.className = 'ai-box run'; box.innerHTML = '<span class="spin"></span>AIが指示書を読み取っています…（10〜40秒）'; return; }
+  if (p.aiState === 'error'){ box.className = 'ai-box ng'; box.innerHTML = `読み取りに失敗しました：${esc(p.aiErr)}　<a href="#" id="aiRetry">もう一度</a>`; $('aiRetry').onclick = e => { e.preventDefault(); aiRead(p); }; return; }
+  const a = p.ai;
+  const labLine = !a.fields.lab && a.labRaw ? `<br>用紙の技工所名「${esc(a.labRaw)}」は未登録です。 <a href="#" id="aiAddLab">この名前で技工所を追加</a>` : '';
+  box.className = 'ai-box ok';
+  box.innerHTML = (a.unsure.length ? `🤖 読み取りました。<b>赤枠の${a.unsure.length}項目</b>（${a.unsure.map(k => LABEL[k]).join('・')}）は画像と見比べて確認してください。` : '🤖 読み取りました。画像と見比べて、よければ登録してください。')
+    + (a.note ? `<br>AIのメモ：${esc(a.note)}` : '') + labLine;
+  if ($('aiAddLab')) $('aiAddLab').onclick = e => { e.preventDefault(); pendingLabReturn = true; showTab('labs'); resetLabForm(); $('lName').value = a.labRaw; $('lName').focus(); };
+}
+function applyAiToForm(p){
+  showAiStatus(p);
+  if (p.aiState !== 'done' || !$('rf_lab')) return;
+  if (!$('rf_lab').querySelector(`option[value="${CSS.escape(p.ai.fields.lab || '')}"]`)) $('rf_lab').innerHTML = labOptions(p.ai.fields.lab, false, false);
+  for (const k of AI_FIELDS){
+    const el = $('rf_' + k); if (!el) continue;
+    const v = p.ai.fields[k];
+    if (v === '' && (k === 'dentist' || k === 'kind') && el.value) continue;   // 前回の入力（医師名・区分）が残っていればそのまま
+    el.value = v ?? '';
+    el.classList.add('ai-filled');
+    el.classList.toggle('ai-unsure', p.ai.unsure.includes(k));
+    el.title = p.ai.unsure.includes(k) ? 'AIが自信のない項目です。画像と見比べて確認してください' : 'AIが読み取った値です';
+    el.addEventListener('input', () => el.classList.remove('ai-unsure'), { once: true });
+  }
+  checkLate();
+}
+function aiMeta(p, o){
+  if (p.aiState !== 'done') return undefined;
+  return { model: p.ai.model, unsure: p.ai.unsure, edited: AI_FIELDS.filter(k => String(p.ai.fields[k] ?? '') !== String(o[k] ?? '')) };
+}
+$('aiReadBtn').onclick = () => { const p = pending[pendSel]; if (p) aiRead(p); };
+
+// まとめて読み取り（autoReg=true なら、迷いのないものは自動で登録）
+async function aiBatch(autoReg){
+  if (!aiReady()) return;
+  if (autoReg && !operator()){ alert('画面右上の「入力者」を選んでください（自動登録した人として記録します）'); $('opSel').focus(); return; }
+  const list = pending.filter(p => p.aiState !== 'reading');
+  if (!list.length) return;
+  const per = (aiLocal().effort || 'high') === 'high' ? '10〜20' : '5〜10';
+  if (!confirm(`${list.length}枚をAIで読み取ります（1枚 約${per}円）。` + (autoReg ? '\n\n読み取りに迷いがなく、解像度・重複にも問題がない指示書は、そのまま登録します。\n迷いがあるものは「要確認」として残します。' : ''))) return;
+  aiBatchRunning = true; renderPending();
+  const st = $('aiBatchStatus'); st.classList.remove('hidden'); st.className = 'ai-box run';
+  let done = 0, reg = 0, check = 0, fail = 0;
+  const show = () => { st.innerHTML = `<span class="spin"></span>読み取り中… ${done}/${list.length}枚` + (autoReg ? `（自動登録 ${reg}・要確認 ${check}${fail ? `・失敗 ${fail}` : ''}）` : ''); };
+  show();
+  let next = 0;
+  const worker = async () => {
+    while (next < list.length){
+      const p = list[next++];
+      if (p.aiState !== 'done') await aiRead(p);
+      done++;
+      if (p.aiState !== 'done'){ fail++; show(); continue; }
+      if (autoReg){
+        const o = { ...p.ai.fields, doneDate: '' };
+        const dup = allRecs().some(r => r.files.some(x => x.sha256 === p.info.sha256));
+        const ok = !p.ai.unsure.length && !validate(o) && !(p.info.dpi && p.info.dpi < 195) && !dup;
+        if (ok){
+          try { await serial(() => saveRecord(p, o, p.info, aiMeta(p, o))); reg++; afterRemoved(p); }
+          catch (e) { check++; p.aiState = 'error'; p.aiErr = '自動登録できませんでした：' + e.message; renderPending(); }
+        } else check++;
+      }
+      show();
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]);
+  aiBatchRunning = false;
+  st.className = 'ai-box ok';
+  st.innerHTML = autoReg
+    ? `完了：${reg}枚を自動登録しました。` + (check ? `<b>${check}枚</b>は確認が必要です（一覧の「要確認」）。` : '') + (fail ? `${fail}枚は読み取りに失敗しました。` : '')
+    : `完了：${done - fail}枚を読み取りました。1枚ずつ確認して登録してください。` + (fail ? `${fail}枚は失敗しました。` : '');
+  renderPending();
+  if (pendSel < 0 && pending.length) selectPending(0);
+}
+$('aiBatchAuto').onclick = () => aiBatch(true);
+$('aiBatchRead').onclick = () => aiBatch(false);
+
+// 設定画面（AI）
+function renderAiSettings(){
+  const c = S.settings.aiConsent;
+  $('aiConsentState').innerHTML = c?.on ? `<span class="badge ok">有効</span> <span class="sub">${esc(c.date)} ${esc(c.by)} が有効にしました</span>` : '<span class="badge gray">無効</span>';
+  $('aiConsentBtn').textContent = c?.on ? 'AI読み取りを無効にする' : '上記を確認し、医院としてAI読み取りを有効にする';
+  $('aiConsentBtn').className = c?.on ? 'btn' : 'btn primary';
+  const l = aiLocal();
+  $('aiKey').value = l.apiKey || ''; $('aiEffort').value = l.effort || 'high'; $('aiAuto').value = l.auto || '1';
+}
+$('aiConsentBtn').onclick = async () => {
+  if (!needOp()) return;
+  const on = !S.settings.aiConsent?.on;
+  if (on && !confirm('患者さんの個人情報を含む指示書の画像を、Anthropic社（米国）のAIに送って読み取ることを、医院として承認しますか？\n（承認した人と日付が台帳に記録されます）')) return;
+  try { await append('settings', null, { aiConsent: { on, by: operator(), date: today() } }); renderAiSettings(); renderPending(); toast(on ? 'AI読み取りを有効にしました' : '無効にしました'); }
+  catch (e) { alert(e.message); }
+};
+$('aiSaveBtn').onclick = () => {
+  const key = $('aiKey').value.trim();
+  if (key && !/^sk-ant-/.test(key) && !confirm('APIキーの形式（sk-ant-…）と違うようです。このまま保存しますか？')) return;
+  saveAiLocal({ apiKey: key, effort: $('aiEffort').value, auto: $('aiAuto').value });
+  toast('このパソコンに保存しました'); renderPending();
+};
+$('aiTestBtn').onclick = async () => {
+  $('aiSaveBtn').click();
+  if (!aiLocal().apiKey){ $('aiTestResult').textContent = 'APIキーを入れてください'; return; }
+  $('aiTestResult').textContent = '確認中…';
+  try {
+    const client = await aiClient();
+    await client.models.retrieve(AI_MODEL);
+    $('aiTestResult').textContent = '✅ 接続できました（' + AI_MODEL + '）';
+  } catch (e) { $('aiTestResult').textContent = '❌ ' + aiErrMsg(e); }
+};
 
 // ================= 検索・一覧 =================
 const filterIds = ['fDateKind', 'fFrom', 'fTo', 'fAmtMin', 'fAmtMax', 'fLab', 'fPatient', 'fText', 'fKind', 'fState'];
@@ -975,7 +1274,7 @@ async function showDetail(no, fileIdx){
 function histLine(e){
   const d = e.data || {};
   let body = '';
-  if (e.op === 'create') body = 'ファイル ' + esc(d.file?.name || '');
+  if (e.op === 'create') body = 'ファイル ' + esc(d.file?.name || '') + (d.ai ? `<br>🤖 AI読み取り（${esc(d.ai.model)}）${d.ai.edited?.length ? '・人が修正：' + d.ai.edited.map(k => LABEL[k] || k).join('・') : '・修正なし'}` : '');
   if (e.op === 'update') body = Object.keys(d.after || {}).map(k => `${LABEL[k] || k}：${esc(fmtVal(k, d.before?.[k]))} → ${esc(fmtVal(k, d.after[k]))}`).join('<br>') + (d.reason ? `<br>理由：${esc(d.reason)}` : '');
   if (e.op === 'add-file') body = (d.replace ? '差し替え：' : '追加：') + esc(d.file?.name || '') + (d.reason ? `<br>理由：${esc(d.reason)}` : '');
   if (e.op === 'void' || e.op === 'restore') body = '理由：' + esc(d.reason || '');
@@ -1065,12 +1364,12 @@ function renderLabs(){
 }
 function editLab(id){
   labEditId = id; const l = S.labs[id];
-  $('lName').value = l.name; $('lColor').value = l.color || '#1a73e8'; $('lTel').value = l.tel || ''; $('lPerson').value = l.person || ''; $('lMemo').value = l.memo || ''; $('lActive').value = l.active === false ? '0' : '1';
+  $('lName').value = l.name; $('lHint').value = l.hint || ''; $('lColor').value = l.color || '#1a73e8'; $('lTel').value = l.tel || ''; $('lPerson').value = l.person || ''; $('lMemo').value = l.memo || ''; $('lActive').value = l.active === false ? '0' : '1';
   $('labFormTitle').textContent = '技工所を編集'; $('labSaveBtn').textContent = '変更を保存'; $('labCancelBtn').classList.remove('hidden');
   $('lName').focus();
 }
 function resetLabForm(){
-  labEditId = null; ['lName', 'lTel', 'lPerson', 'lMemo'].forEach(i => $(i).value = '');
+  labEditId = null; ['lName', 'lTel', 'lPerson', 'lMemo', 'lHint'].forEach(i => $(i).value = '');
   const palette = ['#1a73e8', '#d93025', '#137333', '#b06000', '#9334e6', '#00838f', '#c2185b', '#5f6368'];
   $('lColor').value = palette[Object.keys(S.labs).length % palette.length]; $('lActive').value = '1';
   $('labFormTitle').textContent = '技工所を追加'; $('labSaveBtn').textContent = '追加'; $('labCancelBtn').classList.add('hidden');
@@ -1078,7 +1377,7 @@ function resetLabForm(){
 $('labCancelBtn').onclick = resetLabForm;
 $('labSaveBtn').onclick = async () => {
   if (!needOp()) return;
-  const d = { name: $('lName').value.trim(), color: $('lColor').value, tel: $('lTel').value.trim(), person: $('lPerson').value.trim(), memo: $('lMemo').value.trim(), active: $('lActive').value === '1' };
+  const d = { name: $('lName').value.trim(), color: $('lColor').value, tel: $('lTel').value.trim(), person: $('lPerson').value.trim(), memo: $('lMemo').value.trim(), hint: $('lHint').value.trim(), active: $('lActive').value === '1' };
   if (!d.name){ alert('技工所名を入力してください'); return; }
   if (Object.values(S.labs).some(l => l.name === d.name && l.id !== labEditId)){ alert('同じ名前の技工所がすでにあります'); return; }
   try {
@@ -1086,6 +1385,7 @@ $('labSaveBtn').onclick = async () => {
     else await append('lab-add', null, { id: 'L' + Date.now().toString(36), ...d });
     toast(labEditId ? '変更しました' : '追加しました');
     resetLabForm(); renderLabs();
+    if (pendingLabReturn){ pendingLabReturn = false; showTab('register'); const p = pending[pendSel]; if (p?.ai){ const id = Object.values(S.labs).find(l => l.name === d.name)?.id; if (id){ p.ai.fields.lab = id; p.ai.unsure = p.ai.unsure.filter(k => k !== 'lab'); } applyAiToForm(p); } }
   } catch (e) { alert(e.message); }
 };
 
@@ -1153,7 +1453,7 @@ function renderAudit(){
   $('auditBody').innerHTML = list.map(e => {
     const d = e.data || {};
     let s = '';
-    if (e.op === 'create') s = `${esc(labName(d.fields?.lab))} ／ ${esc(d.fields?.issueDate)} ／ ${esc(d.file?.name)}`;
+    if (e.op === 'create') s = `${esc(labName(d.fields?.lab))} ／ ${esc(d.fields?.issueDate)} ／ ${esc(d.file?.name)}` + (d.ai ? ` ／ 🤖AI読み取り${d.ai.edited?.length ? `（人が修正：${d.ai.edited.map(k => LABEL[k] || k).join('・')}）` : '（修正なし）'}` : '');
     else if (e.op === 'lab-add' || e.op === 'lab-update') s = esc(d.name);
     else if (e.op === 'verify') s = d.ok ? `異常なし（ファイル${d.files}件）` : `<span class="badge ng">異常 ${d.problems}件</span>`;
     else if (e.op === 'init' || e.op === 'settings') s = Object.keys(d).map(k => esc(k)).join(', ');
@@ -1221,6 +1521,7 @@ function renderSettings(){
   $('sClinic').value = s.clinicName; $('sResp').value = s.responsible; $('sRet').value = String(s.retentionYears); $('sPaper').value = s.paper;
   $('sPaperSize').value = s.paperSize; $('sWarn').value = s.warnDays; $('sOps').value = (s.operators || []).join('\n'); $('sItems').value = (s.items || []).join('\n');
   $('lawHelp').innerHTML = lawHelpHtml();
+  renderAiSettings();
 }
 $('saveSettingsBtn').onclick = async () => {
   if (!needOp()) return;
@@ -1244,7 +1545,7 @@ function printDoc(kind){
 <h2>第3条（管理責任者等）</h2><p>1　スキャナ保存の管理責任者は ${resp} とする。<br>2　スキャン及び登録を行う入力者は ${ops} とし、管理責任者が指名する。<br>3　入力者は、登録時にアプリの「入力者」欄で自分の名前を選び、操作者を記録する。</p>
 <h2>第4条（使用するシステム）</h2><p>指示書の保存には「技工指示書保管」アプリ（以下「本システム」という。）を使用し、保存先は管理責任者が定めたフォルダとする。本システムの概要は別紙「システム概要書」による。</p>
 <h2>第5条（スキャナの設定）</h2><p>スキャナは、解像度300dpi以上、カラー（赤・緑・青 各256階調以上）で読み取る。用紙全体が欠けずに読み取れていることを確認する。</p>
-<h2>第6条（入力の手順と期間）</h2><p>1　指示書を交付するとき（又は返送を受けたとき）は、遅滞なく（おおむね${s.warnDays}日以内に）スキャンし、本システムに登録する。<br>2　入力者は、登録前に画面上で画像と紙の指示書を見比べ、文字・記号・図が読み取れることを確認する。<br>3　登録時に、技工所、指示書発行日、患者を特定する情報その他の項目を入力する。技工料は判明したときに入力する。<br>4　技工物の納品を受けたときは、技工終了日を入力する。<br>5　期間内に登録できなかった場合は、その理由をメモ欄に記録する。</p>
+<h2>第6条（入力の手順と期間）</h2><p>1　指示書を交付するとき（又は返送を受けたとき）は、遅滞なく（おおむね${s.warnDays}日以内に）スキャンし、本システムに登録する。<br>2　入力者は、登録前に画面上で画像と紙の指示書を見比べ、文字・記号・図が読み取れることを確認する。<br>3　登録時に、技工所、指示書発行日、患者を特定する情報その他の項目を入力する。技工料は判明したときに入力する。<br>4　技工物の納品を受けたときは、技工終了日を入力する。<br>5　期間内に登録できなかった場合は、その理由をメモ欄に記録する。${s.aiConsent?.on ? '<br>6　項目の入力には、Anthropic社のAI（Claude）による読み取りを利用することができる。AIが読み取った内容は、入力者が画像と見比べて確認する（自動登録したものは、管理責任者が月1回以上、抜き取りで確認する）。AIの利用は管理責任者が承認し、外国にある第三者への個人データの提供として、個人情報保護法に基づく措置（本人の同意の取得、又は基準に適合する体制の確認と情報提供）を講じる。' : ''}</p>
 <h2>第7条（原本の取扱い）</h2><p>${s.paper === 'keep' ? '紙の指示書は、スキャン後も保存期間が終わるまで、年月ごとにまとめて保管する。' : '紙の指示書は、スキャン後に管理責任者が画像を確認し、第9条の措置を行ったうえで、管理責任者の承認を得て廃棄する。廃棄までの間は年月ごとにまとめて保管する。'}</p>
 <h2>第8条（訂正・削除）</h2><p>1　登録したデータの訂正は本システムの「修正」「ファイル追加・差し替え」により行い、理由を記録する。訂正前の内容及びファイルは消去せず保存する。<br>2　誤登録の場合は「取消」により処理し、理由を記録する。登録データの削除は行わない。<br>3　保存フォルダ内のファイルをエクスプローラー等で直接変更・削除してはならない。</p>
 <h2>第9条（真実性の確認）</h2><p>1　管理責任者は、月1回以上、本システムの「整合性チェック」を実行し、結果を確認する。<br>2　管理責任者は、月1回以上、台帳の最新ハッシュ値を記録し、第三者に時刻が記録される方法（電子メールの送信等）で控えを保存する。${s.paper === 'discard' ? '<br>3　紙の原本を廃棄する指示書については、管理責任者が電子署名及びタイムスタンプ（総務大臣が認定する時刻認証業務によるもの）を付す。' : ''}</p>
@@ -1270,7 +1571,8 @@ function printDoc(kind){
 <div style="font-size:20px;line-height:2;margin-top:30px">
 <p>当院では、歯科技工物（かぶせ物・入れ歯など）を作製するための<b>歯科技工指示書</b>を、スキャナで読み取り、<b>電子データとして保存</b>しています。</p>
 <p>保存したデータは、法令に基づき適切に管理し、診療と歯科技工の目的以外には使用しません。</p>
-<p>電子化による保存を希望されない方は、受付までお申し出ください。</p>
+${s.aiConsent?.on ? '<p>指示書の内容の読み取りには、<b>米国の Anthropic 社が提供するAI（Claude）</b>を利用しており、読み取りのために指示書の画像（お名前を含みます）を同社に送信します。同社は送信されたデータをAIの学習に使用せず、一定期間の保管後に削除します。米国の個人情報保護制度や同社の保護措置については、受付でご説明します。</p>' : ''}
+<p>電子化による保存${s.aiConsent?.on ? 'やAIによる読み取り' : ''}を希望されない方は、受付までお申し出ください。</p>
 <p style="text-align:right;margin-top:40px">${c}<br>管理責任者　${resp}</p></div>`],
     scanner: ['スキャナ設定メモ', `
 <table><tr><th>解像度</th><td><b>300dpi</b>（最低でも200dpi以上）</td></tr>
@@ -1320,6 +1622,10 @@ function lawHelpHtml(){
 → <b>紙の指示書も保存期間中は保管する運用（初期設定）</b>にすれば、スキャンデータは検索・閲覧用の写しとなり、この要件は問題になりません。紙を廃棄したい場合は、認定タイムスタンプ付きのサービス（JIIMA認証製品など）との併用を検討してください。</li>
 <li>電子帳簿保存法では、タイムスタンプの代わりに「訂正削除の履歴が残るシステムで、入力期間内に保存したことを確認できる」方法が認められていますが、パソコンのフォルダに保存する方式ではフォルダを直接操作される余地があるため、ハッシュ値の控えを定期的にメールで送るなど、時刻を第三者に記録させる運用を併せて行ってください（事務処理規程 第9条）。</li>
 <li>保存フォルダのアクセス管理（Google アカウントの二段階認証、共有範囲の限定）は医院側で行ってください。指示書には患者の個人情報が含まれます。</li></ul>
+<h3>5. AI読み取りを使う場合</h3>
+<ul><li>指示書の画像（患者の氏名等を含む）を Anthropic 社（米国）に送るため、個人情報保護法第28条の「外国にある第三者への提供」にあたります。本人の同意を得るか、同社との契約（DPA）等で基準に適合する体制を確認し、本人の求めに応じて情報提供できるようにしてください。</li>
+<li>医療情報システムの安全管理に関するガイドラインでは、外部のサービスを使うときは、管理者がサービスの内容・リスクを確認して選ぶことが求められます。有効化した人と日付は台帳に記録されます。</li>
+<li>AIの読み取りは誤ることがあります。読み取った値・自信のない項目・人が直した項目は台帳に記録されます。自動登録を使う場合も、定期的に抜き取りで確認してください。</li></ul>
 <p class="sub">最終的な判断は、所轄の税務署・保健所・地方厚生局、または顧問税理士にご確認ください。</p>`;
 }
 
